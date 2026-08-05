@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account</title>
+      <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+      <!-- Sidebar -->
+    <aside class="sidebar">
+
+        <header class="profile">
+
+            <img src="../images/COLM LOGO.png" alt="Counselor Profile">
+
+            <div class="info">
+                <h4 id="sidebarName"></h4>
+                <p>Counselor</p>
+
+            </div>
+
+        </header>
+
+
+   <hr>
+
+        <nav aria-label="Counselor Navigation">
+
+            <ul>
+
+                <li>
+            <a href="counselor-dashboard.html">
+              <i class="fa-solid fa-house"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="counselor-student.html">
+                        <i class="fa-solid fa-user-graduate"></i>
+                        <span>Students</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="counselor-announcements.html">
+                        <i class="fa-solid fa-bullhorn"></i>
+                        <span>Announcements</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-appointments.html">
+                        <i class="fa-solid fa-calendar"></i>
+                        <span>Appointments</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-cases.html">
+                        <i class="fa-solid fa-folder-open"></i>
+                        <span>Cases</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-forms.html">
+                        <i class="fa-solid fa-book"></i>
+                        <span>Forms &amp; Interventions</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-reports.html">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>Reports</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-account.html">
+                        <i class="fa-solid fa-user"></i>
+                        <span>Account</span>
+                    </a>
+                </li>
+                <li class="desktop-only">
+                    <button type="button" id="logoutBtn" title="Log Out">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Log Out</span>
+                    </button>
+                </li>
+
+                <li class="hamburger">
+                    <button type="button" onclick="toggleMenu()">
+                        <i class="fa-solid fa-bars"></i>
+                        <span>More</span>
+                    </button>
+                </li>
+
+            </ul>
+
+        </nav>
+
+    </aside>
+
+     <nav class="mobile-menu" id="mobileMenu" aria-label="More Navigation">
+
+        <a href="counselor-appointments.html"><i class="fa-solid fa-calendar"></i> Appointments</a>
+
+        <a href="counselor-cases.html"><i class="fa-solid fa-folder-open"></i> Cases</a>
+
+        <a href="counselor-forms.html"><i class="fa-solid fa-book"></i> Forms &amp; Interventions</a>
+
+        <a href="counselor-reports.html"><i class="fa-solid fa-chart-line"></i> Reports</a>
+
+        <a href="counselor-account.html"><i class="fa-solid fa-user"></i> Account</a>
+
+        <a href="#" id="mobileLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
+
+    </nav>
+
+  <main class="content">
+
+        <header class="GreetingsCard">
+            <h1>Accounts &amp; Access Management</h1>
+            <p>Create and manage counselor accounts.</p>
+        </header>
+
+        <div class="section-title" style="margin-top:30px;">
+            <h2>Bulk Student Import</h2>
+        </div>
+        <div class="upload-dropzone" id="uploadDropzone">
+            <div class="upload-dropzone-icon"><i class="fa-solid fa-file-excel"></i></div>
+            <h3>Drop Excel File Here</h3>
+            <p>Columns: First Name (required), Middle Name, Last Name, Level, Contact Number (all optional).</p>
+            <p class="hint">Level should match exactly: "Grade 7"–"Grade 12" for high school, or "1st Year"–"4th Year" for college </p>
+            <input type="file" id="xlsxFileInput" accept=".xlsx,.xls" hidden>
+            <button type="button" class="btn btn-outline" id="xlsxUploadBtn"><i class="fa-solid fa-upload"></i> Upload .xlsx</button>
+            <div class="form-note-banner" id="xlsxFileName" style="display:none; margin-top:14px;"></div>
+        </div>
+
+        <div id="importPreviewSection" style="display:none; margin-top:20px;">
+            <div class="section-title">
+                <h2>Preview (<span id="importPreviewCount">0</span> students)</h2>
+            </div>
+            <div class="account-form-grid" style="margin-bottom:16px;">
+                <div class="form-field">
+                    <label for="importEducationLevel">Education Level</label>
+                    <select id="importEducationLevel">
+                        <option value="college">College</option>
+                        <option value="junior_high">Junior High School (Grade 7-10)</option>
+                        <option value="senior_high">Senior High School (Grade 11-12)</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="importSection">Section (optional, applies to this whole batch)</label>
+                    <input type="text" id="importSection" placeholder="e.g. Rizal, STEM-A">
+                </div>
+            </div>
+            <div class="simple-table-wrap">
+                <table class="simple-table">
+                    <thead>
+                        <tr><th>First Name</th><th>Middle Name</th><th>Last Name</th><th>Level</th><th>Contact Number</th></tr>
+                    </thead>
+                    <tbody id="importPreviewBody"></tbody>
+                </table>
+            </div>
+            <div class="account-actions-row" style="margin-top:16px;">
+                <button type="button" class="btn btn-outline" id="importCancelBtn"><i class="fa-solid fa-xmark"></i> Cancel</button>
+                <button type="button" class="btn btn-primary" id="importConfirmBtn"><i class="fa-solid fa-check"></i> Import Students</button>
+            </div>
+        </div>
+
+        <div id="importResultsSection" style="display:none; margin-top:20px;">
+            <div class="section-title">
+                <h2>Import Results</h2>
+                <button type="button" class="btn btn-outline" id="printResultsBtn" title="Print credentials"><i class="fa-solid fa-print"></i></button>
+            </div>
+            <div class="simple-table-wrap">
+                <table class="simple-table">
+                    <thead>
+                        <tr><th>Name</th><th>Student #</th><th>Login Email</th><th>Temp Password</th><th>Status</th></tr>
+                    </thead>
+                    <tbody id="importResultsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section-title" style="margin-top:30px;">
+            <h2>Create Guidance Counselor Account</h2>
+        </div>
+        <div class="account-form-card">
+            <form id="createStaffForm">
+                <div class="account-form-grid">
+                    <div class="form-field">
+                        <label for="staffFirstNameInput">First Name</label>
+                        <input type="text" id="staffFirstNameInput" required maxlength="100">
+                    </div>
+                    <div class="form-field">
+                        <label for="staffLastNameInput">Last Name</label>
+                        <input type="text" id="staffLastNameInput" required maxlength="100">
+                    </div>
+                    <div class="form-field">
+                        <label for="staffEmailInput">Email</label>
+                        <input type="email" id="staffEmailInput" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="staffWorkDaysInput">Work Days</label>
+                        <input type="text" id="staffWorkDaysInput" placeholder="e.g. Mon-Sat">
+                    </div>
+                </div>
+                <div class="form-note-banner" style="margin-top:16px;">
+                    <i class="fa-solid fa-key"></i> A temporary password is generated automatically — you'll need to relay it to the new counselor.
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="createStaffSaveBtn">Create Account</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="section-title" style="margin-top:30px;">
+            <h2>Change Password</h2>
+        </div>
+        <div class="account-form-card">
+            <form id="changePasswordForm">
+                <div class="account-form-grid">
+                    <div class="form-field">
+                        <label for="newPasswordInput">New Password</label>
+                        <input type="password" id="newPasswordInput" autocomplete="new-password" required minlength="6">
+                    </div>
+                    <div class="form-field">
+                        <label for="confirmPasswordInput">Confirm New Password</label>
+                        <input type="password" id="confirmPasswordInput" autocomplete="new-password" required minlength="6">
+                    </div>
+                </div>
+                <div class="form-note-banner" style="margin-top:16px;">
+                    <i class="fa-solid fa-lock"></i> Must be at least 6 characters. This changes your own login password.
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="changePasswordBtn">Update Password</button>
+                </div>
+            </form>
+        </div>
+
+    </main>
+
+    <!-- New account credentials -->
+    <div class="modal-overlay" id="staffCreatedModalOverlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Account Created</h3>
+                <button type="button" class="modal-close" id="staffCreatedCloseBtn" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Share these credentials with the new counselor. This password won't be shown again.</p>
+                <div class="case-meta-grid" style="grid-template-columns:1fr;">
+                    <div class="case-meta-item">
+                        <label>Email</label>
+                        <div id="staffCreatedEmail">—</div>
+                    </div>
+                    <div class="case-meta-item">
+                        <label>Temporary Password</label>
+                        <div id="staffCreatedPassword" style="font-family: monospace; font-size:16px;">—</div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary" id="staffCreatedOkBtn">Done</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="../js/supabaseClient.js"></script>
+  <script src="../js/counselor-common.js"></script>
+  <script>
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str ?? "";
+      return div.innerHTML;
+    }
+
+    document.getElementById("changePasswordForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const newPassword = document.getElementById("newPasswordInput").value;
+      const confirmPassword = document.getElementById("confirmPasswordInput").value;
+
+      if (newPassword !== confirmPassword) {
+        showToast("Passwords don't match.", "error");
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        showToast("Password must be at least 6 characters.", "error");
+        return;
+      }
+
+      const btn = document.getElementById("changePasswordBtn");
+      btn.disabled = true;
+      btn.textContent = "Updating…";
+
+      const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+
+      btn.disabled = false;
+      btn.textContent = "Update Password";
+
+      if (error) {
+        showToast("Couldn't update password: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      document.getElementById("changePasswordForm").reset();
+      showToast("Password updated.", "success");
+    });
+
+    // ---------- Bulk student import ----------
+
+    const HEADER_ALIASES = {
+      firstName: ["fname", "firstname"],
+      middleName: ["mname", "middlename"],
+      lastName: ["lname", "lastname"],
+      level: ["level", "yearlevel", "gradelevel"],
+      contactNumber: ["contactnumber", "contact", "phone", "phonenumber"],
+    };
+
+    function normalizeHeader(h) {
+      return String(h || "").trim().toLowerCase().replace(/[^a-z]/g, "");
+    }
+
+    function mapRow(rawRow) {
+      const keys = Object.keys(rawRow);
+      const mapped = {};
+      for (const [field, aliases] of Object.entries(HEADER_ALIASES)) {
+        const matchKey = keys.find((k) => aliases.includes(normalizeHeader(k)));
+        mapped[field] = matchKey ? String(rawRow[matchKey] ?? "").trim() : "";
+      }
+      return mapped;
+    }
+
+    let parsedStudents = [];
+
+    function renderImportPreview() {
+      const section = document.getElementById("importPreviewSection");
+      const body = document.getElementById("importPreviewBody");
+      document.getElementById("importPreviewCount").textContent = parsedStudents.length;
+
+      body.innerHTML = parsedStudents.length
+        ? parsedStudents
+            .map(
+              (r) => `
+          <tr>
+            <td>${escapeHtml(r.firstName)}</td>
+            <td>${escapeHtml(r.middleName) || "—"}</td>
+            <td>${escapeHtml(r.lastName) || "—"}</td>
+            <td>${escapeHtml(r.level) || "—"}</td>
+            <td>${escapeHtml(r.contactNumber) || "—"}</td>
+          </tr>
+        `
+            )
+            .join("")
+        : `<tr class="table-empty"><td colspan="5">No valid rows found — make sure the sheet has a First Name column.</td></tr>`;
+
+      section.style.display = "block";
+      document.getElementById("importResultsSection").style.display = "none";
+    }
+
+    function handleFile(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        let rawRows;
+        try {
+          const workbook = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          if (!sheet) throw new Error("No sheet found in this file.");
+          rawRows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        } catch (err) {
+          // A wrong-format file (not really an .xlsx, corrupted, a renamed
+          // .docx/.pdf, etc.) makes the xlsx library throw — without this,
+          // that exception was uncaught and the counselor just saw nothing
+          // happen at all, with no clue why.
+          console.error(err);
+          showToast("Couldn't read that file — make sure it's a valid Excel (.xlsx) file.", "error");
+          document.getElementById("xlsxFileInput").value = "";
+          return;
+        }
+
+        parsedStudents = rawRows.map(mapRow).filter((r) => r.firstName);
+
+        const fileNameEl = document.getElementById("xlsxFileName");
+        fileNameEl.style.display = "flex";
+        fileNameEl.innerHTML = parsedStudents.length
+          ? `<i class="fa-solid fa-check"></i> ${escapeHtml(file.name)} — ${parsedStudents.length} student${parsedStudents.length === 1 ? "" : "s"} found`
+          : `<i class="fa-solid fa-triangle-exclamation"></i> ${escapeHtml(file.name)} — no valid rows found. Make sure the sheet has a First Name column.`;
+
+        renderImportPreview();
+      };
+      reader.onerror = () => {
+        showToast("Couldn't read that file.", "error");
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    document.getElementById("xlsxUploadBtn").addEventListener("click", () => {
+      document.getElementById("xlsxFileInput").click();
+    });
+
+    document.getElementById("xlsxFileInput").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) handleFile(file);
+    });
+
+    const dropzone = document.getElementById("uploadDropzone");
+    ["dragenter", "dragover"].forEach((evt) =>
+      dropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        dropzone.classList.add("dragover");
+      })
+    );
+    ["dragleave", "drop"].forEach((evt) =>
+      dropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        dropzone.classList.remove("dragover");
+      })
+    );
+    dropzone.addEventListener("drop", (e) => {
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    });
+
+    document.getElementById("importCancelBtn").addEventListener("click", () => {
+      parsedStudents = [];
+      document.getElementById("importPreviewSection").style.display = "none";
+      document.getElementById("xlsxFileName").style.display = "none";
+      document.getElementById("xlsxFileInput").value = "";
+    });
+
+    function printImportResults(results) {
+      const win = window.open("", "_blank");
+      if (!win) {
+        showToast("Please allow pop-ups to print credentials.", "error");
+        return;
+      }
+
+      const rows = results
+        .map(
+          (r) => `
+        <tr>
+          <td>${escapeHtml(r.firstName)} ${escapeHtml(r.lastName)}</td>
+          <td>${escapeHtml(r.studentNumber)}</td>
+          <td>${escapeHtml(r.email)}</td>
+          <td>${r.success ? escapeHtml(r.tempPassword) : "—"}</td>
+          <td>${r.success ? "Created" : "Failed: " + escapeHtml(r.error || "")}</td>
+        </tr>
+      `
+        )
+        .join("");
+
+      win.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Student Login Credentials</title>
+          <style>
+            body { font-family: Arial, sans-serif; color:#111827; padding:32px; }
+            h1 { font-size:20px; margin:0 0 4px; }
+            .meta { color:#6b7280; font-size:12px; margin-bottom:20px; }
+            table { width:100%; border-collapse:collapse; }
+            th, td { text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; font-size:12.5px; }
+            th { background:#f9fafb; text-transform:uppercase; font-size:10.5px; letter-spacing:.03em; color:#6b7280; }
+            .print-btn { margin-bottom:20px; padding:8px 16px; border-radius:8px; border:none; background:#2563eb; color:#fff; font-weight:600; cursor:pointer; }
+            @media print { .print-btn { display:none; } }
+          </style>
+        </head>
+        <body>
+          <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+          <h1>Student Login Credentials</h1>
+          <div class="meta">Generated ${new Date().toLocaleString("en-US")} · ${results.length} account${results.length === 1 ? "" : "s"} · keep this confidential</div>
+          <table>
+            <thead><tr><th>Name</th><th>Student #</th><th>Login Email</th><th>Temp Password</th><th>Status</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+      `);
+      // The closing body/html tags are deliberately left out above. A dev-server
+      // auto-reload tool (e.g. VS Code Live Server) does a naive text search
+      // for the closing body tag in the raw file to know where to inject its
+      // reload script, and it was matching the one in this string instead of
+      // the page's real one, corrupting this file's actual script tag. Both
+      // end tags are optional in HTML5 — the browser closes them implicitly —
+      // so omitting them here sidesteps the false match entirely.
+      win.document.close();
+    }
+
+    function renderImportResults(results) {
+      const body = document.getElementById("importResultsBody");
+
+      body.innerHTML = results
+        .map(
+          (r) => `
+        <tr>
+          <td>${escapeHtml(r.firstName)} ${escapeHtml(r.lastName)}</td>
+          <td>${escapeHtml(r.studentNumber)}</td>
+          <td>${escapeHtml(r.email)}</td>
+          <td style="font-family:monospace;">${r.success ? escapeHtml(r.tempPassword) : "—"}</td>
+          <td>
+            <span class="badge badge-${r.success ? "approved" : "cancelled"}">${r.success ? "Created" : "Failed"}</span>
+            ${r.error ? `<div style="font-size:11px; color:#9ca3af; margin-top:2px;">${escapeHtml(r.error)}</div>` : ""}
+          </td>
+        </tr>
+      `
+        )
+        .join("");
+
+      document.getElementById("importResultsSection").style.display = "block";
+      document.getElementById("printResultsBtn").onclick = () => printImportResults(results);
+    }
+
+    document.getElementById("importConfirmBtn").addEventListener("click", async () => {
+      if (!parsedStudents.length) return;
+
+      const btn = document.getElementById("importConfirmBtn");
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner"></i> Importing…`;
+
+      const educationLevel = document.getElementById("importEducationLevel").value;
+      const section = document.getElementById("importSection").value.trim();
+
+      const { data, error } = await supabaseClient.functions.invoke("create-student-accounts", {
+        body: { students: parsedStudents, educationLevel, section },
+      });
+
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa-solid fa-check"></i> Import Students`;
+
+      if (error || data?.error) {
+        showToast("Import failed: " + (data?.error || error.message), "error");
+        console.error(error || data?.error);
+        return;
+      }
+
+      renderImportResults(data.results || []);
+      document.getElementById("importPreviewSection").style.display = "none";
+      document.getElementById("xlsxFileName").style.display = "none";
+      document.getElementById("xlsxFileInput").value = "";
+      parsedStudents = [];
+    });
+
+    // ---------- Single counselor account creation ----------
+
+    document.getElementById("createStaffForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const payload = {
+        firstName: document.getElementById("staffFirstNameInput").value.trim(),
+        lastName: document.getElementById("staffLastNameInput").value.trim(),
+        email: document.getElementById("staffEmailInput").value.trim(),
+        workDays: document.getElementById("staffWorkDaysInput").value.trim(),
+      };
+
+      const saveBtn = document.getElementById("createStaffSaveBtn");
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Creating…";
+
+      const { data, error } = await supabaseClient.functions.invoke("create-staff-account", { body: payload });
+
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Create Account";
+
+      if (error || data?.error) {
+        showToast("Couldn't create account: " + (data?.error || error.message), "error");
+        console.error(error || data?.error);
+        return;
+      }
+
+      document.getElementById("staffCreatedEmail").textContent = data.email;
+      document.getElementById("staffCreatedPassword").textContent = data.tempPassword;
+      document.getElementById("staffCreatedModalOverlay").classList.add("show");
+      document.getElementById("createStaffForm").reset();
+    });
+
+    function closeStaffCreatedModal() {
+      document.getElementById("staffCreatedModalOverlay").classList.remove("show");
+    }
+
+    document.getElementById("staffCreatedCloseBtn").addEventListener("click", closeStaffCreatedModal);
+    document.getElementById("staffCreatedOkBtn").addEventListener("click", closeStaffCreatedModal);
+    document.getElementById("staffCreatedModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "staffCreatedModalOverlay") closeStaffCreatedModal();
+    });
+
+    (async () => {
+      const result = await requireCounselorAuth();
+      if (!result) return;
+      hidePageLoadOverlay();
+    })();
+  </script>
+</body>
+</html>

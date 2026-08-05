@@ -1,0 +1,3379 @@
+/* =========================================================
+   COLM Guidance Portal — Global Stylesheet
+   Sections: Reset, Typography, Layout, Sidebar, Mobile Nav,
+             Buttons/Forms, Dashboard, Announcements,
+             Appointments, Resources, Profile, History
+   ========================================================= */
+
+/* ---------- Reset ---------- */
+
+* {
+    box-sizing: border-box;
+}
+
+/* Icon glyphs (Font Awesome etc.) carry their own line-height, which throws
+   off dead-center alignment inside flex-centered circular/square buttons and
+   avatars even though align-items/justify-content are already set to center —
+   the icon centers within its inherited line box, not its actual glyph
+   bounds. Resetting line-height to 1 on every such container fixes this
+   consistently instead of patching each one individually. */
+.btn,
+.icon-btn,
+.stat-card-icon,
+.notif-bell,
+.appointment-avatar,
+.counselor-avatar,
+.report-card-icon,
+.form-library-icon,
+.upload-dropzone-icon,
+.cal-nav-btn,
+.modal-close {
+    line-height: 1;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f3f4f6;
+    color: #111827;
+}
+
+a {
+    color: inherit;
+}
+
+img {
+    max-width: 100%;
+}
+
+/* ---------- Typography ---------- */
+
+
+h1 { font-size: clamp(24px, 4vw, 36px); margin: 0 0 .4em; }
+h2 { font-size: clamp(18px, 3vw, 28px); margin: 0 0 .4em; }
+h3 { font-size: clamp(16px, 2.2vw, 22px); margin: 0 0 .3em; }
+p  { font-size: clamp(14px, 2vw, 16px); margin: 0 0 .5em; }
+
+/* ---------- Layout ---------- */
+
+.content {
+    position: relative;
+    margin-left: 270px;
+    padding: 20px 30px 20px 20px;
+    min-height: 100vh;
+}
+
+.GreetingsCard {
+    position: relative;
+    width: 100%;
+    padding: 1.8rem;
+    /* Extra right padding reserves room for the notification bell (always
+       absolutely positioned in this corner via .notif-wrap) so the title/
+       subtitle text never wraps underneath it and gets hidden — most
+       noticeable on narrow screens where the heading wraps to 2 lines. */
+    padding-right: 4.5rem;
+    background: linear-gradient(135deg, #060015, #0b0f2e);
+    color: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 20px rgba(0,0,0,.12);
+}
+
+.GreetingsCard h1,
+.GreetingsCard h3,
+.GreetingsCard p {
+    margin-top: 0;
+}
+
+.GreetingsCard p {
+    opacity: .95;
+    margin-bottom: 0;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 30px 0 15px;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.section-title h2 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* justify-content:space-between only spaces items that share a line —
+   if flex-wrap pushes the last action button onto its own line (narrow
+   screens, or a wide filter-tabs group crowding it out), that lone item
+   collapses to the left edge instead of staying pinned right. Force it
+   explicitly so the button never drifts next to the heading. */
+.section-title > .icon-btn:last-child,
+.section-title > .btn:last-child {
+    margin-left: auto;
+}
+
+/* A pair of action buttons (Reset Password / Archive) that stays grouped
+   together and wraps as a unit on narrow screens, instead of each button
+   being an independent flex-wrap item that ends up looking stretched and
+   stacked on its own line. */
+.account-actions-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.section-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: #fef3c7;
+    color: #b45309;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.section-count[hidden] {
+    display: none;
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+    /* There's a generic, unscoped `button { width: 100% }` rule further
+       down this file (written for the login page specifically) that was
+       silently making every .btn full-width everywhere else too, since
+       .btn never contested that one property itself. That's the actual
+       reason Cancel/Import (and others) were stacking instead of sitting
+       side by side — not the flex container, which was always correct. */
+    width: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    font-size: clamp(13px, 1.8vw, 15px);
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: .2s;
+}
+
+.btn-primary {
+    background: #2563eb;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #1d4ed8;
+    transform: translateY(-2px);
+}
+
+.btn-outline {
+    background: transparent;
+    color: #2563eb;
+    border: 1.5px solid #2563eb;
+}
+
+.btn-outline:hover {
+    background: #eff6ff;
+}
+
+.btn-danger {
+    background: #dc2626;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #b91c1c;
+    transform: translateY(-2px);
+}
+
+.btn-block {
+    width: 100%;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12.5px;
+    border-radius: 6px;
+}
+
+/* ---------- Forms ---------- */
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-field label {
+    font-size: clamp(13px, 1.8vw, 14px);
+    font-weight: 600;
+    color: #374151;
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 15px;
+    font-family: inherit;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #fff;
+    color: #111827;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+}
+
+.form-field textarea {
+    resize: vertical;
+    min-height: 90px;
+}
+
+.form-actions {
+    margin-top: 18px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* ---------- Status Badges ---------- */
+
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: clamp(11px, 1.6vw, 13px);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.badge-approved { background: #dcfce7; color: #15803d; }
+.badge-pending  { background: #fef3c7; color: #b45309; }
+.badge-cancelled{ background: #fee2e2; color: #b91c1c; }
+.badge-rescheduled{ background: #dbeafe; color: #1d4ed8; }
+.badge-info     { background: #e0e7ff; color: #4338ca; }
+.badge-missed   { background: #fde68a; color: #92400e; }
+
+.mono-cell { font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+
+/* ---------- Sidebar ---------- */
+
+.sidebar {
+    z-index: 1000;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 270px;
+    height: 100vh;
+    background-color: #060015;
+    padding: 20px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: white;
+    margin-bottom: 10px;
+}
+
+.profile img {
+    width: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid white;
+}
+
+.info h4,
+.info p {
+    margin: 0;
+}
+
+.info p {
+  
+    color: lightgray;
+    font-size: clamp(12px, 2vw, 14px);
+}
+
+.sidebar nav {
+    width: 100%;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.sidebar li {
+    width: 100%;
+}
+
+.sidebar a,
+.sidebar button {
+    width: 100%;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    color: white;
+    background: none;
+    border: none;
+    text-decoration: none;
+    cursor: pointer;
+    transition: .2s;
+    font-size: clamp(12px, 2vw, 16px);
+    font-family: inherit;
+    font-weight: normal;
+}
+
+.sidebar a:hover,
+.sidebar button:hover {
+    background: rgba(255,255,255,.08);
+    border-radius: 8px;
+}
+
+.sidebar a.active {
+    background: #2563eb;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+.hamburger {
+    display: none;
+}
+
+/* ---------- Mobile Menu ("More") ---------- */
+
+.mobile-menu {
+    position: fixed;
+    bottom: 75px;
+    right: -250px;
+    width: 200px;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 0 12px rgba(0,0,0,.2);
+    transition: .3s;
+    z-index: 999;
+}
+
+.mobile-menu.show {
+    right: 10px;
+}
+
+.mobile-menu a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    text-decoration: none;
+    color: #111827;
+    border-bottom: 1px solid #eee;
+    font-size: clamp(12px, 2vw, 16px);
+}
+
+.mobile-menu a:last-child {
+    border-bottom: none;
+}
+
+.mobile-menu a.active {
+    background: #eff6ff;
+    color: #2563eb;
+    font-weight: 700;
+}
+
+/* The "More" panel is only ever opened via the hamburger, which itself
+   only exists below 768px — but its .show state is plain JS toggling with
+   no viewport awareness, so if it's opened on a narrow screen and the
+   window is then resized wider (or a device rotated), it stays stuck
+   visible. Force it shut regardless of .show once we're back at desktop
+   width. */
+@media (min-width: 769px) {
+    .mobile-menu.show {
+        right: -250px;
+    }
+}
+
+/* =========================================================
+   Dashboard
+   ========================================================= */
+
+/* =========================================================
+   Announcements
+   ========================================================= */
+
+.AnnouncementsList {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+}
+
+.announcement-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px 22px;
+    box-shadow: 0 4px 10px rgba(0,0,0,.08);
+    transition: .25s;
+    border-top: 5px solid #2563eb;
+    cursor: pointer;
+}
+
+.announcement-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0,0,0,.12);
+}
+
+.announcement-card.urgent { border-top-color: #ef4444; }
+.announcement-card.event  { border-top-color: #22c55e; }
+
+.announcement-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.announcement-card h3 {
+    margin: 0 0 8px;
+}
+
+.announcement-card p {
+    color: #4b5563;
+    margin-bottom: 10px;
+}
+
+.announcement-card small {
+    color: #9ca3af;
+}
+
+/* =========================================================
+   Appointments
+   ========================================================= */
+
+.AppointmentsList {
+    display: flex;
+    flex-direction: column;
+}
+
+.appointment-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+    border: 1px solid #f1f5f9;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+    border-left: 4px solid #2563eb;
+    transition: box-shadow .15s;
+}
+
+.appointment-card:hover {
+    box-shadow: 0 8px 20px rgba(15,23,42,.08);
+}
+
+.appointment-card.pending     { border-left-color: #f59e0b; }
+.appointment-card.approved    { border-left-color: #22c55e; }
+.appointment-card.cancelled   { border-left-color: #ef4444; }
+.appointment-card.declined    { border-left-color: #ef4444; }
+.appointment-card.completed   { border-left-color: #4338ca; }
+.appointment-card.rescheduled { border-left-color: #3b82f6; }
+
+.appointment-avatar {
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: #eef2ff;
+    color: #4338ca;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.appointment-info {
+    flex: 1;
+    min-width: 200px;
+}
+
+.appointment-info h3 {
+    margin: 0 0 6px;
+}
+
+.appointment-info p {
+    margin: 0 0 8px;
+    color: #4b5563;
+}
+
+.appointment-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    color: #9ca3af;
+    font-size: 12.5px;
+    margin-bottom: 6px;
+}
+
+.appointment-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.appointment-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: #f8fafc;
+    border-radius: 10px;
+    color: #4b5563;
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+.appointment-note i {
+    margin-top: 2px;
+    color: #94a3b8;
+}
+
+.appointment-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+/* =========================================================
+   Counselor availability card + appointment table actions
+   ========================================================= */
+
+.availability-card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.availability-info h3 {
+    margin: 0 0 4px;
+}
+
+.availability-info small {
+    color: #6b7280;
+}
+
+.availability-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+/* Keep the toggle button on the same row as the name across the whole
+   mobile range instead of wrapping below it — name stays left, button
+   stays right, same order as desktop. */
+@media (max-width: 768px) {
+    .availability-card {
+        flex-wrap: nowrap;
+        padding: 14px 16px;
+        gap: 10px;
+    }
+
+    .availability-info {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .availability-info h3 {
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .availability-actions {
+        flex-shrink: 0;
+        flex-wrap: nowrap;
+        gap: 8px;
+    }
+
+    .availability-actions .btn {
+        padding: 8px 12px;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+}
+
+.table-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+@media (max-width: 768px) {
+    /* flex-wrap only breaks a row once it runs out of width, which in a
+       narrow mobile cell meant 3-4 icon buttons (approved appointments:
+       complete/reschedule/cancel/note) stacked one-per-row instead of
+       wrapping cleanly. Grid forces exactly 2 per row regardless. */
+    .table-actions {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        justify-items: center;
+    }
+}
+
+.appointments-table {
+    table-layout: fixed;
+}
+
+.appointments-table th:nth-child(1) { width: 18%; }
+.appointments-table th:nth-child(2) { width: 12%; }
+.appointments-table th:nth-child(3) { width: 10%; }
+.appointments-table th:nth-child(4) { width: 28%; }
+.appointments-table th:nth-child(5) { width: 12%; }
+.appointments-table th:nth-child(6) { width: 20%; }
+
+.student-appointments-table {
+    table-layout: fixed;
+}
+
+.student-appointments-table th:nth-child(1) { width: 16%; }
+.student-appointments-table th:nth-child(2) { width: 11%; }
+.student-appointments-table th:nth-child(3) { width: 9%; }
+.student-appointments-table th:nth-child(4) { width: 22%; }
+.student-appointments-table th:nth-child(5) { width: 20%; }
+.student-appointments-table th:nth-child(6) { width: 12%; }
+.student-appointments-table th:nth-child(7) { width: 10%; }
+.student-appointments-table td:nth-child(7) { text-align: center; }
+
+.submissions-table td:nth-child(5) { text-align: center; }
+
+@media (max-width: 1024px) {
+    .student-appointments-table {
+        min-width: 680px;
+    }
+}
+
+/* The Action column can hold up to 4 icon buttons at once (approved-status
+   rows) — the generic 480px scroll floor crushes them into 2 wrapped
+   rows inside the cell. Give this table more breathing room. */
+@media (max-width: 1024px) {
+    .appointments-table {
+        min-width: 640px;
+    }
+}
+
+.col-concern {
+    word-break: break-word;
+}
+
+.cases-table {
+    table-layout: fixed;
+}
+
+/* File #, Student, Nature of Incident, Status, Sessions, Last
+   Updated, Action — 7 columns (Section moved back to the case detail
+   modal only, not the summary table). */
+.cases-table th:nth-child(1) { width: 10%; }
+.cases-table th:nth-child(2) { width: 20%; }
+.cases-table th:nth-child(3) { width: 32%; }
+.cases-table th:nth-child(4) { width: 14%; }
+.cases-table th:nth-child(5) { width: 8%; }
+.cases-table th:nth-child(6) { width: 10%; }
+.cases-table th:nth-child(7) { width: 6%; }
+.cases-table td:nth-child(7) { text-align: center; }
+
+@media (max-width: 1024px) {
+    .cases-table {
+        min-width: 700px;
+    }
+}
+
+.cases-table td:nth-child(3) {
+    word-break: break-word;
+}
+
+.students-table {
+    table-layout: fixed;
+}
+
+.students-table th:nth-child(1) { width: 4%; }
+.students-table th:nth-child(2) { width: 12%; }
+.students-table th:nth-child(3) { width: 20%; }
+.students-table th:nth-child(4) { width: 16%; }
+.students-table th:nth-child(5) { width: 12%; }
+.students-table th:nth-child(6) { width: 12%; }
+.students-table th:nth-child(7) { width: 14%; }
+.students-table th:nth-child(8) { width: 10%; }
+.students-table td:nth-child(8) { text-align: center; }
+
+/* 8 columns is too many to stay legible at the generic .simple-table
+   480px scroll floor — give it more room before the horizontal scroll
+   kicks in, so cells like Education Level don't get crushed. */
+@media (max-width: 1024px) {
+    .students-table {
+        min-width: 760px;
+    }
+}
+
+.bulk-action-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1d4ed8;
+}
+
+.bulk-action-bar > div {
+    flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+    .bulk-action-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .bulk-action-bar > div {
+        justify-content: flex-end;
+    }
+}
+
+.table-search {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-size: 13px;
+    width: 260px;
+    max-width: 100%;
+}
+
+.table-search:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+}
+
+/* Search box + its paired action button (e.g. Cases' search + New Case),
+   grouped and aligned together as one row rather than living apart. */
+.toolbar-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
+/* =========================================================
+   Dashboard analytics — status breakdown bars
+   ========================================================= */
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 18px;
+}
+
+.analytics-card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+    padding: 22px;
+}
+
+.analytics-card h3 {
+    margin: 0 0 16px;
+}
+
+.status-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.status-bar-row:last-child {
+    margin-bottom: 0;
+}
+
+.status-bar-label {
+    width: 92px;
+    flex-shrink: 0;
+    font-size: 12.5px;
+    color: #374151;
+    font-weight: 600;
+}
+
+.status-bar-track {
+    flex: 1;
+    height: 8px;
+    background: #f3f4f6;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.status-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    min-width: 3px;
+}
+
+.status-bar-value {
+    width: 26px;
+    flex-shrink: 0;
+    text-align: right;
+    font-size: 13px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.note-indicator {
+    color: #9ca3af;
+    font-size: 12px;
+    cursor: help;
+}
+
+.simple-table tr.table-empty:hover {
+    background: none;
+}
+
+.simple-table tr.table-empty td {
+    padding: 40px 20px;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 13.5px;
+}
+
+/* =========================================================
+   Empty State
+   ========================================================= */
+
+.empty-state {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+    padding: 44px 20px;
+    text-align: center;
+    color: #6b7280;
+    font-size: 13.5px;
+    grid-column: 1 / -1;
+    width: 100%;
+}
+
+.empty-state i {
+    display: block;
+    font-size: 22px;
+    margin-bottom: 10px;
+    color: #cbd5e1;
+}
+
+/* =========================================================
+   Alert / Confirmation Banner
+   ========================================================= */
+
+.banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 22px;
+    font-size: clamp(13px, 1.9vw, 15px);
+}
+
+.banner i {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.banner-content {
+    flex: 1;
+}
+
+.banner-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.review-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #fef3c7;
+    color: #b45309;
+    font-size: 10.5px;
+    font-weight: 700;
+    margin-left: 6px;
+    white-space: nowrap;
+}
+
+/* =========================================================
+   Calendar
+   ========================================================= */
+
+.CalendarLayout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    align-items: start;
+    margin-top: 30px;
+    margin-bottom: 10px;
+}
+
+.CalendarWrap {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 10px rgba(0,0,0,.08);
+    padding: 18px;
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.CalendarWrap .CalendarHeader h3 {
+    font-size: clamp(15px, 2.2vw, 20px);
+}
+
+.CalendarWrap .cal-day {
+    aspect-ratio: 1.8;
+    font-size: clamp(12px, 1.6vw, 15px);
+}
+
+.CalendarHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.CalendarHeader h3 {
+    margin: 0;
+}
+
+.CalendarHeader .cal-nav-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: none;
+    background: #f3f4f6;
+    color: #111827;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: .2s;
+}
+
+.CalendarHeader .cal-nav-btn:hover {
+    background: #e5e7eb;
+}
+
+.CalendarWeekdays,
+.CalendarGrid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.CalendarWeekdays span {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #9ca3af;
+    padding-bottom: 6px;
+}
+
+.cal-day {
+    position: relative;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    background: #f9fafb;
+    color: #374151;
+    border: 1px solid transparent;
+    transition: .15s;
+}
+
+.cal-day:hover {
+    background: #eff6ff;
+}
+
+.cal-day.empty {
+    background: transparent;
+    cursor: default;
+    pointer-events: none;
+}
+
+.cal-day.today {
+    border-color: #2563eb;
+    font-weight: 700;
+}
+
+.cal-day.has-event::after {
+    content: "";
+    position: absolute;
+    bottom: 5px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #2563eb;
+}
+
+.cal-day.holiday {
+    color: #b91c1c;
+}
+
+.cal-day.holiday::before {
+    content: "";
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #ef4444;
+}
+
+.cal-day.selected {
+    background: #2563eb;
+    color: #fff;
+}
+
+.cal-day.selected.has-event::after {
+    background: #fff;
+}
+
+.CalendarLegend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 14px;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.CalendarLegend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.legend-dot.event { background: #2563eb; }
+.legend-dot.holiday { background: #ef4444; }
+
+.CalendarFilterBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.CalendarFilterBar .filter-label {
+    font-weight: 700;
+    color: #111827;
+}
+
+.staff-list-item {
+    background: #fff;
+    border-radius: 14px;
+    padding: 16px 18px;
+    box-shadow: 0 4px 10px rgba(0,0,0,.08);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.staff-list-item h3 {
+    margin: 0 0 6px;
+}
+
+.staff-list-item p {
+    color: #4b5563;
+    margin: 0 0 6px;
+}
+
+.staff-list-item small {
+    color: #9ca3af;
+}
+
+.staff-item-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: .2s;
+    color: #374151;
+}
+
+/* .icon-btn is display:flex — a block-level box — so text-align:center on
+   a parent <td> has no effect on it (text-align only positions inline
+   content). Center it directly instead. :only-child scopes this to a
+   bare action button sitting alone in a cell (View, etc.) without
+   touching multi-button cells, which already center via .table-actions. */
+.simple-table td > .icon-btn:only-child {
+    margin: 0 auto;
+}
+
+.icon-btn:hover {
+    background: #f3f4f6;
+}
+
+.icon-btn.danger {
+    color: #ef4444;
+    border-color: #fecaca;
+}
+
+.icon-btn.danger:hover {
+    background: #fee2e2;
+}
+
+.icon-btn.primary {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+}
+
+.icon-btn.primary:hover {
+    background: #1d4ed8;
+}
+
+.icon-btn.sm {
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+}
+
+/* =========================================================
+   Generic Modal (e.g. Announcement Detail)
+   ========================================================= */
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.55);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-overlay.show {
+    display: flex;
+}
+
+.modal-box {
+    background: #fff;
+    border-radius: 16px;
+    max-width: 520px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0,0,0,.25);
+}
+
+.modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 22px 24px 0;
+}
+
+.modal-header h3 {
+    margin: 0;
+}
+
+.modal-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: #f3f4f6;
+    color: #374151;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: .2s;
+}
+
+.modal-close:hover {
+    background: #e5e7eb;
+}
+
+.modal-body {
+    padding: 14px 24px 24px;
+}
+
+.modal-meta {
+    color: #9ca3af;
+    font-size: 13px;
+    margin-bottom: 14px;
+}
+
+.modal-body p:last-child {
+    color: #374151;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.modal-content-text {
+    color: #374151;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.modal-day-item {
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-day-item:last-child {
+    padding-bottom: 0;
+    margin-bottom: 0;
+    border-bottom: none;
+}
+
+.modal-day-item h4 {
+    margin: 0 0 4px;
+}
+
+/* =========================================================
+   Responsive — Tablet
+   ========================================================= */
+
+@media (max-width: 1024px) {
+    .CalendarLayout { grid-template-columns: 1fr; }
+    .AnnouncementsList { grid-template-columns: 1fr; }
+    .assigned-forms-grid { grid-template-columns: repeat(2, 1fr); }
+
+    .appt-form-row {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+            "counselor counselor"
+            "date time";
+    }
+
+    .appt-form-row .field-counselor { grid-area: counselor; }
+    .appt-form-row .field-date { grid-area: date; }
+    .appt-form-row .field-time { grid-area: time; }
+
+    /* Table columns get squeezed instead of overflowing safely once this
+       rule stopped being 640px-only — every .simple-table on every page
+       needs the scroll fallback well before phone width. */
+    .simple-table-wrap {
+        overflow-x: auto;
+    }
+
+    .simple-table {
+        min-width: 480px;
+        /* table-layout:fixed (set by .students-table/.appointments-table/
+           .cases-table for desktop) forces cells into their percentage
+           width regardless of content, which just wraps long text into
+           multiple cramped lines instead of scrolling. Let columns size
+           to their actual (single-line) content instead — combined with
+           overflow-x:auto above, that's what makes the table scroll. */
+        table-layout: auto;
+    }
+
+    .simple-table th,
+    .simple-table td {
+        white-space: nowrap;
+    }
+
+    /* ...except columns that are meant to hold long free text — those
+       should still wrap within their column rather than force the whole
+       table absurdly wide. */
+    .simple-table .col-concern,
+    .cases-table td:nth-child(3) {
+        white-space: normal;
+    }
+}
+
+@media (max-width: 640px) {
+    .appt-form-row {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "counselor"
+            "date"
+            "time";
+    }
+}
+
+@media (max-width: 640px) {
+    .assigned-forms-grid { grid-template-columns: 1fr; }
+
+    /* Was stacking to a column, which dropped the Available/Unavailable
+       badge below the name — keep it a row with the name truncating
+       instead, same fix as the counselor's own availability card. */
+    .counselor-row {
+        flex-wrap: nowrap;
+        gap: 8px;
+        padding: 12px 14px;
+    }
+
+    .counselor-row-main {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .counselor-row-main h3 {
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .counselor-row > .badge {
+        flex-shrink: 0;
+    }
+
+    .info-edit-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+    }
+}
+
+/* =========================================================
+   Responsive — Mobile
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+    .content {
+        margin-left: 0;
+        padding: 20px 15px 90px;
+    }
+
+    .profile,
+    .sidebar hr {
+        display: none;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: 65px;
+        left: 0;
+        bottom: 0;
+        top: auto;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .sidebar nav {
+        width: 100%;
+        height: 100%;
+    }
+
+    .sidebar ul {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: center;
+        gap: 0;
+    }
+
+    .sidebar li {
+        flex: 1;
+        height: 100%;
+    }
+
+    .sidebar a,
+    .sidebar button {
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .sidebar a.active {
+        border-radius: 0;
+    }
+
+    .desktop-only {
+        display: none;
+    }
+
+    .hamburger {
+        display: block;
+    }
+
+    .appointment-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .appointment-actions {
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    .section-title {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    /* The heading stays left, but filter controls (tabs, search, the
+       trailing action button) were also defaulting to the left edge once
+       stacked — pull them to the right instead so they don't just look
+       like a second, disconnected heading under the first. */
+    .section-title > .filter-tabs,
+    .section-title > .table-search,
+    .section-title > select,
+    .section-title > .filter-toolbar {
+        align-self: flex-end;
+    }
+
+    .filter-toolbar {
+        justify-content: flex-end;
+    }
+
+    .CalendarLayout {
+        grid-template-columns: 1fr;
+    }
+
+    .cal-day {
+        font-size: 12px;
+    }
+
+    .staff-item-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .field-row-top {
+        flex-direction: column;
+    }
+
+}
+
+/* ---------- Auth / Dashboard compatibility ---------- */
+
+.container {
+  display: grid;
+  grid-template-columns: 2fr 3fr; 
+  min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  .container {
+    grid-template-columns: 1fr; /* stack on mobile */
+    grid-template-rows: auto 1fr;
+  }
+
+  .right-panel form {
+    padding-bottom: 64px; /* extra breathing room below the form on mobile */
+  }
+
+  input, select, textarea {
+    font-size: 16px; /* iOS Safari auto-zooms the page on focus if inputs are <16px, which is what shoves the form/padding out of view when the keyboard opens */
+  }
+  
+}
+
+.left-panel {
+  background: linear-gradient(135deg, #060015, #0b0f2e);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+  .logo {
+    margin-top: 40px;
+      width: 50%;
+        max-width: 200px;
+  }
+
+
+.left-panel h1 {
+  font-size: clamp(22px, 3vw, 32px);
+  margin: 0 0 10px;
+  line-height: 1.2;
+}
+
+.left-panel hr {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.2);
+  margin: 14px 0;
+      width: 90%;
+
+}
+
+.left-panel p {
+  margin: 0;
+  opacity: 0.95;
+}
+
+.right-panel {
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+ padding: 40px 20px;
+
+}
+.right-panel form {
+  width: 100%;
+  max-width: 400px; 
+  margin-top: 20px;
+
+}
+
+.login-greeting {
+  align-self: flex-start;
+    text-align: left;
+      margin-bottom: 20px;
+}
+
+.login-greeting h2 {
+  margin-bottom: 6px;
+}
+
+.login-greeting p {
+  margin: 0;
+  color: #6b7280;
+}
+
+.role-switch {
+  display: flex;
+  gap: 8px;
+  margin: 18px 0 10px;
+}
+
+.role-switch button {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.role-switch button.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+#staffNotice {
+  margin: 0 0 14px;
+  color: #4b5563;
+  font-size: 14px;
+}
+
+#loginForm,
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+
+#loginForm label,
+.auth-card label {
+  margin-top: 0;
+}
+
+.forgot-password-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.forgot-password-link:hover {
+  text-decoration: underline;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 14px;
+  display: inline-block;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+#loginBtn {
+  margin-top: 18px;
+}
+
+@media (max-width: 900px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+
+  .left-panel {
+    padding: 28px 24px 24px;
+  }
+
+  .right-panel {
+    padding: 24px 20px 36px;
+  }
+}
+
+@media (max-width: 600px) {
+  #loginForm {
+    padding: 20px;
+  }
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 14px 0 6px;
+}
+
+input, select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d5d7db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: #fff;
+  color: #111827;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: #2d6cdf;
+}
+
+button {
+  width: 100%;
+  padding: 11px;
+  margin-top: 22px;
+  background: #2d6cdf;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #2456b3;
+}
+
+button:disabled {
+  background: #9ab1e0;
+  cursor: not-allowed;
+}
+
+.error-msg {
+  background: #fdeceb;
+  color: #b3261e;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 13px;
+  margin-top: 16px;
+  display: none;
+}
+
+/* =========================================================
+   Counselor Forms — builder
+   ========================================================= */
+
+.modal-box.wide {
+    max-width: 720px;
+}
+
+@media (max-width: 480px) {
+    .modal-overlay {
+        padding: 10px;
+    }
+
+    .modal-header {
+        padding: 16px 16px 0;
+    }
+
+    .modal-body {
+        padding: 10px 16px 16px;
+    }
+}
+
+.builder-section-label {
+    font-weight: 700;
+    font-size: 14px;
+    margin: 22px 0 10px;
+    color: #374151;
+}
+
+.field-row {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+    background: #f9fafb;
+}
+
+.field-row-top {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.field-row-top .form-field {
+    margin: 0;
+}
+
+.field-row-top .form-field.label-field {
+    flex: 2;
+}
+
+.field-row-top .form-field.type-field {
+    flex: 1;
+}
+
+.field-row-options {
+    margin-bottom: 10px;
+}
+
+.hint {
+    display: block;
+    color: #9ca3af;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.field-row-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.field-required-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: #374151;
+}
+
+.add-field-btn {
+    width: 100%;
+    padding: 12px;
+    border: 2px dashed #d1d5db;
+    border-radius: 12px;
+    background: #fff;
+    color: #2563eb;
+    font-weight: 600;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.add-field-btn:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+}
+
+.builder-empty-fields {
+    text-align: center;
+    color: #9ca3af;
+    padding: 20px;
+    border: 1px dashed #e5e7eb;
+    border-radius: 12px;
+    margin-bottom: 12px;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
+/* ---------- Section wizard (form builder & answer modal) ---------- */
+
+.section-progress-track {
+    height: 6px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.section-progress-fill {
+    height: 100%;
+    background: #2563eb;
+    border-radius: 999px;
+    transition: width .25s ease;
+}
+
+.section-indicator-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.section-indicator-pill {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #2563eb;
+    background: #eff6ff;
+    padding: 5px 12px;
+    border-radius: 999px;
+}
+
+.section-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 20px;
+    background: #fbfbfc;
+}
+
+.section-delete-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: auto;
+    margin-top: 0;
+    margin-left: auto;
+    border: none;
+    background: none;
+    color: #ef4444;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: .2s;
+    white-space: nowrap;
+}
+
+.section-delete-link:hover:not(:disabled) {
+    background: #fee2e2;
+}
+
+.section-delete-link:disabled {
+    color: #d1d5db;
+    cursor: not-allowed;
+    background: none;
+}
+
+.section-wizard-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 22px;
+}
+
+.wizard-nav-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+    margin-top: 0;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: .2s;
+    white-space: nowrap;
+    border: 1.5px solid #2563eb;
+    background: #fff;
+    color: #2563eb;
+}
+
+.wizard-nav-btn:hover:not(:disabled) {
+    background: #eff6ff;
+}
+
+.wizard-nav-btn.primary {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
+}
+
+.wizard-nav-btn.primary:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
+.wizard-nav-btn:disabled {
+    border-color: #e5e7eb;
+    color: #d1d5db;
+    background: #fff;
+    cursor: not-allowed;
+}
+
+.wizard-add-section {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+    margin-top: 0;
+    padding: 10px 16px;
+    border: 2px dashed #d1d5db;
+    border-radius: 8px;
+    background: #fff;
+    color: #2563eb;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: .2s;
+    white-space: nowrap;
+}
+
+.wizard-add-section:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+}
+
+/* ---------- Assigned Forms (student) ---------- */
+
+.assigned-forms-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+}
+
+.assigned-form-tile {
+    background: #fff;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    min-height: 160px;
+}
+
+.assigned-form-tile h3 {
+    margin: 4px 0 0;
+}
+
+.assigned-form-tile p {
+    color: #6b7280;
+    font-size: 13px;
+    flex-grow: 1;
+    margin: 0;
+}
+
+.assigned-form-tile .form-actions {
+    margin-top: 0;
+    width: 100%;
+    justify-content: flex-end;
+}
+
+/* ---------- Simple data table (submission history, etc.) ---------- */
+
+.simple-table-wrap {
+    max-height: 560px;
+    overflow-y: auto;
+    border-radius: 16px;
+}
+
+.simple-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 10px rgba(0,0,0,.08);
+}
+
+/* Column headers stay visible while scrolling a tall table, instead of
+   scrolling out of view along with the rows. */
+.simple-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.simple-table th,
+.simple-table td {
+    padding: 14px 18px;
+    text-align: left;
+    font-size: 14px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.simple-table th {
+    background: #f9fafb;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: #6b7280;
+}
+
+.simple-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.simple-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+/* ---------- Assign-to-student modal ---------- */
+
+.assign-select-all-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+}
+
+.assign-select-all-row .assign-student-row {
+    padding: 10px 12px 10px 0;
+}
+
+.assign-student-list {
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 6px;
+    margin-bottom: 16px;
+}
+
+.assign-student-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.assign-student-row:hover {
+    background: #f9fafb;
+}
+
+.assign-student-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.assign-student-row .hint {
+    margin: 0 0 0 auto;
+}
+
+/* ---------- Answer modal (student form fill-out) ---------- */
+
+.radio-option,
+.checkbox-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    font-size: 14px;
+    color: #374151;
+    cursor: pointer;
+}
+
+.radio-option input,
+.checkbox-option input {
+    width: 16px;
+    height: 16px;
+}
+
+.required-mark {
+    color: #ef4444;
+}
+
+/* =========================================================
+   Page load overlay
+   ========================================================= */
+
+.page-load-overlay {
+    position: absolute;
+    inset: 0;
+    background: #f3f4f6;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity .2s ease;
+}
+
+.page-load-overlay.hide {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.page-load-spinner {
+    width: 44px;
+    height: 44px;
+    border: 4px solid #dbeafe;
+    border-top-color: #2563eb;
+    border-radius: 50%;
+    animation: page-load-spin .7s linear infinite;
+}
+
+@keyframes page-load-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* =========================================================
+   Student Dashboard — stat cards & upcoming section
+   ========================================================= */
+
+.stat-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin: 25px 0;
+}
+
+.stat-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px;
+    margin-top: 0;
+    box-shadow: 0 4px 10px rgba(0,0,0,.06);
+    cursor: pointer;
+    transition: .2s;
+    text-align: left;
+    border: none;
+    width: 100%;
+    min-width: 0;
+    min-height: 150px;
+    overflow: hidden;
+    overflow-wrap: break-word;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0,0,0,.1);
+}
+
+.stat-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    gap: 10px;
+}
+
+.stat-card-label {
+    color: #6b7280;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.stat-card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #060015;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.stat-card-value {
+    font-size: 30px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 6px;
+}
+
+.stat-card-value.status-available {
+    color: #16a34a;
+    font-size: 22px;
+}
+
+.stat-card-value.status-unavailable {
+    color: #b91c1c;
+    font-size: 22px;
+}
+
+.stat-card-desc {
+    color: #9ca3af;
+    font-size: 13px;
+}
+
+@media (max-width: 1024px) {
+    .stat-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .stat-cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .stat-card {
+        min-height: 0;
+        padding: 16px;
+    }
+}
+
+@media (max-width: 420px) {
+    .stat-cards {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.upcoming-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 10px rgba(0,0,0,.06);
+}
+
+.upcoming-card h2 {
+    margin: 0 0 2px;
+    text-align: left;
+}
+
+.upcoming-subtitle {
+    color: #9ca3af;
+    font-size: 14px;
+    margin: 0 0 16px;
+}
+
+.upcoming-item {
+    background: #f3f4f6;
+    border-radius: 12px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.upcoming-item-body h3 {
+    margin: 0 0 4px;
+}
+
+.upcoming-item-body small {
+    color: #6b7280;
+    display: block;
+}
+
+.upcoming-item .badge {
+    flex-shrink: 0;
+}
+
+/* The shared .empty-state is centered by design for full-page/section
+   "nothing here yet" placeholders — but inside this card it sits next to
+   otherwise left-aligned text, so it reads as misaligned. Scope it back
+   to left just here rather than changing the shared class everywhere. */
+.upcoming-card .empty-state {
+    text-align: left;
+    padding: 12px 0;
+    background: none;
+    border: none;
+    box-shadow: none;
+}
+
+/* =========================================================
+   Student Appointments — counselor list & inline form
+   ========================================================= */
+
+.counselor-list-card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+    padding: 8px;
+}
+
+.counselor-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: .15s;
+}
+
+.counselor-row-main {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    text-align: left;
+}
+
+.counselor-list-card .empty-state {
+    text-align: left;
+    background: none;
+    border: none;
+    box-shadow: none;
+}
+
+.counselor-avatar {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #eef2ff;
+    color: #4338ca;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.counselor-row:hover {
+    background: #f9fafb;
+}
+
+.counselor-row.selected {
+    background: #eff6ff;
+    box-shadow: inset 0 0 0 1.5px #bfdbfe;
+}
+
+.counselor-row:not(:last-child) {
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.counselor-row h3 {
+    margin: 0 0 4px;
+}
+
+.counselor-row small {
+    color: #6b7280;
+}
+
+.appointment-form-card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+    padding: 24px;
+}
+
+.appt-form-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 14px;
+}
+
+.appt-form-row .form-field {
+    min-width: 0;
+}
+
+.form-note-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+    padding: 10px 14px;
+    background: #f0f6ff;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    color: #1e40af;
+    font-size: 12.5px;
+}
+
+.form-note-banner i {
+    color: #2563eb;
+}
+
+.appt-form-row select {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+/* =========================================================
+   Filter Tabs (History, etc.)
+   ========================================================= */
+
+.filter-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.filter-tabs button {
+    width: auto;
+    margin-top: 0;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: .15s;
+}
+
+.filter-tabs button:hover {
+    background: #f9fafb;
+}
+
+.filter-tabs button.active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+}
+
+/* =========================================================
+   Student Profile
+   ========================================================= */
+
+.profile-summary-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 10px rgba(0,0,0,.08);
+    padding: 36px 24px;
+    text-align: center;
+}
+
+.profile-avatar-wrap {
+    margin-bottom: 16px;
+}
+
+.profile-avatar {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #111827;
+    padding: 8px;
+}
+
+.profile-summary-card h2 {
+    margin: 0 0 4px;
+}
+
+.profile-meta {
+    color: #6b7280;
+    margin: 0 0 12px;
+}
+
+.profile-contact-rows {
+    margin: 24px auto 0;
+    text-align: left;
+    max-width: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.profile-contact-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.contact-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #f3f4f6;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.profile-edit-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 10px rgba(0,0,0,.08);
+    padding: 24px;
+}
+
+.info-edit-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 10px;
+}
+
+.form-field input:disabled {
+    background: #f3f4f6;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
+/* =========================================================
+   Notifications (bell, top-right of the main content header)
+   ========================================================= */
+
+.notif-wrap {
+    position: absolute;
+    top: 1.4rem;
+    right: 1.4rem;
+    z-index: 10;
+}
+
+.notif-bell {
+    /* Solid fill (not transparent) so it reads on both the dark
+       GreetingsCard gradient and the plain light page background used
+       by the pages that fall back to anchoring on main.content. */
+    position: relative;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #2563eb;
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 15px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    transition: .2s;
+    flex-shrink: 0;
+}
+
+.notif-bell:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+.notif-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: #dc2626;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+}
+
+.notif-badge[hidden] {
+    display: none;
+}
+
+.notif-dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 340px;
+    max-width: calc(100vw - 40px);
+    max-height: 440px;
+    background: #fff;
+    color: #111827;
+    border: 1px solid rgba(17,24,39,.06);
+    border-radius: 14px;
+    box-shadow: 0 20px 45px rgba(15,23,42,.18), 0 2px 8px rgba(15,23,42,.06);
+    z-index: 1500;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: notifDropdownIn .15s ease;
+}
+
+@keyframes notifDropdownIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.notif-dropdown[hidden] {
+    display: none;
+}
+
+.notif-dropdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px;
+    border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
+}
+
+.notif-dropdown-header h4 {
+    margin: 0;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.notif-filter-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 10px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
+}
+
+.notif-filter-tabs button {
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: .15s;
+}
+
+.notif-filter-tabs button:hover {
+    background: #f9fafb;
+}
+
+.notif-filter-tabs button.active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+}
+
+.notif-unread-count {
+    display: block;
+    margin-top: 2px;
+    font-size: 11.5px;
+    color: #6b7280;
+}
+
+.notif-mark-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    white-space: nowrap;
+}
+
+.notif-mark-all:hover {
+    color: #1d4ed8;
+    text-decoration: underline;
+}
+
+.notif-mark-all[hidden] {
+    display: none;
+}
+
+.notif-list {
+    /* flex:1 + min-height:0 makes THIS scroll internally when there are
+       many notifications, instead of the list's natural content height
+       pushing past .notif-dropdown's max-height and getting silently
+       clipped by its overflow:hidden (the default flex-item min-height
+       is "auto", i.e. "at least my content size", which would otherwise
+       override the intent of overflow-y here). */
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.notif-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    padding: 13px 16px;
+    border: none;
+    border-bottom: 1px solid #f3f4f6;
+    background: none;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background-color .15s;
+}
+
+.notif-item:last-child {
+    border-bottom: none;
+}
+
+.notif-item:hover {
+    background: #f9fafb;
+}
+
+.notif-item.unread {
+    background: #f5f9ff;
+}
+
+.notif-item.unread:hover {
+    background: #eaf2ff;
+}
+
+.notif-item-icon {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12.5px;
+    background: #eef1f5;
+    color: #64748b;
+}
+
+.notif-item-icon.type-appointment { background: #dbeafe; color: #1d4ed8; }
+.notif-item-icon.type-announcement { background: #fef3c7; color: #b45309; }
+.notif-item-icon.type-form { background: #dcfce7; color: #15803d; }
+
+.notif-item-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.notif-item-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.notif-item-title {
+    font-weight: 600;
+    font-size: 13px;
+    color: #111827;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.notif-item.read .notif-item-title {
+    font-weight: 500;
+    color: #4b5563;
+}
+
+.notif-item-dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    margin-top: 4px;
+    border-radius: 50%;
+    background: #2563eb;
+}
+
+.notif-item-message {
+    display: -webkit-box;
+    font-size: 12px;
+    line-height: 1.45;
+    color: #6b7280;
+    margin: 2px 0 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.notif-item.read .notif-item-message {
+    color: #9ca3af;
+}
+
+.notif-item-time {
+    display: block;
+    font-size: 11px;
+    color: #9ca3af;
+}
+
+.notif-empty {
+    padding: 44px 20px;
+    text-align: center;
+    color: #9ca3af;
+}
+
+.notif-empty i {
+    display: block;
+    font-size: 22px;
+    margin-bottom: 10px;
+    color: #cbd5e1;
+}
+
+.notif-empty p {
+    margin: 0;
+    font-size: 13px;
+}
+
+/* =========================================================
+   Cases — detail modal, timeline, session form
+   ========================================================= */
+
+.case-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px 20px;
+    margin-bottom: 18px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.case-meta-item label {
+    display: block;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: #9ca3af;
+    margin-bottom: 2px;
+}
+
+.case-meta-item div {
+    font-size: 14px;
+    color: #111827;
+}
+
+.status-select {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-size: 12.5px;
+    font-weight: 600;
+    background: #fff;
+    color: #374151;
+    cursor: pointer;
+}
+
+.case-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-height: 280px;
+    overflow-y: auto;
+    margin-bottom: 18px;
+}
+
+.case-timeline-item {
+    position: relative;
+    padding: 12px 14px 12px 18px;
+    border-left: 2px solid #e0e7ff;
+    background: #f8fafc;
+    border-radius: 0 10px 10px 0;
+}
+
+.case-timeline-item::before {
+    content: "";
+    position: absolute;
+    left: -5px;
+    top: 16px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4338ca;
+}
+
+.case-timeline-date {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #4338ca;
+    text-transform: uppercase;
+    letter-spacing: .02em;
+    margin-bottom: 4px;
+}
+
+.case-timeline-row {
+    font-size: 13px;
+    color: #374151;
+    margin-bottom: 2px;
+}
+
+.case-timeline-row strong {
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.case-attachments-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.attachment-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.attachment-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid #dbeafe;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: .15s;
+}
+
+.attachment-chip:hover {
+    background: #dbeafe;
+}
+
+.case-session-form {
+    padding-top: 16px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.case-session-form .builder-section-label {
+    margin-bottom: 10px;
+}
+
+/* =========================================================
+   Reports
+   ========================================================= */
+
+.report-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 18px;
+}
+
+/* Fixed 2x2 for the 4 report types, instead of auto-fill's variable
+   1/2/3-per-row flow depending on container width. */
+.reports-grid-2x2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+@media (max-width: 480px) {
+    .reports-grid-2x2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Student detail modal's 3-stat row — was a hardcoded inline
+   repeat(3,1fr) that ignored the modal's narrow width on phones. */
+.student-detail-stats {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 480px) {
+    .student-detail-stats {
+        grid-template-columns: 1fr;
+    }
+}
+
+.report-card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.report-card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: #eef2ff;
+    color: #4338ca;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.report-card h3 {
+    margin: 0;
+}
+
+.report-card p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 13px;
+    flex: 1;
+}
+
+/* =========================================================
+   Forms — library card grid
+   ========================================================= */
+
+.library-panel {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+    padding: 20px;
+}
+
+.library-panel .empty-state {
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 24px 0;
+}
+
+.form-library-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 18px;
+}
+
+.form-library-card {
+    /* Flat, not shadowed — these live inside .library-panel, which already
+       carries the border/shadow, so a second one here would look like a
+       card nested inside a card. */
+    background: #f9fafb;
+    border-radius: 12px;
+    border: 1px solid #f1f5f9;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.form-library-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #eef2ff;
+    color: #4338ca;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+}
+
+.form-library-card h3 {
+    margin: 0;
+}
+
+.form-library-card p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 13px;
+    flex: 1;
+}
+
+.form-library-meta {
+    color: #9ca3af;
+    font-size: 12px;
+}
+
+.form-library-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+/* =========================================================
+   Account — upload dropzone, staff creation
+   ========================================================= */
+
+.upload-dropzone {
+    position: relative;
+    border: 2px dashed #d1d5db;
+    border-radius: 16px;
+    background: #f9fafb;
+    padding: 40px 20px;
+    text-align: center;
+    transition: .15s;
+}
+
+.upload-dropzone.dragover {
+    border-color: #2563eb;
+    background: #eff6ff;
+}
+
+.upload-dropzone-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: #9ca3af;
+    margin: 0 auto 14px;
+}
+
+.upload-dropzone h3 {
+    margin: 0 0 6px;
+}
+
+.upload-dropzone p {
+    margin: 0 0 16px;
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.account-form-card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+    padding: 24px;
+}
+
+.account-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+@media (max-width: 640px) {
+    .case-meta-grid,
+    .account-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* =========================================================
+   Toast stack + confirm modal
+   ========================================================= */
+
+.toast-stack {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 4000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 360px;
+    pointer-events: none;
+}
+
+.toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: #111827;
+    color: #fff;
+    padding: 12px 16px;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0,0,0,.25);
+    font-size: 13.5px;
+    line-height: 1.4;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateX(24px);
+    transition: opacity .2s ease, transform .2s ease;
+    pointer-events: auto;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.toast i {
+    margin-top: 1px;
+    flex-shrink: 0;
+}
+
+.toast-success { background: #15803d; }
+.toast-error { background: #b91c1c; }
+.toast-info { background: #1d4ed8; }
+
+.confirm-modal-box {
+    max-width: 380px;
+}
+
+.confirm-modal-box .modal-content-text {
+    margin: 0;
+}
+
+@media (max-width: 480px) {
+    .toast-stack {
+        left: 12px;
+        right: 12px;
+        top: 12px;
+        max-width: none;
+    }
+}
+
+/* =========================================================
+   Form submission viewer (counselor read-only answers)
+   ========================================================= */
+
+.submission-section {
+    padding-bottom: 18px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.submission-section:last-child {
+    padding-bottom: 0;
+    margin-bottom: 0;
+    border-bottom: none;
+}
+
+.submission-section h4 {
+    margin: 0 0 4px;
+}
+
+.submission-section-desc {
+    margin: 0 0 12px;
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.submission-question {
+    margin-top: 12px;
+}
+
+.submission-question-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+.submission-question-answer {
+    font-size: 14px;
+    color: #111827;
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 10px 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.submission-answer-empty {
+    color: #9ca3af;
+    font-style: italic;
+}
+
+

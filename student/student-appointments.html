@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointments</title>
+      <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+      <!-- Sidebar -->
+    <aside class="sidebar">
+
+        <header class="profile">
+
+            <img src="../images/COLM LOGO.png" alt="Student Profile">
+
+            <div class="info">
+                <h4 id="sidebarName"></h4>
+                <p>Student</p>
+
+            </div>
+
+        </header>
+
+
+   <hr>
+
+        <nav aria-label="Student Navigation">
+
+            <ul>
+
+                <li>
+            <a href="student-dashboard.html">
+              <i class="fa-solid fa-house"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="student-announcements.html">
+                        <i class="fa-solid fa-bullhorn"></i>
+                        <span>Announcements</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="student-appointments.html">
+                        <i class="fa-solid fa-calendar"></i>
+                        <span>Appointments</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="student-forms.html">
+                        <i class="fa-solid fa-book"></i>
+                        <span>Forms &amp; Interventions</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="student-history.html">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>History</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="student-profile.html">
+                        <i class="fa-solid fa-user"></i>
+                        <span>Profile</span>
+                    </a>
+                </li>
+                <li class="desktop-only">
+                    <button type="button" id="logoutBtn" title="Log Out">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Log Out</span>
+                    </button>
+                </li>
+
+                <li class="hamburger">
+                    <button type="button" onclick="toggleMenu()">
+                        <i class="fa-solid fa-bars"></i>
+                        <span>More</span>
+                    </button>
+                </li>
+
+            </ul>
+
+        </nav>
+
+    </aside>
+
+     <nav class="mobile-menu" id="mobileMenu" aria-label="More Navigation">
+
+        <a href="student-forms.html"><i class="fa-solid fa-book"></i> Forms &amp; Interventions</a>
+
+        <a href="student-history.html"><i class="fa-solid fa-clock-rotate-left"></i> History</a>
+
+        <a href="student-profile.html"><i class="fa-solid fa-user"></i> Profile</a>
+
+        <a href="#" id="mobileLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
+
+    </nav>
+
+  <main class="content">
+
+ <header class="GreetingsCard">
+            <h1>Appointments</h1>
+                <p>Manage your upcoming appointments and schedule new ones.</p>
+        </header>
+
+        <div class="section-title">
+            <h2>Guidance Counselors</h2>
+        </div>
+        <div class="counselor-list-card" id="counselorListCard">
+            <div class="empty-state">Loading…</div>
+        </div>
+
+        <div class="section-title" style="margin-top:30px;">
+            <h2>Appointment Form</h2>
+        </div>
+        <div class="appointment-form-card">
+            <form id="appointmentForm">
+                <div class="form-field">
+                    <label for="apptConcernInput">Concern</label>
+                    <textarea id="apptConcernInput" rows="4" required placeholder="Briefly describe what you'd like to talk about"></textarea>
+                </div>
+                <div class="appt-form-row">
+                    <div class="form-field field-counselor">
+                        <label for="counselorSelect">Counselor</label>
+                        <select id="counselorSelect" required></select>
+                    </div>
+                    <div class="form-field field-date">
+                        <label for="apptDateInput">Date</label>
+                        <input type="date" id="apptDateInput" required>
+                    </div>
+                    <div class="form-field field-time">
+                        <label for="apptTimeInput">Time</label>
+                        <input type="time" id="apptTimeInput" min="08:00" max="17:00" required>
+                    </div>
+                </div>
+                <div class="form-note-banner"><i class="fa-regular fa-clock"></i> Guidance office hours: Monday–Saturday, 8:00 AM–5:00 PM.</div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="apptSaveBtn">Submit Request</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="section-title" style="margin-top:30px;">
+            <h2>My Appointments</h2>
+            <select id="appointmentsFilterSelect" class="table-search" style="width:auto;">
+                <option value="all">All</option>
+                <option value="pending" selected>Pending</option>
+                <option value="approved">Approved</option>
+                <option value="completed">Completed</option>
+                <option value="missed">Missed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="declined">Declined</option>
+                <option value="rescheduled">Rescheduled</option>
+            </select>
+        </div>
+
+        <div class="simple-table-wrap">
+            <table class="simple-table student-appointments-table">
+                <thead>
+                    <tr>
+                        <th>Counselor</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Concern</th>
+                        <th>Note</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="appointmentsList"></tbody>
+            </table>
+        </div>
+
+</main>
+
+    <div class="modal-overlay" id="apptDetailModalOverlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Appointment Details</h3>
+                <button type="button" class="modal-close" id="apptDetailCloseBtn" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="case-meta-grid">
+                    <div class="case-meta-item">
+                        <label>Counselor</label>
+                        <div id="apptDetailCounselor">—</div>
+                    </div>
+                    <div class="case-meta-item">
+                        <label>Status</label>
+                        <div id="apptDetailStatus">—</div>
+                    </div>
+                    <div class="case-meta-item">
+                        <label>Date</label>
+                        <div id="apptDetailDate">—</div>
+                    </div>
+                    <div class="case-meta-item">
+                        <label>Time</label>
+                        <div id="apptDetailTime">—</div>
+                    </div>
+                    <div class="case-meta-item" style="grid-column: 1 / -1;">
+                        <label>Concern</label>
+                        <div id="apptDetailConcern">—</div>
+                    </div>
+                    <div class="case-meta-item" style="grid-column: 1 / -1;" id="apptDetailNoteWrap">
+                        <label>Note from your counselor</label>
+                        <div id="apptDetailNote">—</div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-danger" id="apptDetailCancelBtn">Cancel Appointment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+      <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/supabaseClient.js"></script>
+  <script src="../js/student-common.js"></script>
+  <script>
+    let currentStudent = null;
+    let allCounselors = [];
+    let allAppointments = [];
+    let activeAppointmentsFilter = "pending";
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str ?? "";
+      return div.innerHTML;
+    }
+
+    function pad(n) {
+      return String(n).padStart(2, "0");
+    }
+
+    function todayStr() {
+      const t = new Date();
+      return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
+    }
+
+    function isSunday(dateStr) {
+      const [y, m, d] = dateStr.split("-").map(Number);
+      return new Date(y, m - 1, d).getDay() === 0;
+    }
+
+    function formatDate(dateStr) {
+      const [y, m, d] = dateStr.split("-").map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    }
+
+    function formatTime(timeStr) {
+      if (!timeStr) return "";
+      const [h, m] = timeStr.split(":").map(Number);
+      const period = h >= 12 ? "PM" : "AM";
+      const h12 = h % 12 === 0 ? 12 : h % 12;
+      return `${h12}:${pad(m)} ${period}`;
+    }
+
+    function capitalize(str) {
+      return str ? str.charAt(0).toUpperCase() + str.slice(1) : "";
+    }
+
+    function badgeClass(status) {
+      if (status === "declined") return "cancelled";
+      if (status === "completed") return "info";
+      if (status === "missed") return "missed";
+      return status;
+    }
+
+    function initials(name) {
+      return (name || "")
+        .split(" ")
+        .filter(Boolean)
+        .map((p) => p[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase();
+    }
+
+    function highlightSelectedCounselor() {
+      const selectedId = document.getElementById("counselorSelect").value;
+      document.querySelectorAll(".counselor-row").forEach((row) => {
+        row.classList.toggle("selected", row.dataset.counselorId === selectedId);
+      });
+    }
+
+    async function loadCounselors() {
+      const select = document.getElementById("counselorSelect");
+      const listCard = document.getElementById("counselorListCard");
+
+      const { data, error } = await supabaseClient
+        .from("counselors")
+        .select("counselor_id, first_name, last_name, availability_status, work_days, user_id")
+        .order("first_name", { ascending: true });
+
+      if (error) {
+        console.error(error);
+        listCard.innerHTML = `<div class="empty-state">Couldn't load counselors.</div>`;
+        return;
+      }
+
+      const counselors = data || [];
+      allCounselors = counselors;
+
+      select.innerHTML = counselors
+        .map(
+          (c) =>
+            `<option value="${c.counselor_id}">${escapeHtml(c.first_name)} ${escapeHtml(c.last_name)}${
+              c.availability_status && c.availability_status !== "available" ? ` (${escapeHtml(c.availability_status)})` : ""
+            }</option>`
+        )
+        .join("");
+
+      if (counselors.length === 0) {
+        listCard.innerHTML = `<div class="empty-state">No counselors found.</div>`;
+        return;
+      }
+
+      listCard.innerHTML = counselors
+        .map((c) => {
+          const available = (c.availability_status || "available").toLowerCase() === "available";
+          const name = `${c.first_name} ${c.last_name}`;
+          return `
+            <div class="counselor-row" data-counselor-id="${c.counselor_id}">
+              <div class="counselor-row-main">
+                <div class="counselor-avatar">${escapeHtml(initials(name))}</div>
+                <div>
+                  <h3>${escapeHtml(name)}</h3>
+                  <small>${escapeHtml(c.work_days || "Mon-Sat")} · 8:00 AM - 5:00 PM</small>
+                </div>
+              </div>
+              <span class="badge ${available ? "badge-approved" : "badge-cancelled"}">${available ? "Available" : "Unavailable"}</span>
+            </div>
+          `;
+        })
+        .join("");
+
+      listCard.querySelectorAll(".counselor-row").forEach((row) => {
+        row.addEventListener("click", () => {
+          select.value = row.dataset.counselorId;
+          highlightSelectedCounselor();
+        });
+      });
+
+      select.addEventListener("change", highlightSelectedCounselor);
+      highlightSelectedCounselor();
+    }
+
+    function appointmentRowHtml(a) {
+      const counselorName = a.counselors ? `${a.counselors.first_name} ${a.counselors.last_name}` : "Unassigned";
+
+      return `
+        <tr data-id="${a.appointment_id}">
+          <td>${escapeHtml(counselorName)}</td>
+          <td>${formatDate(a.appointment_date)}</td>
+          <td>${formatTime(a.appointment_time)}</td>
+          <td class="col-concern">${escapeHtml(a.concern || "—")}</td>
+          <td class="col-concern">${a.counselor_note ? escapeHtml(a.counselor_note) : "—"}</td>
+          <td><span class="badge badge-${badgeClass(a.status)}">${capitalize(a.status)}</span></td>
+          <td><button type="button" class="icon-btn sm" data-action="view" title="View details"><i class="fa-solid fa-eye"></i></button></td>
+        </tr>
+      `;
+    }
+
+    function renderAppointmentsList(appointments) {
+      const list = document.getElementById("appointmentsList");
+
+      if (!appointments.length) {
+        list.innerHTML =
+          activeAppointmentsFilter === "all"
+            ? `<tr class="table-empty"><td colspan="7">No appointments yet. Use the form above to request one.</td></tr>`
+            : `<tr class="table-empty"><td colspan="7">No ${activeAppointmentsFilter} appointments.</td></tr>`;
+        return;
+      }
+
+      list.innerHTML = appointments.map(appointmentRowHtml).join("");
+
+      list.querySelectorAll("tr[data-id]").forEach((row) => {
+        const a = appointments.find((x) => x.appointment_id === Number(row.dataset.id));
+        row.querySelector('[data-action="view"]')?.addEventListener("click", () => openAppointmentDetail(a));
+      });
+    }
+
+    let currentDetailAppointment = null;
+
+    function openAppointmentDetail(a) {
+      currentDetailAppointment = a;
+      const counselorName = a.counselors ? `${a.counselors.first_name} ${a.counselors.last_name}` : "Unassigned";
+
+      document.getElementById("apptDetailCounselor").textContent = counselorName;
+      document.getElementById("apptDetailStatus").innerHTML = `<span class="badge badge-${badgeClass(a.status)}">${capitalize(a.status)}</span>`;
+      document.getElementById("apptDetailDate").textContent = formatDate(a.appointment_date);
+      document.getElementById("apptDetailTime").textContent = formatTime(a.appointment_time);
+      document.getElementById("apptDetailConcern").textContent = a.concern || "—";
+
+      const noteWrap = document.getElementById("apptDetailNoteWrap");
+      noteWrap.style.display = a.counselor_note ? "" : "none";
+      document.getElementById("apptDetailNote").textContent = a.counselor_note || "—";
+
+      // Withdrawing an unconfirmed request is fine, but once a session is
+      // approved it's scheduled — the client's rule is that a scheduled
+      // session is never cancelled outright, only rescheduled by the
+      // counselor (see counselor-appointments.html's Reschedule/Missed
+      // actions). A student who needs to change an approved session should
+      // reach out to the counselor rather than self-cancel it.
+      document.getElementById("apptDetailCancelBtn").style.display = a.status === "pending" ? "" : "none";
+
+      document.getElementById("apptDetailModalOverlay").classList.add("show");
+    }
+
+    document.getElementById("apptDetailCloseBtn").addEventListener("click", () => {
+      document.getElementById("apptDetailModalOverlay").classList.remove("show");
+    });
+    document.getElementById("apptDetailModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "apptDetailModalOverlay") {
+        document.getElementById("apptDetailModalOverlay").classList.remove("show");
+      }
+    });
+    document.getElementById("apptDetailCancelBtn").addEventListener("click", async () => {
+      if (!currentDetailAppointment) return;
+      await cancelAppointment(currentDetailAppointment);
+      document.getElementById("apptDetailModalOverlay").classList.remove("show");
+    });
+
+    function applyAppointmentsFilter() {
+      const filtered =
+        activeAppointmentsFilter === "all"
+          ? allAppointments
+          : allAppointments.filter((a) => a.status === activeAppointmentsFilter);
+      renderAppointmentsList(filtered);
+    }
+
+    document.getElementById("appointmentsFilterSelect").addEventListener("change", (e) => {
+      activeAppointmentsFilter = e.target.value;
+      applyAppointmentsFilter();
+    });
+
+    async function loadAppointments() {
+      const list = document.getElementById("appointmentsList");
+      list.innerHTML = `<div class="empty-state">Loading…</div>`;
+
+      const { data, error } = await supabaseClient
+        .from("appointments")
+        .select(
+          "appointment_id, concern, appointment_date, appointment_time, status, counselor_note, counselors(first_name, last_name, user_id)"
+        )
+        .eq("student_id", currentStudent.student_id)
+        .order("appointment_date", { ascending: false })
+        .order("appointment_time", { ascending: false });
+
+      if (error) {
+        list.innerHTML = `<div class="empty-state">Couldn't load appointments.</div>`;
+        console.error(error);
+        return;
+      }
+
+      allAppointments = data || [];
+      applyAppointmentsFilter();
+    }
+
+    async function cancelAppointment(a) {
+      const ok = await confirmDialog("Cancel this appointment request?", { confirmLabel: "Cancel Request", danger: true });
+      if (!ok) return;
+
+      const { error } = await supabaseClient
+        .from("appointments")
+        .update({ status: "cancelled" })
+        .eq("appointment_id", a.appointment_id);
+
+      if (error) {
+        showToast("Couldn't cancel appointment: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      if (a.counselors?.user_id) {
+        await supabaseClient.from("notifications").insert({
+          recipient_user_id: a.counselors.user_id,
+          type: "appointment",
+          title: "Appointment cancelled",
+          message: a.concern || "A student cancelled their appointment request.",
+          link: "counselor-appointments.html",
+        });
+      }
+
+      await loadAppointments();
+    }
+
+    document.getElementById("apptDateInput").addEventListener("change", (e) => {
+      if (e.target.value && isSunday(e.target.value)) {
+        showToast("Guidance is closed on Sundays. Please choose a date from Monday to Saturday.", "error");
+        e.target.value = "";
+      }
+    });
+
+    document.getElementById("appointmentForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const appointmentDate = document.getElementById("apptDateInput").value;
+      const appointmentTime = document.getElementById("apptTimeInput").value;
+
+      if (isSunday(appointmentDate)) {
+        showToast("Guidance is closed on Sundays. Please choose a date from Monday to Saturday.", "error");
+        return;
+      }
+      if (appointmentTime < "08:00" || appointmentTime > "17:00") {
+        showToast("Guidance office hours are 8:00 AM–5:00 PM. Please choose a time within that range.", "error");
+        return;
+      }
+
+      const payload = {
+        student_id: currentStudent.student_id,
+        counselor_id: Number(document.getElementById("counselorSelect").value),
+        appointment_date: appointmentDate,
+        appointment_time: appointmentTime,
+        concern: document.getElementById("apptConcernInput").value.trim(),
+        school_year: defaultSchoolYear(),
+      };
+
+      // Two students booking the same counselor's slot happens often enough
+      // that it needs a check up front, not just a database error after
+      // the fact — a database-level unique index (see
+      // migrations/appointments_no_double_booking.sql) still catches the
+      // rare case where two requests race each other past this check.
+      const { data: clashing, error: clashError } = await supabaseClient
+        .from("appointments")
+        .select("appointment_id")
+        .eq("counselor_id", payload.counselor_id)
+        .eq("appointment_date", payload.appointment_date)
+        .eq("appointment_time", payload.appointment_time)
+        .not("status", "in", "(cancelled,declined)")
+        .limit(1);
+
+      if (clashError) {
+        showToast("Couldn't check that time slot: " + clashError.message, "error");
+        console.error(clashError);
+        return;
+      }
+      if (clashing && clashing.length) {
+        showToast("That time slot is already booked with this counselor — please choose another.", "error");
+        return;
+      }
+
+      const selectedCounselor = allCounselors.find((c) => c.counselor_id === payload.counselor_id);
+      const isAvailable = !selectedCounselor || (selectedCounselor.availability_status || "available").toLowerCase() === "available";
+      if (!isAvailable) {
+        const proceed = await confirmDialog(
+          "This counselor is currently marked unavailable — your request may take longer to be reviewed. Submit anyway?",
+          { confirmLabel: "Submit Anyway" }
+        );
+        if (!proceed) return;
+      }
+
+      const saveBtn = document.getElementById("apptSaveBtn");
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Submitting…";
+
+      const { error } = await supabaseClient.from("appointments").insert(payload);
+
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Submit Request";
+
+      if (error) {
+        const message =
+          error.code === "23505"
+            ? "That time slot was just booked by someone else — please choose another."
+            : "Couldn't request appointment: " + error.message;
+        showToast(message, "error");
+        console.error(error);
+        return;
+      }
+
+      if (selectedCounselor?.user_id) {
+        await supabaseClient.from("notifications").insert({
+          recipient_user_id: selectedCounselor.user_id,
+          type: "appointment",
+          title: "New appointment request",
+          message: payload.concern || "A student requested a guidance appointment.",
+          link: "counselor-appointments.html",
+        });
+      }
+
+      document.getElementById("appointmentForm").reset();
+      showToast("Appointment request submitted.", "success");
+      await loadAppointments();
+    });
+
+    window.addEventListener("app:notification", (e) => {
+      if (e.detail?.type === "appointment") loadAppointments();
+    });
+
+    (async () => {
+      const result = await requireStudentAuth();
+      if (!result) return;
+
+      currentStudent = result.student;
+      document.getElementById("apptDateInput").min = todayStr();
+      await Promise.all([loadCounselors(), loadAppointments()]);
+      hidePageLoadOverlay();
+    })();
+  </script>
+</body>
+</html>

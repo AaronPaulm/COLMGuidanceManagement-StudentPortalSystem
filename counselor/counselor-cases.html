@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cases</title>
+      <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+      <!-- Sidebar -->
+    <aside class="sidebar">
+
+        <header class="profile">
+
+            <img src="../images/COLM LOGO.png" alt="Counselor Profile">
+
+            <div class="info">
+                <h4 id="sidebarName"></h4>
+                <p>Counselor</p>
+
+            </div>
+
+        </header>
+
+
+   <hr>
+
+        <nav aria-label="Counselor Navigation">
+
+            <ul>
+
+                <li>
+            <a href="counselor-dashboard.html">
+              <i class="fa-solid fa-house"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="counselor-student.html">
+                        <i class="fa-solid fa-user-graduate"></i>
+                        <span>Students</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="counselor-announcements.html">
+                        <i class="fa-solid fa-bullhorn"></i>
+                        <span>Announcements</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-appointments.html">
+                        <i class="fa-solid fa-calendar"></i>
+                        <span>Appointments</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-cases.html">
+                        <i class="fa-solid fa-folder-open"></i>
+                        <span>Cases</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-forms.html">
+                        <i class="fa-solid fa-book"></i>
+                        <span>Forms &amp; Interventions</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-reports.html">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>Reports</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-account.html">
+                        <i class="fa-solid fa-user"></i>
+                        <span>Account</span>
+                    </a>
+                </li>
+                <li class="desktop-only">
+                    <button type="button" id="logoutBtn" title="Log Out">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Log Out</span>
+                    </button>
+                </li>
+
+                <li class="hamburger">
+                    <button type="button" onclick="toggleMenu()">
+                        <i class="fa-solid fa-bars"></i>
+                        <span>More</span>
+                    </button>
+                </li>
+
+            </ul>
+
+        </nav>
+
+    </aside>
+
+     <nav class="mobile-menu" id="mobileMenu" aria-label="More Navigation">
+
+        <a href="counselor-appointments.html"><i class="fa-solid fa-calendar"></i> Appointments</a>
+
+        <a href="counselor-cases.html"><i class="fa-solid fa-folder-open"></i> Cases</a>
+
+        <a href="counselor-forms.html"><i class="fa-solid fa-book"></i> Forms &amp; Interventions</a>
+
+        <a href="counselor-reports.html"><i class="fa-solid fa-chart-line"></i> Reports</a>
+
+        <a href="counselor-account.html"><i class="fa-solid fa-user"></i> Account</a>
+
+        <a href="#" id="mobileLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
+
+    </nav>
+
+  <main class="content">
+
+        <header class="GreetingsCard">
+            <h1>Incident &amp; Case Tracking</h1>
+            <p>Record incidents, assign actions, and track case progress.</p>
+        </header>
+
+        <div class="section-title" style="margin-top:30px;">
+            <h2>Cases</h2>
+            <div class="filter-tabs" id="casesFilterTabs">
+                <button type="button" class="active" data-filter="all">All</button>
+                <button type="button" data-filter="open">Open</button>
+                <button type="button" data-filter="monitoring">Monitoring</button>
+                <button type="button" data-filter="resolved">Resolved</button>
+            </div>
+        </div>
+
+        <div class="toolbar-row">
+            <input type="text" id="casesStudentSearch" class="table-search" placeholder="Search by student name...">
+            <select id="casesSchoolYearFilter" class="table-search" style="width:auto;">
+                <option value="all">All school years</option>
+            </select>
+            <button type="button" class="icon-btn sm primary" id="newCaseBtn" title="New Case">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </div>
+
+        <div class="simple-table-wrap">
+            <table class="simple-table cases-table">
+                <thead>
+                    <tr>
+                        <th>File #</th>
+                        <th>Student</th>
+                        <th>Nature of Incident</th>
+                        <th>Status</th>
+                        <th>Sessions</th>
+                        <th>Last Updated</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="casesList"></tbody>
+            </table>
+        </div>
+
+    </main>
+
+    <!-- New Case Modal -->
+    <div class="modal-overlay" id="newCaseModalOverlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>New Case</h3>
+                <button type="button" class="modal-close" id="newCaseModalCloseBtn" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="newCaseForm">
+                    <div class="form-field">
+                        <label for="caseStudentSelect">Student</label>
+                        <select id="caseStudentSelect" required></select>
+                    </div>
+                    <div class="form-field" style="margin-top:14px;">
+                        <label for="caseNatureInput">Nature of Incident</label>
+                        <input type="text" id="caseNatureInput" required maxlength="150" placeholder="e.g. Repeated tardiness">
+                    </div>
+
+                    <div class="builder-section-label">First Session</div>
+
+                    <div class="form-field">
+                        <label for="caseActionInput">Action Taken</label>
+                        <textarea id="caseActionInput" rows="2"></textarea>
+                    </div>
+                    <div class="form-field" style="margin-top:14px;">
+                        <label for="caseNoteInput">Session Note</label>
+                        <textarea id="caseNoteInput" rows="2"></textarea>
+                    </div>
+                    <div class="form-field" style="margin-top:14px;">
+                        <label for="caseRecommendationInput">Recommendation</label>
+                        <textarea id="caseRecommendationInput" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="newCaseSaveBtn">Create Case</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Case Detail Modal -->
+    <div class="modal-overlay" id="caseDetailModalOverlay">
+        <div class="modal-box wide">
+            <div class="modal-header">
+                <h3 id="caseDetailTitle">Case</h3>
+                <button type="button" class="modal-close" id="caseDetailCloseBtn" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="case-meta-grid">
+                    <div class="case-meta-item">
+                        <label>File #</label>
+                        <div id="caseDetailFileNumber">—</div>
+                    </div>
+                    <div class="case-meta-item">
+                        <label>Student</label>
+                        <div id="caseDetailStudent">—</div>
+                    </div>
+                    <div class="case-meta-item">
+                        <label>Section</label>
+                        <div id="caseDetailSection">—</div>
+                    </div>
+                    <div class="case-meta-item">
+                        <label>Status</label>
+                        <div>
+                            <select class="status-select" id="caseStatusSelect">
+                                <option value="open">Open</option>
+                                <option value="monitoring">Monitoring</option>
+                                <option value="resolved">Resolved</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="case-meta-item">
+                        <label>Nature of Incident</label>
+                        <div id="caseDetailNature">—</div>
+                    </div>
+                    <div class="case-meta-item">
+                        <label>Opened</label>
+                        <div id="caseDetailOpened">—</div>
+                    </div>
+                    <div class="case-meta-item">
+                        <label>School Year</label>
+                        <div id="caseDetailSchoolYear">—</div>
+                    </div>
+                    <div class="case-meta-item">
+                        <label>Days Open</label>
+                        <div id="caseDetailDaysOpen">—</div>
+                    </div>
+                </div>
+
+                <div class="builder-section-label" style="margin-top:0;">Interventions</div>
+                <span class="hint" style="display:block; margin-bottom:8px;">Visible to the student until you remove access — no need to delete it once they've improved.</span>
+                <div class="case-timeline" id="caseInterventionsList"></div>
+
+                <div class="case-session-form">
+                    <div class="builder-section-label">Add Intervention</div>
+                    <form id="addInterventionForm">
+                        <div class="form-field">
+                            <label for="interventionTemplateSelect">Intervention</label>
+                            <select id="interventionTemplateSelect" required>
+                                <option value="">— Select a template —</option>
+                            </select>
+                            <span class="hint">Manage available templates in the Intervention Library (Forms &amp; Interventions page).</span>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" id="addInterventionBtn">Assign Intervention</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="builder-section-label">Session Timeline</div>
+                <div class="case-timeline" id="caseTimeline"></div>
+
+                <div class="case-session-form">
+                    <div class="builder-section-label">Add Session</div>
+                    <form id="addSessionForm">
+                        <div class="form-field">
+                            <label for="sessionActionInput">Action Taken</label>
+                            <textarea id="sessionActionInput" rows="2"></textarea>
+                        </div>
+                        <div class="form-field" style="margin-top:14px;">
+                            <label for="sessionNoteInput">Session Note</label>
+                            <textarea id="sessionNoteInput" rows="2"></textarea>
+                        </div>
+                        <div class="form-field" style="margin-top:14px;">
+                            <label for="sessionRecommendationInput">Recommendation</label>
+                            <textarea id="sessionRecommendationInput" rows="2"></textarea>
+                        </div>
+                        <div class="form-field" style="margin-top:14px;">
+                            <label for="sessionProofInput">Proof / Evidence (optional)</label>
+                            <input type="file" id="sessionProofInput" multiple accept="image/*,.pdf,.doc,.docx">
+                            <span class="hint">Photos or documents — up to 10MB each.</span>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" id="addSessionBtn">Add Session</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/supabaseClient.js"></script>
+  <script src="../js/counselor-common.js"></script>
+  <script>
+    let currentCounselor = null;
+    let allCasesById = {};
+    let allCases = [];
+    let activeCasesFilter = "all";
+    let activeSchoolYearFilter = "";
+    let currentCaseId = null;
+    let allInterventionTemplates = [];
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str ?? "";
+      return div.innerHTML;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return "—";
+      return new Date(dateStr).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    }
+
+    function capitalize(str) {
+      return str ? str.charAt(0).toUpperCase() + str.slice(1) : "";
+    }
+
+    function statusBadgeClass(status) {
+      if (status === "resolved") return "approved";
+      if (status === "monitoring") return "info";
+      return "pending";
+    }
+
+    function studentName(c) {
+      return c.students ? `${c.students.first_name} ${c.students.last_name}` : "Unknown student";
+    }
+
+    async function loadStudentsForSelect() {
+      const select = document.getElementById("caseStudentSelect");
+      const { data, error } = await supabaseClient
+        .from("students")
+        .select("student_id, first_name, last_name, student_number")
+        .eq("is_archived", false)
+        .order("first_name", { ascending: true });
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      select.innerHTML = (data || [])
+        .map(
+          (s) =>
+            `<option value="${s.student_id}">${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}${
+              s.student_number ? ` (${escapeHtml(s.student_number)})` : ""
+            }</option>`
+        )
+        .join("");
+    }
+
+    async function loadInterventionTemplates() {
+      const { data, error } = await supabaseClient
+        .from("intervention_templates")
+        .select("intervention_template_id, title, file_path, file_name")
+        .eq("counselor_id", currentCounselor.counselor_id)
+        .order("title", { ascending: true });
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      allInterventionTemplates = data || [];
+
+      const select = document.getElementById("interventionTemplateSelect");
+      select.innerHTML =
+        `<option value="">— Select a template —</option>` +
+        allInterventionTemplates
+          .map((t) => `<option value="${t.intervention_template_id}">${escapeHtml(t.title)}</option>`)
+          .join("");
+    }
+
+    function caseRowHtml(c) {
+      const sessions = c.case_sessions || [];
+      const lastUpdated = sessions.length
+        ? sessions.reduce((latest, s) => (s.created_at > latest ? s.created_at : latest), c.created_at)
+        : c.created_at;
+
+      return `
+        <tr data-id="${c.case_id}">
+          <td class="mono-cell">${escapeHtml(c.file_number || "—")}</td>
+          <td>${escapeHtml(studentName(c))}</td>
+          <td>${escapeHtml(c.nature_of_incident)}</td>
+          <td><span class="badge badge-${statusBadgeClass(c.status)}">${capitalize(c.status)}</span></td>
+          <td>${sessions.length}</td>
+          <td>${formatDate(lastUpdated)}</td>
+          <td><button type="button" class="icon-btn sm" data-action="view" title="View case"><i class="fa-solid fa-eye"></i></button></td>
+        </tr>
+      `;
+    }
+
+    function renderCasesTable(cases) {
+      const list = document.getElementById("casesList");
+
+      list.innerHTML = cases.length
+        ? cases.map(caseRowHtml).join("")
+        : `<tr class="table-empty"><td colspan="7">No cases found.</td></tr>`;
+
+      list.querySelectorAll("tr[data-id]").forEach((row) => {
+        row.querySelector('[data-action="view"]')?.addEventListener("click", () => openCaseDetail(Number(row.dataset.id)));
+      });
+    }
+
+    function applyCasesFilter() {
+      // Status, school year, and student search all combine — each one
+      // narrows the same list further, not either/or.
+      let filtered = activeCasesFilter === "all" ? allCases : allCases.filter((c) => c.status === activeCasesFilter);
+
+      if (activeSchoolYearFilter !== "all") {
+        filtered = filtered.filter((c) => c.school_year === activeSchoolYearFilter);
+      }
+
+      const query = document.getElementById("casesStudentSearch").value.trim().toLowerCase();
+      if (query) {
+        filtered = filtered.filter((c) => studentName(c).toLowerCase().includes(query));
+      }
+
+      renderCasesTable(filtered);
+    }
+
+    document.getElementById("casesFilterTabs").addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-filter]");
+      if (!btn || btn.classList.contains("active")) return;
+      document.querySelectorAll("#casesFilterTabs button").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      activeCasesFilter = btn.dataset.filter;
+      applyCasesFilter();
+    });
+
+    document.getElementById("casesStudentSearch").addEventListener("input", applyCasesFilter);
+
+    // Offenses reset every school year (per the client's yearly-tally rule) —
+    // this filter is how a counselor confirms a case predates the current
+    // year without it ever being deleted (records stay put, see A2).
+    document.getElementById("casesSchoolYearFilter").addEventListener("change", (e) => {
+      activeSchoolYearFilter = e.target.value;
+      applyCasesFilter();
+    });
+
+    // Populates the dropdown with every school year actually present in the
+    // loaded cases, plus the current one (even if it has no cases yet), and
+    // defaults the view to "this year" so old years are one click away
+    // instead of cluttering the default list.
+    function populateSchoolYearFilter() {
+      const select = document.getElementById("casesSchoolYearFilter");
+      const current = defaultSchoolYear();
+      const years = new Set(allCases.map((c) => c.school_year).filter(Boolean));
+      years.add(current);
+      const sortedYears = Array.from(years).sort((a, b) => b.localeCompare(a));
+
+      select.innerHTML =
+        `<option value="all">All school years</option>` +
+        sortedYears.map((y) => `<option value="${escapeHtml(y)}">${escapeHtml(y)}</option>`).join("");
+
+      if (!activeSchoolYearFilter) activeSchoolYearFilter = current;
+      select.value = activeSchoolYearFilter;
+    }
+
+    async function loadCases() {
+      const list = document.getElementById("casesList");
+      list.innerHTML = `<tr class="table-empty"><td colspan="7">Loading…</td></tr>`;
+
+      const { data, error } = await supabaseClient
+        .from("cases")
+        .select(
+          "case_id, nature_of_incident, status, school_year, file_number, created_at, students(first_name, last_name, section, user_id), case_sessions(session_id, session_date, action_taken, session_note, recommendation, created_at, appointment_id, case_session_attachments(attachment_id, file_path, file_name)), interventions(intervention_id, title, file_path, file_name, is_visible_to_student, created_at)"
+        )
+        .eq("counselor_id", currentCounselor.counselor_id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        list.innerHTML = `<tr class="table-empty"><td colspan="7">Couldn't load cases.</td></tr>`;
+        console.error(error);
+        return;
+      }
+
+      allCases = data || [];
+      allCasesById = {};
+      allCases.forEach((c) => (allCasesById[c.case_id] = c));
+
+      populateSchoolYearFilter();
+      applyCasesFilter();
+    }
+
+    // ---------- New Case modal ----------
+
+    function openNewCaseModal() {
+      document.getElementById("newCaseForm").reset();
+      document.getElementById("newCaseModalOverlay").classList.add("show");
+    }
+
+    function closeNewCaseModal() {
+      document.getElementById("newCaseModalOverlay").classList.remove("show");
+    }
+
+    document.getElementById("newCaseBtn").addEventListener("click", openNewCaseModal);
+    document.getElementById("newCaseModalCloseBtn").addEventListener("click", closeNewCaseModal);
+    document.getElementById("newCaseModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "newCaseModalOverlay") closeNewCaseModal();
+    });
+
+    document.getElementById("newCaseForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const studentId = Number(document.getElementById("caseStudentSelect").value);
+      const nature = document.getElementById("caseNatureInput").value.trim();
+      const action = document.getElementById("caseActionInput").value.trim();
+      const note = document.getElementById("caseNoteInput").value.trim();
+      const recommendation = document.getElementById("caseRecommendationInput").value.trim();
+
+      const saveBtn = document.getElementById("newCaseSaveBtn");
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Creating…";
+
+      const { data: newCase, error } = await supabaseClient
+        .from("cases")
+        .insert({
+          student_id: studentId,
+          counselor_id: currentCounselor.counselor_id,
+          nature_of_incident: nature,
+          school_year: defaultSchoolYear(),
+        })
+        .select("case_id")
+        .single();
+
+      if (error) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Create Case";
+        showToast("Couldn't create case: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      if (action || note || recommendation) {
+        const { error: sessionError } = await supabaseClient.from("case_sessions").insert({
+          case_id: newCase.case_id,
+          action_taken: action || null,
+          session_note: note || null,
+          recommendation: recommendation || null,
+        });
+        if (sessionError) console.error(sessionError);
+      }
+
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Create Case";
+      closeNewCaseModal();
+      await loadCases();
+    });
+
+    // ---------- Case detail modal ----------
+
+    function timelineItemHtml(s) {
+      const attachments = s.case_session_attachments || [];
+      const attachmentsHtml = attachments.length
+        ? `<div class="case-timeline-row case-attachments-row">
+            <strong>Proof:</strong>
+            <div class="attachment-chip-list">
+              ${attachments
+                .map(
+                  (a) =>
+                    `<button type="button" class="attachment-chip" data-path="${escapeHtml(a.file_path)}"><i class="fa-solid fa-paperclip"></i> ${escapeHtml(a.file_name)}</button>`
+                )
+                .join("")}
+            </div>
+          </div>`
+        : "";
+
+      return `
+        <div class="case-timeline-item">
+          <div class="case-timeline-date">${formatDate(s.session_date || s.created_at)}</div>
+          ${s.action_taken ? `<div class="case-timeline-row"><strong>Action:</strong> ${escapeHtml(s.action_taken)}</div>` : ""}
+          ${s.session_note ? `<div class="case-timeline-row"><strong>Note:</strong> ${escapeHtml(s.session_note)}</div>` : ""}
+          ${s.recommendation ? `<div class="case-timeline-row"><strong>Recommendation:</strong> ${escapeHtml(s.recommendation)}</div>` : ""}
+          ${attachmentsHtml}
+          ${!s.action_taken && !s.session_note && !s.recommendation ? `<div class="case-timeline-row">Case opened.</div>` : ""}
+        </div>
+      `;
+    }
+
+    async function openAttachment(path) {
+      const { data, error } = await supabaseClient.storage.from("case-attachments").createSignedUrl(path, 60);
+      if (error) {
+        showToast("Couldn't open file: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+      window.open(data.signedUrl, "_blank");
+    }
+
+    function interventionItemHtml(iv) {
+      return `
+        <div class="case-timeline-item">
+          <div class="case-timeline-date">${formatDate(iv.created_at)}</div>
+          <div class="case-timeline-row">
+            <strong>${escapeHtml(iv.title)}</strong>
+            <span class="badge badge-${iv.is_visible_to_student ? "approved" : "cancelled"}">${iv.is_visible_to_student ? "Visible to Student" : "Access Removed"}</span>
+          </div>
+          <div class="case-timeline-row case-attachments-row">
+            <div class="attachment-chip-list">
+              <button type="button" class="attachment-chip" data-action="view-intervention" data-path="${escapeHtml(iv.file_path)}"><i class="fa-solid fa-file-lines"></i> ${escapeHtml(iv.file_name)}</button>
+            </div>
+            <button type="button" class="btn btn-outline btn-sm" data-action="toggle-intervention" data-id="${iv.intervention_id}">
+              ${iv.is_visible_to_student ? "Remove Access" : "Restore Access"}
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function toggleInterventionAccess(interventionId) {
+      const c = allCasesById[currentCaseId];
+      const iv = c?.interventions?.find((i) => i.intervention_id === interventionId);
+      if (!iv) return;
+
+      const newValue = !iv.is_visible_to_student;
+      const { error } = await supabaseClient
+        .from("interventions")
+        .update({ is_visible_to_student: newValue, updated_at: new Date().toISOString() })
+        .eq("intervention_id", interventionId);
+
+      if (error) {
+        showToast("Couldn't update access: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      iv.is_visible_to_student = newValue;
+      renderInterventionsList(c);
+      showToast(newValue ? "Visible to student again." : "Access removed.", "success");
+    }
+
+    function renderInterventionsList(c) {
+      const interventions = [...(c.interventions || [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      const list = document.getElementById("caseInterventionsList");
+
+      list.innerHTML = interventions.length
+        ? interventions.map(interventionItemHtml).join("")
+        : `<div class="notif-empty" style="padding:20px;">No interventions uploaded yet.</div>`;
+
+      list.querySelectorAll('[data-action="view-intervention"]').forEach((chip) => {
+        chip.addEventListener("click", () => openAttachment(chip.dataset.path));
+      });
+      list.querySelectorAll('[data-action="toggle-intervention"]').forEach((btn) => {
+        btn.addEventListener("click", () => toggleInterventionAccess(Number(btn.dataset.id)));
+      });
+    }
+
+    function renderCaseDetail(c) {
+      document.getElementById("caseDetailTitle").textContent = `Case — ${studentName(c)}`;
+      document.getElementById("caseDetailFileNumber").textContent = c.file_number || "—";
+      document.getElementById("caseDetailStudent").textContent = studentName(c);
+      document.getElementById("caseDetailSection").textContent = c.students?.section || "—";
+      document.getElementById("caseDetailNature").textContent = c.nature_of_incident;
+      document.getElementById("caseDetailOpened").textContent = formatDate(c.created_at);
+      document.getElementById("caseDetailSchoolYear").textContent = c.school_year || "—";
+      document.getElementById("caseStatusSelect").value = c.status;
+
+      // Passive readout only — duration stays the counselor's call, this
+      // just saves them the mental math of "how long has this been open."
+      const daysOpen = Math.floor((Date.now() - new Date(c.created_at).getTime()) / 86400000);
+      document.getElementById("caseDetailDaysOpen").textContent = `${daysOpen} day${daysOpen === 1 ? "" : "s"}`;
+
+      renderInterventionsList(c);
+
+      const sessions = [...(c.case_sessions || [])].sort(
+        (a, b) => new Date(b.session_date || b.created_at) - new Date(a.session_date || a.created_at)
+      );
+
+      const timeline = document.getElementById("caseTimeline");
+      timeline.innerHTML = sessions.length
+        ? sessions.map(timelineItemHtml).join("")
+        : `<div class="notif-empty" style="padding:20px;">No sessions logged yet.</div>`;
+
+      timeline.querySelectorAll(".attachment-chip").forEach((chip) => {
+        chip.addEventListener("click", () => openAttachment(chip.dataset.path));
+      });
+    }
+
+    function openCaseDetail(caseId) {
+      const c = allCasesById[caseId];
+      if (!c) return;
+      currentCaseId = caseId;
+      renderCaseDetail(c);
+      document.getElementById("addSessionForm").reset();
+      document.getElementById("addInterventionForm").reset();
+      document.getElementById("caseDetailModalOverlay").classList.add("show");
+    }
+
+    function closeCaseDetail() {
+      document.getElementById("caseDetailModalOverlay").classList.remove("show");
+      currentCaseId = null;
+    }
+
+    document.getElementById("caseDetailCloseBtn").addEventListener("click", closeCaseDetail);
+    document.getElementById("caseDetailModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "caseDetailModalOverlay") closeCaseDetail();
+    });
+
+    document.getElementById("caseStatusSelect").addEventListener("change", async (e) => {
+      if (!currentCaseId) return;
+      const newStatus = e.target.value;
+
+      const { error } = await supabaseClient
+        .from("cases")
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq("case_id", currentCaseId);
+
+      if (error) {
+        showToast("Couldn't update case status: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      allCasesById[currentCaseId].status = newStatus;
+      await loadCases();
+    });
+
+    document.getElementById("addSessionForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!currentCaseId) return;
+
+      const action = document.getElementById("sessionActionInput").value.trim();
+      const note = document.getElementById("sessionNoteInput").value.trim();
+      const recommendation = document.getElementById("sessionRecommendationInput").value.trim();
+
+      const files = Array.from(document.getElementById("sessionProofInput").files || []);
+      const oversized = files.find((f) => f.size > 10 * 1024 * 1024);
+      if (oversized) {
+        showToast(`"${oversized.name}" is over 10MB — please use a smaller file.`, "error");
+        return;
+      }
+
+      const btn = document.getElementById("addSessionBtn");
+      btn.disabled = true;
+      btn.textContent = "Adding…";
+
+      const { data: session, error } = await supabaseClient
+        .from("case_sessions")
+        .insert({
+          case_id: currentCaseId,
+          action_taken: action || null,
+          session_note: note || null,
+          recommendation: recommendation || null,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        btn.disabled = false;
+        btn.textContent = "Add Session";
+        showToast("Couldn't add session: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      if (files.length) {
+        btn.textContent = "Uploading files…";
+        for (const file of files) {
+          const path = `${currentCaseId}/${session.session_id}/${Date.now()}-${file.name}`;
+          const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file);
+
+          if (uploadError) {
+            showToast(`Session saved, but "${file.name}" failed to upload: ` + uploadError.message, "error");
+            console.error(uploadError);
+            continue;
+          }
+
+          const { error: attachError } = await supabaseClient.from("case_session_attachments").insert({
+            session_id: session.session_id,
+            file_path: path,
+            file_name: file.name,
+          });
+          if (attachError) console.error(attachError);
+        }
+      }
+
+      btn.disabled = false;
+      btn.textContent = "Add Session";
+
+      document.getElementById("addSessionForm").reset();
+      await loadCases();
+      renderCaseDetail(allCasesById[currentCaseId]);
+    });
+
+    document.getElementById("addInterventionForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!currentCaseId) return;
+
+      const btn = document.getElementById("addInterventionBtn");
+      const templateId = document.getElementById("interventionTemplateSelect").value;
+      const template = allInterventionTemplates.find((t) => t.intervention_template_id === Number(templateId));
+      if (!template) {
+        showToast("Select a template to assign.", "error");
+        return;
+      }
+
+      // Assigning a saved template is just a DB insert copying its
+      // file_path/file_name onto this case — no new upload, and future
+      // edits/removal of the template itself never touch this copy.
+      btn.disabled = true;
+      btn.textContent = "Assigning…";
+
+      const { error } = await supabaseClient.from("interventions").insert({
+        case_id: currentCaseId,
+        counselor_id: currentCounselor.counselor_id,
+        title: template.title,
+        file_path: template.file_path,
+        file_name: template.file_name,
+      });
+
+      btn.disabled = false;
+      btn.textContent = "Assign Intervention";
+
+      if (error) {
+        showToast("Couldn't assign intervention: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      const c = allCasesById[currentCaseId];
+      if (c?.students?.user_id) {
+        await supabaseClient.from("notifications").insert({
+          recipient_user_id: c.students.user_id,
+          type: "intervention",
+          title: "A new intervention was shared with you",
+          message: template.title,
+          link: "student-forms.html",
+        });
+      }
+
+      document.getElementById("addInterventionForm").reset();
+      await loadCases();
+      renderCaseDetail(allCasesById[currentCaseId]);
+      showToast("Intervention assigned — visible to the student.", "success");
+    });
+
+    (async () => {
+      const result = await requireCounselorAuth();
+      if (!result) return;
+
+      currentCounselor = result.counselor;
+      await Promise.all([loadCases(), loadStudentsForSelect(), loadInterventionTemplates()]);
+      hidePageLoadOverlay();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports</title>
+      <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+      <!-- Sidebar -->
+    <aside class="sidebar">
+
+        <header class="profile">
+
+            <img src="../images/COLM LOGO.png" alt="Counselor Profile">
+
+            <div class="info">
+                <h4 id="sidebarName"></h4>
+                <p>Counselor</p>
+
+            </div>
+
+        </header>
+
+
+   <hr>
+
+        <nav aria-label="Counselor Navigation">
+
+            <ul>
+
+                <li>
+            <a href="counselor-dashboard.html">
+              <i class="fa-solid fa-house"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="counselor-student.html">
+                        <i class="fa-solid fa-user-graduate"></i>
+                        <span>Students</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="counselor-announcements.html">
+                        <i class="fa-solid fa-bullhorn"></i>
+                        <span>Announcements</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-appointments.html">
+                        <i class="fa-solid fa-calendar"></i>
+                        <span>Appointments</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-cases.html">
+                        <i class="fa-solid fa-folder-open"></i>
+                        <span>Cases</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-forms.html">
+                        <i class="fa-solid fa-book"></i>
+                        <span>Forms &amp; Interventions</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-reports.html">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>Reports</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-account.html">
+                        <i class="fa-solid fa-user"></i>
+                        <span>Account</span>
+                    </a>
+                </li>
+                <li class="desktop-only">
+                    <button type="button" id="logoutBtn" title="Log Out">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Log Out</span>
+                    </button>
+                </li>
+
+                <li class="hamburger">
+                    <button type="button" onclick="toggleMenu()">
+                        <i class="fa-solid fa-bars"></i>
+                        <span>More</span>
+                    </button>
+                </li>
+
+            </ul>
+
+        </nav>
+
+    </aside>
+
+     <nav class="mobile-menu" id="mobileMenu" aria-label="More Navigation">
+
+        <a href="counselor-appointments.html"><i class="fa-solid fa-calendar"></i> Appointments</a>
+
+        <a href="counselor-cases.html"><i class="fa-solid fa-folder-open"></i> Cases</a>
+
+        <a href="counselor-forms.html"><i class="fa-solid fa-book"></i> Forms &amp; Interventions</a>
+
+        <a href="counselor-reports.html"><i class="fa-solid fa-chart-line"></i> Reports</a>
+
+        <a href="counselor-account.html"><i class="fa-solid fa-user"></i> Account</a>
+
+        <a href="#" id="mobileLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
+
+    </nav>
+
+  <main class="content">
+
+        <header class="GreetingsCard">
+            <h1>Report Generation &amp; Printing</h1>
+            <p>Export student records, incident reports, counseling history, and progress reports.</p>
+        </header>
+
+        <div class="section-title" style="margin-top:30px;">
+            <h2>Reports</h2>
+            <select id="reportSchoolYearSelect" class="table-search" style="width:auto;">
+                <option value="">All time</option>
+            </select>
+        </div>
+        <span class="hint" style="display:block; margin-bottom:16px;">School Year applies to Incident Reports, Counseling History, Progress Reports, Case Notes, Accomplishment Reports, and Narrative Reports. Leave on "All time" for no date filtering. Student Records is always the full current roster.</span>
+
+        <div class="report-grid reports-grid-2x2">
+            <div class="report-card">
+                <div class="report-card-icon"><i class="fa-solid fa-id-card"></i></div>
+                <h3>Student Records</h3>
+                <p>Full roster with contact and parent/guardian details, ready to print.</p>
+                <button type="button" class="btn btn-outline" id="genStudentRecordsBtn">Generate</button>
+            </div>
+            <div class="report-card">
+                <div class="report-card-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <h3>Incident Reports</h3>
+                <p>All logged cases and their current status.</p>
+                <button type="button" class="btn btn-outline" id="genIncidentReportsBtn">Generate</button>
+            </div>
+            <div class="report-card">
+                <div class="report-card-icon"><i class="fa-solid fa-comments"></i></div>
+                <h3>Counseling History</h3>
+                <p>Completed guidance sessions and notes.</p>
+                <button type="button" class="btn btn-outline" id="genCounselingHistoryBtn">Generate</button>
+            </div>
+            <div class="report-card">
+                <div class="report-card-icon"><i class="fa-solid fa-chart-line"></i></div>
+                <h3>Progress Reports</h3>
+                <p>Per-student rollup of cases and completed sessions.</p>
+                <button type="button" class="btn btn-outline" id="genProgressReportsBtn">Generate</button>
+            </div>
+            <div class="report-card">
+                <div class="report-card-icon"><i class="fa-solid fa-note-sticky"></i></div>
+                <h3>Case Notes</h3>
+                <p>Session notes, actions taken, and recommendations logged per case.</p>
+                <button type="button" class="btn btn-outline" id="genCaseNotesBtn">Generate</button>
+            </div>
+            <div class="report-card">
+                <div class="report-card-icon"><i class="fa-solid fa-award"></i></div>
+                <h3>Accomplishment Reports</h3>
+                <p>Internal activity log with optional photos — for office records, not distribution.</p>
+                <div class="form-actions" style="justify-content:flex-start; gap:8px;">
+                    <button type="button" class="btn btn-outline" id="logAccomplishmentBtn">+ Log Activity</button>
+                    <button type="button" class="btn btn-outline" id="genAccomplishmentReportsBtn">Generate</button>
+                </div>
+            </div>
+            <div class="report-card">
+                <div class="report-card-icon"><i class="fa-solid fa-file-lines"></i></div>
+                <h3>Narrative Reports</h3>
+                <p>Free-form per-student write-ups.</p>
+                <div class="form-actions" style="justify-content:flex-start; gap:8px;">
+                    <button type="button" class="btn btn-outline" id="addNarrativeBtn">+ Add Narrative</button>
+                    <button type="button" class="btn btn-outline" id="genNarrativeReportsBtn">Generate</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Log Accomplishment modal -->
+    <div class="modal-overlay" id="logAccomplishmentModalOverlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Log Accomplishment</h3>
+                <button type="button" class="modal-close" id="logAccomplishmentCloseBtn" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="logAccomplishmentForm">
+                    <div class="form-field">
+                        <label for="accActivityTitleInput">Activity Title</label>
+                        <input type="text" id="accActivityTitleInput" required maxlength="150" placeholder="e.g. Grade 9 Values Formation Seminar">
+                    </div>
+                    <div class="form-field" style="margin-top:14px;">
+                        <label for="accActivityDateInput">Date</label>
+                        <input type="date" id="accActivityDateInput" required>
+                    </div>
+                    <div class="form-field" style="margin-top:14px;">
+                        <label for="accDescriptionInput">Description</label>
+                        <textarea id="accDescriptionInput" rows="3"></textarea>
+                    </div>
+                    <div class="form-field" style="margin-top:14px;">
+                        <label for="accPhotosInput">Photos (optional, internal use)</label>
+                        <input type="file" id="accPhotosInput" multiple accept="image/*">
+                        <span class="hint">Up to 10MB each.</span>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="logAccomplishmentSaveBtn">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Narrative modal -->
+    <div class="modal-overlay" id="addNarrativeModalOverlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Add Narrative Report</h3>
+                <button type="button" class="modal-close" id="addNarrativeCloseBtn" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addNarrativeForm">
+                    <div class="form-field">
+                        <label for="narrativeStudentSelect">Student</label>
+                        <select id="narrativeStudentSelect" required></select>
+                    </div>
+                    <div class="form-field" style="margin-top:14px;">
+                        <label for="narrativeTextInput">Narrative</label>
+                        <textarea id="narrativeTextInput" rows="6" required></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="addNarrativeSaveBtn">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/supabaseClient.js"></script>
+  <script src="../js/counselor-common.js"></script>
+  <script>
+    let currentCounselor = null;
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str ?? "";
+      return div.innerHTML;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return "—";
+      return new Date(dateStr).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    }
+
+    function capitalize(str) {
+      return str ? str.charAt(0).toUpperCase() + str.slice(1) : "";
+    }
+
+    // Opens a clean, print-styled page in a new tab. No PDF library needed —
+    // the counselor uses the browser's own Print -> Save as PDF.
+    function openPrintableReport(title, columns, rows) {
+      const win = window.open("", "_blank");
+      if (!win) {
+        showToast("Please allow pop-ups to generate this report.", "error");
+        return;
+      }
+
+      const tableRows = rows.length
+        ? rows.map((r) => `<tr>${columns.map((c) => `<td>${escapeHtml(r[c.key] ?? "—")}</td>`).join("")}</tr>`).join("")
+        : `<tr><td colspan="${columns.length}" style="text-align:center; color:#9ca3af; padding:24px;">No records found.</td></tr>`;
+
+      win.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>${escapeHtml(title)}</title>
+          <style>
+            body { font-family: Arial, sans-serif; color:#111827; padding:32px; }
+            h1 { font-size:20px; margin:0 0 4px; }
+            .meta { color:#6b7280; font-size:12px; margin-bottom:20px; }
+            table { width:100%; border-collapse:collapse; }
+            th, td { text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; font-size:12.5px; }
+            th { background:#f9fafb; text-transform:uppercase; font-size:10.5px; letter-spacing:.03em; color:#6b7280; }
+            .print-btn { margin-bottom:20px; padding:8px 16px; border-radius:8px; border:none; background:#2563eb; color:#fff; font-weight:600; cursor:pointer; }
+            @media print { .print-btn { display:none; } }
+          </style>
+        </head>
+        <body>
+          <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+          <h1>${escapeHtml(title)}</h1>
+          <div class="meta">Generated ${new Date().toLocaleString("en-US")} · ${rows.length} record${rows.length === 1 ? "" : "s"}</div>
+          <table>
+            <thead><tr>${columns.map((c) => `<th>${escapeHtml(c.label)}</th>`).join("")}</tr></thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+      `);
+      // The closing body/html tags are deliberately left out above. A dev-server
+      // auto-reload tool (e.g. VS Code Live Server) does a naive text search
+      // for the closing body tag in the raw file to know where to inject its
+      // reload script, and it was matching the one in this string instead of
+      // the page's real one, corrupting this file's actual script tag. Both
+      // end tags are optional in HTML5 — the browser closes them implicitly —
+      // so omitting them here sidesteps the false match entirely.
+      win.document.close();
+    }
+
+    function educationLevelLabel(value) {
+      return { college: "College", junior_high: "Junior High School", senior_high: "Senior High School" }[value] || "—";
+    }
+
+    // Shared by every date-filterable report. "To" needs the end-of-day
+    // time appended for timestamptz columns (created_at) — otherwise
+    // "2026-07-27" means midnight at the start of that day and silently
+    // excludes everything that happened on the selected end date itself.
+    // A school year runs June 1 - May 31 (the same June-cutoff convention
+    // as defaultSchoolYear() and every school_year column in the schema).
+    // The School Year filter is the only date filtering on this page now —
+    // every report reads its range through this one function.
+    function schoolYearToDateRange(schoolYear) {
+      const [startYear, endYear] = schoolYear.split("-");
+      return { from: `${startYear}-06-01`, to: `${endYear}-05-31` };
+    }
+
+    function getReportDateRange() {
+      const schoolYear = document.getElementById("reportSchoolYearSelect").value;
+      if (!schoolYear) return { from: null, toEndOfDay: null, to: null };
+
+      const { from, to } = schoolYearToDateRange(schoolYear);
+      return { from, toEndOfDay: `${to}T23:59:59`, to };
+    }
+
+    function populateReportSchoolYearSelect() {
+      const select = document.getElementById("reportSchoolYearSelect");
+      const current = defaultSchoolYear();
+      const [currentStart] = current.split("-").map(Number);
+
+      // Three years back through one year ahead is generous enough to
+      // cover "as far back as 2023" (per the client's retention rule)
+      // without the list growing forever as time passes.
+      const years = [];
+      for (let y = currentStart + 1; y >= currentStart - 3; y--) {
+        years.push(`${y - 1}-${y}`);
+      }
+
+      // Defaults to "All time" rather than pre-selecting the current year —
+      // matches the app's existing "leave blank for all-time" default
+      // instead of silently narrowing every report the first time this
+      // page loads.
+      select.innerHTML =
+        `<option value="">All time</option>` + years.map((y) => `<option value="${y}">S.Y. ${y}</option>`).join("");
+    }
+
+    async function generateStudentRecords() {
+      const { data, error } = await supabaseClient
+        .from("students")
+        .select("student_number, first_name, middle_name, last_name, education_level, year_level, section, contact_number, parent_guardian")
+        .eq("is_archived", false)
+        .order("last_name", { ascending: true });
+
+      if (error) {
+        showToast("Couldn't load student records: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      const rows = (data || []).map((s) => ({
+        name: `${s.first_name} ${s.middle_name ? s.middle_name + " " : ""}${s.last_name}`,
+        student_number: s.student_number || "—",
+        education_level: educationLevelLabel(s.education_level),
+        year_level: s.year_level || "—",
+        section: s.section || "—",
+        contact_number: s.contact_number || "—",
+        parent_guardian: s.parent_guardian || "—",
+      }));
+
+      openPrintableReport(
+        "Student Records",
+        [
+          { key: "name", label: "Name" },
+          { key: "student_number", label: "Student No." },
+          { key: "education_level", label: "Education Level" },
+          { key: "year_level", label: "Year Level" },
+          { key: "section", label: "Section" },
+          { key: "contact_number", label: "Contact" },
+          { key: "parent_guardian", label: "Parent/Guardian" },
+        ],
+        rows
+      );
+    }
+
+    async function generateIncidentReports() {
+      const { from, toEndOfDay } = getReportDateRange();
+
+      let query = supabaseClient
+        .from("cases")
+        .select("file_number, nature_of_incident, status, created_at, students(first_name, last_name, section)")
+        .eq("counselor_id", currentCounselor.counselor_id);
+      if (from) query = query.gte("created_at", from);
+      if (toEndOfDay) query = query.lte("created_at", toEndOfDay);
+
+      const { data, error } = await query.order("created_at", { ascending: false });
+
+      if (error) {
+        showToast("Couldn't load incident reports: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        showToast("No incident reports found for the selected range.", "info");
+        return;
+      }
+
+      const rows = data.map((c) => ({
+        fileNumber: c.file_number || "—",
+        student: c.students ? `${c.students.first_name} ${c.students.last_name}` : "Unknown",
+        section: c.students?.section || "—",
+        nature: c.nature_of_incident,
+        status: capitalize(c.status),
+        date: formatDate(c.created_at),
+      }));
+
+      openPrintableReport(
+        "Incident Reports",
+        [
+          { key: "fileNumber", label: "File #" },
+          { key: "student", label: "Student" },
+          { key: "section", label: "Section" },
+          { key: "nature", label: "Nature of Incident" },
+          { key: "status", label: "Status" },
+          { key: "date", label: "Date Opened" },
+        ],
+        rows
+      );
+    }
+
+    async function generateCounselingHistory() {
+      const { from, to } = getReportDateRange();
+
+      // appointment_date is a plain date column (not timestamptz), so
+      // unlike created_at above, "to" doesn't need an end-of-day suffix —
+      // "2026-07-27" already matches that whole day correctly as-is.
+      let query = supabaseClient
+        .from("appointments")
+        .select("appointment_date, concern, counselor_note, students(first_name, last_name)")
+        .eq("counselor_id", currentCounselor.counselor_id)
+        .eq("status", "completed");
+      if (from) query = query.gte("appointment_date", from);
+      if (to) query = query.lte("appointment_date", to);
+
+      const { data, error } = await query.order("appointment_date", { ascending: false });
+
+      if (error) {
+        showToast("Couldn't load counseling history: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        showToast(
+          "No completed counseling sessions found. This report only includes appointments explicitly marked \"Completed\" on the Appointments page — pending/approved ones don't count yet.",
+          "info"
+        );
+        return;
+      }
+
+      const rows = data.map((a) => ({
+        student: a.students ? `${a.students.first_name} ${a.students.last_name}` : "Unknown",
+        date: formatDate(a.appointment_date),
+        concern: a.concern || "—",
+        note: a.counselor_note || "—",
+      }));
+
+      openPrintableReport(
+        "Counseling History",
+        [
+          { key: "student", label: "Student" },
+          { key: "date", label: "Date" },
+          { key: "concern", label: "Concern" },
+          { key: "note", label: "Session Note" },
+        ],
+        rows
+      );
+    }
+
+    async function generateProgressReports() {
+      const { from, toEndOfDay, to } = getReportDateRange();
+
+      let casesQuery = supabaseClient
+        .from("cases")
+        .select("student_id, status, created_at, students(first_name, last_name)")
+        .eq("counselor_id", currentCounselor.counselor_id);
+      if (from) casesQuery = casesQuery.gte("created_at", from);
+      if (toEndOfDay) casesQuery = casesQuery.lte("created_at", toEndOfDay);
+
+      let apptsQuery = supabaseClient
+        .from("appointments")
+        .select("student_id, status, appointment_date, students(first_name, last_name)")
+        .eq("counselor_id", currentCounselor.counselor_id)
+        .eq("status", "completed");
+      if (from) apptsQuery = apptsQuery.gte("appointment_date", from);
+      if (to) apptsQuery = apptsQuery.lte("appointment_date", to);
+
+      const [{ data: cases, error: casesError }, { data: appts, error: apptsError }] = await Promise.all([
+        casesQuery,
+        apptsQuery,
+      ]);
+
+      if (casesError || apptsError) {
+        showToast("Couldn't load progress reports.", "error");
+        console.error(casesError || apptsError);
+        return;
+      }
+
+      if ((!cases || cases.length === 0) && (!appts || appts.length === 0)) {
+        showToast("No cases or completed sessions found for the selected range.", "info");
+        return;
+      }
+
+      const byStudent = {};
+      const ensure = (studentId, name) => {
+        if (!byStudent[studentId]) byStudent[studentId] = { name, openCases: 0, resolvedCases: 0, sessions: 0 };
+        return byStudent[studentId];
+      };
+
+      (cases || []).forEach((c) => {
+        const name = c.students ? `${c.students.first_name} ${c.students.last_name}` : "Unknown";
+        const entry = ensure(c.student_id, name);
+        if (c.status === "resolved") entry.resolvedCases++;
+        else entry.openCases++;
+      });
+
+      (appts || []).forEach((a) => {
+        const name = a.students ? `${a.students.first_name} ${a.students.last_name}` : "Unknown";
+        const entry = ensure(a.student_id, name);
+        entry.sessions++;
+      });
+
+      const rows = Object.values(byStudent).map((e) => ({
+        name: e.name,
+        openCases: e.openCases,
+        resolvedCases: e.resolvedCases,
+        sessions: e.sessions,
+      }));
+
+      openPrintableReport(
+        "Progress Reports",
+        [
+          { key: "name", label: "Student" },
+          { key: "openCases", label: "Open/Monitoring Cases" },
+          { key: "resolvedCases", label: "Resolved Cases" },
+          { key: "sessions", label: "Completed Sessions" },
+        ],
+        rows
+      );
+    }
+
+    async function generateCaseNotes() {
+      const { from, toEndOfDay } = getReportDateRange();
+
+      let query = supabaseClient
+        .from("cases")
+        .select(
+          "nature_of_incident, created_at, students(first_name, last_name), case_sessions(session_date, action_taken, session_note, recommendation, created_at)"
+        )
+        .eq("counselor_id", currentCounselor.counselor_id);
+      if (from) query = query.gte("created_at", from);
+      if (toEndOfDay) query = query.lte("created_at", toEndOfDay);
+
+      const { data, error } = await query.order("created_at", { ascending: false });
+
+      if (error) {
+        showToast("Couldn't load case notes: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      const rows = [];
+      (data || []).forEach((c) => {
+        const student = c.students ? `${c.students.first_name} ${c.students.last_name}` : "Unknown";
+        (c.case_sessions || [])
+          // Skip the placeholder session created automatically when a case
+          // is opened with no notes yet — nothing to report on there.
+          .filter((s) => s.action_taken || s.session_note || s.recommendation)
+          .forEach((s) => {
+            rows.push({
+              student,
+              case: c.nature_of_incident,
+              date: formatDate(s.session_date || s.created_at),
+              action: s.action_taken || "—",
+              note: s.session_note || "—",
+              recommendation: s.recommendation || "—",
+            });
+          });
+      });
+
+      if (!rows.length) {
+        showToast("No case notes found for the selected range.", "info");
+        return;
+      }
+
+      openPrintableReport(
+        "Case Notes",
+        [
+          { key: "student", label: "Student" },
+          { key: "case", label: "Case" },
+          { key: "date", label: "Date" },
+          { key: "action", label: "Action Taken" },
+          { key: "note", label: "Session Note" },
+          { key: "recommendation", label: "Recommendation" },
+        ],
+        rows
+      );
+    }
+
+    async function generateAccomplishmentReports() {
+      const { from, toEndOfDay } = getReportDateRange();
+
+      let query = supabaseClient
+        .from("accomplishment_reports")
+        .select("activity_title, activity_date, description, accomplishment_report_attachments(attachment_id)")
+        .eq("counselor_id", currentCounselor.counselor_id);
+      if (from) query = query.gte("activity_date", from);
+      if (toEndOfDay) query = query.lte("activity_date", toEndOfDay);
+
+      const { data, error } = await query.order("activity_date", { ascending: false });
+
+      if (error) {
+        showToast("Couldn't load accomplishment reports: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        showToast("No accomplishment reports logged for the selected range.", "info");
+        return;
+      }
+
+      const rows = data.map((r) => ({
+        title: r.activity_title,
+        date: formatDate(r.activity_date),
+        description: r.description || "—",
+        photos: r.accomplishment_report_attachments?.length
+          ? `${r.accomplishment_report_attachments.length} photo(s) on file`
+          : "—",
+      }));
+
+      openPrintableReport(
+        "Accomplishment Reports",
+        [
+          { key: "title", label: "Activity" },
+          { key: "date", label: "Date" },
+          { key: "description", label: "Description" },
+          { key: "photos", label: "Photos" },
+        ],
+        rows
+      );
+    }
+
+    async function generateNarrativeReports() {
+      const { from, toEndOfDay } = getReportDateRange();
+
+      let query = supabaseClient
+        .from("narrative_reports")
+        .select("narrative_text, created_at, students(first_name, last_name)")
+        .eq("counselor_id", currentCounselor.counselor_id);
+      if (from) query = query.gte("created_at", from);
+      if (toEndOfDay) query = query.lte("created_at", toEndOfDay);
+
+      const { data, error } = await query.order("created_at", { ascending: false });
+
+      if (error) {
+        showToast("Couldn't load narrative reports: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        showToast("No narrative reports found for the selected range.", "info");
+        return;
+      }
+
+      const rows = data.map((r) => ({
+        student: r.students ? `${r.students.first_name} ${r.students.last_name}` : "Unknown",
+        date: formatDate(r.created_at),
+        narrative: r.narrative_text,
+      }));
+
+      openPrintableReport(
+        "Narrative Reports",
+        [
+          { key: "student", label: "Student" },
+          { key: "date", label: "Date" },
+          { key: "narrative", label: "Narrative" },
+        ],
+        rows
+      );
+    }
+
+    // ---------- Log Accomplishment modal ----------
+
+    function openLogAccomplishmentModal() {
+      document.getElementById("logAccomplishmentForm").reset();
+      document.getElementById("accActivityDateInput").value = new Date().toISOString().slice(0, 10);
+      document.getElementById("logAccomplishmentModalOverlay").classList.add("show");
+    }
+
+    function closeLogAccomplishmentModal() {
+      document.getElementById("logAccomplishmentModalOverlay").classList.remove("show");
+    }
+
+    document.getElementById("logAccomplishmentBtn").addEventListener("click", openLogAccomplishmentModal);
+    document.getElementById("logAccomplishmentCloseBtn").addEventListener("click", closeLogAccomplishmentModal);
+    document.getElementById("logAccomplishmentModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "logAccomplishmentModalOverlay") closeLogAccomplishmentModal();
+    });
+
+    document.getElementById("logAccomplishmentForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const title = document.getElementById("accActivityTitleInput").value.trim();
+      const date = document.getElementById("accActivityDateInput").value;
+      const description = document.getElementById("accDescriptionInput").value.trim();
+      const files = Array.from(document.getElementById("accPhotosInput").files || []);
+
+      const oversized = files.find((f) => f.size > 10 * 1024 * 1024);
+      if (oversized) {
+        showToast(`"${oversized.name}" is over 10MB — please use a smaller file.`, "error");
+        return;
+      }
+
+      const saveBtn = document.getElementById("logAccomplishmentSaveBtn");
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Saving…";
+
+      const { data: report, error } = await supabaseClient
+        .from("accomplishment_reports")
+        .insert({
+          counselor_id: currentCounselor.counselor_id,
+          activity_title: title,
+          activity_date: date,
+          description: description || null,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save";
+        showToast("Couldn't save accomplishment report: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      if (files.length) {
+        saveBtn.textContent = "Uploading photos…";
+        for (const file of files) {
+          const path = `accomplishments/${report.report_id}/${Date.now()}-${file.name}`;
+          const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file);
+
+          if (uploadError) {
+            showToast(`Report saved, but "${file.name}" failed to upload: ` + uploadError.message, "error");
+            console.error(uploadError);
+            continue;
+          }
+
+          const { error: attachError } = await supabaseClient.from("accomplishment_report_attachments").insert({
+            report_id: report.report_id,
+            file_path: path,
+            file_name: file.name,
+          });
+          if (attachError) console.error(attachError);
+        }
+      }
+
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save";
+      closeLogAccomplishmentModal();
+      showToast("Accomplishment logged.", "success");
+    });
+
+    // ---------- Add Narrative modal ----------
+
+    async function loadStudentsForNarrativeSelect() {
+      const select = document.getElementById("narrativeStudentSelect");
+      const { data, error } = await supabaseClient
+        .from("students")
+        .select("student_id, first_name, last_name, student_number")
+        .eq("is_archived", false)
+        .order("first_name", { ascending: true });
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      select.innerHTML = (data || [])
+        .map(
+          (s) =>
+            `<option value="${s.student_id}">${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}${
+              s.student_number ? ` (${escapeHtml(s.student_number)})` : ""
+            }</option>`
+        )
+        .join("");
+    }
+
+    function openAddNarrativeModal() {
+      document.getElementById("addNarrativeForm").reset();
+      document.getElementById("addNarrativeModalOverlay").classList.add("show");
+    }
+
+    function closeAddNarrativeModal() {
+      document.getElementById("addNarrativeModalOverlay").classList.remove("show");
+    }
+
+    document.getElementById("addNarrativeBtn").addEventListener("click", openAddNarrativeModal);
+    document.getElementById("addNarrativeCloseBtn").addEventListener("click", closeAddNarrativeModal);
+    document.getElementById("addNarrativeModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "addNarrativeModalOverlay") closeAddNarrativeModal();
+    });
+
+    document.getElementById("addNarrativeForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const studentId = Number(document.getElementById("narrativeStudentSelect").value);
+      const narrative = document.getElementById("narrativeTextInput").value.trim();
+
+      const saveBtn = document.getElementById("addNarrativeSaveBtn");
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Saving…";
+
+      const { error } = await supabaseClient.from("narrative_reports").insert({
+        counselor_id: currentCounselor.counselor_id,
+        student_id: studentId,
+        narrative_text: narrative,
+      });
+
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save";
+
+      if (error) {
+        showToast("Couldn't save narrative report: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      closeAddNarrativeModal();
+      showToast("Narrative report saved.", "success");
+    });
+
+    // Every generator is an async query + a new-tab popup — without this,
+    // there was no feedback while the query ran and nothing stopped a
+    // double-click from firing the query (and opening the popup) twice.
+    function wireReportButton(btnId, generator) {
+      const btn = document.getElementById(btnId);
+      const originalText = btn.textContent;
+
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        btn.textContent = "Generating…";
+        try {
+          await generator();
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      });
+    }
+
+    wireReportButton("genStudentRecordsBtn", generateStudentRecords);
+    wireReportButton("genIncidentReportsBtn", generateIncidentReports);
+    wireReportButton("genCounselingHistoryBtn", generateCounselingHistory);
+    wireReportButton("genProgressReportsBtn", generateProgressReports);
+    wireReportButton("genCaseNotesBtn", generateCaseNotes);
+    wireReportButton("genAccomplishmentReportsBtn", generateAccomplishmentReports);
+    wireReportButton("genNarrativeReportsBtn", generateNarrativeReports);
+
+    (async () => {
+      const result = await requireCounselorAuth();
+      if (!result) return;
+
+      currentCounselor = result.counselor;
+      populateReportSchoolYearSelect();
+      await loadStudentsForNarrativeSelect();
+      hidePageLoadOverlay();
+    })();
+  </script>
+</body>
+</html>

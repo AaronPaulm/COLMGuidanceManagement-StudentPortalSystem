@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Appointments</title>
+       <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+      <!-- Sidebar -->
+    <aside class="sidebar">
+
+        <header class="profile">
+
+            <img src="../images/COLM LOGO.png" alt="Counselor Profile">
+
+            <div class="info">
+                <h4 id="sidebarName"></h4>
+                <p>Counselor</p>
+
+            </div>
+
+        </header>
+
+
+   <hr>
+
+        <nav aria-label="Counselor Navigation">
+
+            <ul>
+
+                <li>
+            <a href="counselor-dashboard.html">
+              <i class="fa-solid fa-house"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="counselor-student.html">
+                        <i class="fa-solid fa-user-graduate"></i>
+                        <span>Students</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="counselor-announcements.html">
+                        <i class="fa-solid fa-bullhorn"></i>
+                        <span>Announcements</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-appointments.html">
+                        <i class="fa-solid fa-calendar"></i>
+                        <span>Appointments</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-cases.html">
+                        <i class="fa-solid fa-folder-open"></i>
+                        <span>Cases</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-forms.html">
+                        <i class="fa-solid fa-book"></i>
+                        <span>Forms &amp; Interventions</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-reports.html">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>Reports</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-account.html">
+                        <i class="fa-solid fa-user"></i>
+                        <span>Account</span>
+                    </a>
+                </li>
+                <li class="desktop-only">
+                    <button type="button" id="logoutBtn" title="Log Out">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Log Out</span>
+                    </button>
+                </li>
+
+                <li class="hamburger">
+                    <button type="button" onclick="toggleMenu()">
+                        <i class="fa-solid fa-bars"></i>
+                        <span>More</span>
+                    </button>
+                </li>
+
+            </ul>
+
+        </nav>
+
+    </aside>
+
+     <nav class="mobile-menu" id="mobileMenu" aria-label="More Navigation">
+
+        <a href="counselor-appointments.html"><i class="fa-solid fa-calendar"></i> Appointments</a>
+
+        <a href="counselor-cases.html"><i class="fa-solid fa-folder-open"></i> Cases</a>
+
+        <a href="counselor-forms.html"><i class="fa-solid fa-book"></i> Forms &amp; Interventions</a>
+
+        <a href="counselor-reports.html"><i class="fa-solid fa-chart-line"></i> Reports</a>
+
+        <a href="counselor-account.html"><i class="fa-solid fa-user"></i> Account</a>
+
+        <a href="#" id="mobileLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
+
+    </nav>
+
+    <main class="content">
+
+        <header class="GreetingsCard">
+            <h1>Appointment &amp; Counseling Management</h1>
+            <p>Control your availability for the day and manage your assigned requests.</p>
+        </header>
+
+        <div class="section-title" style="margin-top:30px;">
+            <h2>My Availability Today</h2>
+        </div>
+        <div class="availability-card">
+            <div class="availability-info">
+                <h3 id="availabilityName">—</h3>
+                <small id="availabilityHours">—</small>
+            </div>
+            <div class="availability-actions">
+                <button type="button" class="btn btn-outline" id="availabilityToggleBtn">Set as Unavailable</button>
+            </div>
+        </div>
+
+        <div class="section-title" style="margin-top:30px;">
+            <h2>Appointments</h2>
+            <select id="appointmentsFilterSelect" class="table-search" style="width:auto;">
+                <option value="all">All</option>
+                <option value="pending" selected>Pending</option>
+                <option value="approved">Approved</option>
+                <option value="completed">Completed</option>
+                <option value="missed">Missed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="declined">Declined</option>
+                <option value="rescheduled">Rescheduled</option>
+            </select>
+        </div>
+
+        <div class="toolbar-row">
+            <input type="text" id="appointmentsStudentSearch" class="table-search" placeholder="Search by student name...">
+        </div>
+
+        <div class="simple-table-wrap">
+            <table class="simple-table appointments-table">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Concern</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="appointmentsList"></tbody>
+            </table>
+        </div>
+
+    </main>
+
+    <!-- Appointment action modal (approve / decline / complete / reschedule / missed / note) -->
+    <div class="modal-overlay" id="actionModalOverlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="actionModalTitle">Appointment</h3>
+                <button type="button" class="modal-close" id="actionModalCloseBtn" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-meta" id="actionModalMeta"></p>
+                <form id="actionModalForm">
+                    <div class="appt-form-row" id="actionRescheduleFields" style="display:none; grid-template-columns: 1fr 1fr; margin-top:0;">
+                        <div class="form-field">
+                            <label for="actionDateInput">New date</label>
+                            <input type="date" id="actionDateInput">
+                        </div>
+                        <div class="form-field">
+                            <label for="actionTimeInput">New time</label>
+                            <input type="time" id="actionTimeInput" min="08:00" max="17:00">
+                        </div>
+                    </div>
+                    <div class="form-field" id="actionReasonField" style="margin-top:14px;">
+                        <label for="actionReasonInput" id="actionReasonLabel">Note</label>
+                        <textarea id="actionReasonInput" rows="4"></textarea>
+                    </div>
+                    <div class="form-note-banner" id="actionEmailNote" style="display:none; margin-top:14px;">
+                        <i class="fa-regular fa-envelope"></i> The student will be emailed automatically.
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="actionModalConfirmBtn">Confirm</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add to Case modal -->
+    <div class="modal-overlay" id="addToCaseModalOverlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Add to Case</h3>
+                <button type="button" class="modal-close" id="addToCaseCloseBtn" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-meta" id="addToCaseMeta"></p>
+                <form id="addToCaseForm">
+                    <div class="form-field">
+                        <label for="caseChoiceSelect">Case</label>
+                        <select id="caseChoiceSelect" required>
+                            <option value="new">Create a new case</option>
+                        </select>
+                    </div>
+                    <div class="form-field" id="newCaseNatureField" style="margin-top:14px;">
+                        <label for="newCaseNatureInput">Nature of Incident</label>
+                        <input type="text" id="newCaseNatureInput" maxlength="150">
+                    </div>
+                    <div class="form-field" style="margin-top:14px;">
+                        <label for="caseSessionNoteInput">Session Note</label>
+                        <textarea id="caseSessionNoteInput" rows="3"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="addToCaseSaveBtn">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Signed Documents modal (B3 — attach the scanned, signed invitation letter) -->
+    <div class="modal-overlay" id="signedDocsModalOverlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Signed Documents</h3>
+                <button type="button" class="modal-close" id="signedDocsCloseBtn" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-meta" id="signedDocsMeta"></p>
+                <div class="attachment-chip-list" id="signedDocsList"></div>
+                <div class="form-field" style="margin-top:14px;">
+                    <label for="signedDocInput">Attach a signed scan</label>
+                    <input type="file" id="signedDocInput" multiple accept="image/*,.pdf,.doc,.docx">
+                    <span class="hint">Scanned copies of the printed invitation letter, once signed — up to 10MB each.</span>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary" id="signedDocUploadBtn">Upload</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/supabaseClient.js"></script>
+  <script src="../js/counselor-common.js"></script>
+  <script>
+    let currentCounselor = null;
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str ?? "";
+      return div.innerHTML;
+    }
+
+    function pad(n) {
+      return String(n).padStart(2, "0");
+    }
+
+    function formatDate(dateStr) {
+      const [y, m, d] = dateStr.split("-").map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    }
+
+    function formatTime(timeStr) {
+      if (!timeStr) return "";
+      const [h, m] = timeStr.split(":").map(Number);
+      const period = h >= 12 ? "PM" : "AM";
+      const h12 = h % 12 === 0 ? 12 : h % 12;
+      return `${h12}:${pad(m)} ${period}`;
+    }
+
+    function capitalize(str) {
+      return str ? str.charAt(0).toUpperCase() + str.slice(1) : "";
+    }
+
+    function badgeClass(status) {
+      if (status === "declined") return "cancelled";
+      if (status === "completed") return "info";
+      if (status === "missed") return "missed";
+      return status;
+    }
+
+    function studentName(a) {
+      return a.students ? `${a.students.first_name} ${a.students.last_name}` : "Unknown student";
+    }
+
+    async function updateAppointment(appointmentId, patch) {
+      const { error } = await supabaseClient.from("appointments").update(patch).eq("appointment_id", appointmentId);
+      if (error) {
+        showToast("Couldn't update appointment: " + error.message, "error");
+        console.error(error);
+        return false;
+      }
+      return true;
+    }
+
+    async function notifyStudentAboutAppointment(a, title, message = a.concern || null) {
+      if (!a.students?.user_id) return;
+      await supabaseClient.from("notifications").insert({
+        recipient_user_id: a.students.user_id,
+        type: "appointment",
+        title,
+        message,
+        link: "student-appointments.html",
+      });
+    }
+
+    // ---------- Add to Case modal ----------
+
+    let addToCaseAppointment = null;
+
+    async function openAddToCaseModal(a) {
+      addToCaseAppointment = a;
+      document.getElementById("addToCaseMeta").textContent =
+        `${studentName(a)} · ${formatDate(a.appointment_date)} at ${formatTime(a.appointment_time)}`;
+
+      document.getElementById("newCaseNatureInput").value = a.concern || "";
+      document.getElementById("caseSessionNoteInput").value = "";
+
+      const choiceSelect = document.getElementById("caseChoiceSelect");
+      choiceSelect.innerHTML = `<option value="new">Create a new case</option>`;
+
+      const { data: existingCases, error } = await supabaseClient
+        .from("cases")
+        .select("case_id, nature_of_incident, status")
+        .eq("counselor_id", currentCounselor.counselor_id)
+        .eq("student_id", a.student_id)
+        .neq("status", "resolved")
+        .order("created_at", { ascending: false });
+
+      if (!error && existingCases?.length) {
+        existingCases.forEach((c) => {
+          const opt = document.createElement("option");
+          opt.value = String(c.case_id);
+          opt.textContent = `Add to: ${c.nature_of_incident}`;
+          choiceSelect.appendChild(opt);
+        });
+      }
+
+      toggleNewCaseNatureField();
+      document.getElementById("addToCaseModalOverlay").classList.add("show");
+    }
+
+    function toggleNewCaseNatureField() {
+      const isNew = document.getElementById("caseChoiceSelect").value === "new";
+      document.getElementById("newCaseNatureField").style.display = isNew ? "" : "none";
+      document.getElementById("newCaseNatureInput").required = isNew;
+    }
+
+    document.getElementById("caseChoiceSelect").addEventListener("change", toggleNewCaseNatureField);
+
+    function closeAddToCaseModal() {
+      document.getElementById("addToCaseModalOverlay").classList.remove("show");
+      addToCaseAppointment = null;
+    }
+
+    document.getElementById("addToCaseCloseBtn").addEventListener("click", closeAddToCaseModal);
+    document.getElementById("addToCaseModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "addToCaseModalOverlay") closeAddToCaseModal();
+    });
+
+    document.getElementById("addToCaseForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!addToCaseAppointment) return;
+
+      const a = addToCaseAppointment;
+      const choice = document.getElementById("caseChoiceSelect").value;
+      const note = document.getElementById("caseSessionNoteInput").value.trim();
+      const saveBtn = document.getElementById("addToCaseSaveBtn");
+      saveBtn.disabled = true;
+
+      let caseId = choice === "new" ? null : Number(choice);
+
+      if (choice === "new") {
+        const nature = document.getElementById("newCaseNatureInput").value.trim();
+        const { data: newCase, error } = await supabaseClient
+          .from("cases")
+          .insert({
+            student_id: a.student_id,
+            counselor_id: currentCounselor.counselor_id,
+            nature_of_incident: nature,
+            school_year: defaultSchoolYear(),
+          })
+          .select("case_id")
+          .single();
+
+        if (error) {
+          saveBtn.disabled = false;
+          showToast("Couldn't create case: " + error.message, "error");
+          console.error(error);
+          return;
+        }
+        caseId = newCase.case_id;
+      }
+
+      const { error: sessionError } = await supabaseClient.from("case_sessions").insert({
+        case_id: caseId,
+        appointment_id: a.appointment_id,
+        session_note: note || a.concern || null,
+      });
+
+      saveBtn.disabled = false;
+
+      if (sessionError) {
+        showToast("Couldn't add session to case: " + sessionError.message, "error");
+        console.error(sessionError);
+        return;
+      }
+
+      closeAddToCaseModal();
+      showToast(choice === "new" ? "Case created." : "Session added to case.", "success");
+    });
+
+    // ---------- Signed Documents modal (B3) ----------
+
+    let signedDocsAppointment = null;
+
+    function signedDocChipHtml(doc) {
+      return `<button type="button" class="attachment-chip" data-path="${escapeHtml(doc.file_path)}"><i class="fa-solid fa-paperclip"></i> ${escapeHtml(doc.file_name)}</button>`;
+    }
+
+    function renderSignedDocsList(a) {
+      const docs = a.appointment_attachments || [];
+      const list = document.getElementById("signedDocsList");
+      list.innerHTML = docs.length
+        ? docs.map(signedDocChipHtml).join("")
+        : `<span class="hint">No signed documents attached yet.</span>`;
+
+      list.querySelectorAll(".attachment-chip").forEach((chip) => {
+        chip.addEventListener("click", () => openSignedDoc(chip.dataset.path));
+      });
+    }
+
+    async function openSignedDoc(path) {
+      const { data, error } = await supabaseClient.storage.from("case-attachments").createSignedUrl(path, 60);
+      if (error) {
+        showToast("Couldn't open file: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+      window.open(data.signedUrl, "_blank");
+    }
+
+    function openSignedDocsModal(a) {
+      signedDocsAppointment = a;
+      document.getElementById("signedDocsMeta").textContent =
+        `${studentName(a)} · ${formatDate(a.appointment_date)} at ${formatTime(a.appointment_time)}`;
+      document.getElementById("signedDocInput").value = "";
+      renderSignedDocsList(a);
+      document.getElementById("signedDocsModalOverlay").classList.add("show");
+    }
+
+    function closeSignedDocsModal() {
+      document.getElementById("signedDocsModalOverlay").classList.remove("show");
+      signedDocsAppointment = null;
+    }
+
+    document.getElementById("signedDocsCloseBtn").addEventListener("click", closeSignedDocsModal);
+    document.getElementById("signedDocsModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "signedDocsModalOverlay") closeSignedDocsModal();
+    });
+
+    document.getElementById("signedDocUploadBtn").addEventListener("click", async () => {
+      if (!signedDocsAppointment) return;
+
+      const files = Array.from(document.getElementById("signedDocInput").files || []);
+      if (!files.length) {
+        showToast("Choose a file to upload first.", "error");
+        return;
+      }
+      const oversized = files.find((f) => f.size > 10 * 1024 * 1024);
+      if (oversized) {
+        showToast(`"${oversized.name}" is over 10MB — please use a smaller file.`, "error");
+        return;
+      }
+
+      const btn = document.getElementById("signedDocUploadBtn");
+      btn.disabled = true;
+      btn.textContent = "Uploading…";
+
+      const appointmentId = signedDocsAppointment.appointment_id;
+      const newDocs = [];
+      for (const file of files) {
+        const path = `appointments/${appointmentId}/${Date.now()}-${file.name}`;
+        const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file);
+
+        if (uploadError) {
+          showToast(`"${file.name}" failed to upload: ` + uploadError.message, "error");
+          console.error(uploadError);
+          continue;
+        }
+
+        const { data: inserted, error: attachError } = await supabaseClient
+          .from("appointment_attachments")
+          .insert({ appointment_id: appointmentId, file_path: path, file_name: file.name })
+          .select()
+          .single();
+
+        if (attachError) console.error(attachError);
+        else newDocs.push(inserted);
+      }
+
+      btn.disabled = false;
+      btn.textContent = "Upload";
+      document.getElementById("signedDocInput").value = "";
+
+      if (newDocs.length) {
+        signedDocsAppointment.appointment_attachments = [...(signedDocsAppointment.appointment_attachments || []), ...newDocs];
+        allAppointmentsById[appointmentId] = signedDocsAppointment;
+        renderSignedDocsList(signedDocsAppointment);
+        showToast("Signed document attached.", "success");
+        await loadAppointments();
+      }
+    });
+
+    // ---------- Invitation letter (printable, C3) ----------
+
+    function printInvitationForAppointment(a) {
+      openInvitationLetter({
+        studentName: studentName(a),
+        section: a.students?.section,
+        counselorName: `${currentCounselor.first_name} ${currentCounselor.last_name}`,
+        date: formatDate(a.appointment_date),
+        time: formatTime(a.appointment_time),
+        concern: a.concern,
+      });
+    }
+
+    // ---------- Action modal (approve / decline / complete / reschedule / missed / note) ----------
+
+    const ACTION_CONFIG = {
+      approve: {
+        title: "Approve Appointment",
+        confirmLabel: "Approve & Notify",
+        confirmClass: "btn-primary",
+        showReason: true,
+        reasonLabel: "Note to student (optional)",
+        reasonRequired: false,
+        showReschedule: false,
+        showEmailNote: true,
+      },
+      decline: {
+        title: "Decline Appointment",
+        confirmLabel: "Decline & Notify",
+        confirmClass: "btn-outline",
+        showReason: true,
+        reasonLabel: "Reason for declining",
+        reasonRequired: true,
+        showReschedule: false,
+        showEmailNote: true,
+      },
+      complete: {
+        title: "Mark as Completed",
+        confirmLabel: "Mark Completed",
+        confirmClass: "btn-primary",
+        showReason: true,
+        reasonLabel: "Session note (optional)",
+        reasonRequired: false,
+        showReschedule: false,
+        showEmailNote: false,
+      },
+      reschedule: {
+        title: "Reschedule Appointment",
+        confirmLabel: "Reschedule & Notify",
+        confirmClass: "btn-primary",
+        showReason: true,
+        reasonLabel: "Note to student (optional)",
+        reasonRequired: false,
+        showReschedule: true,
+        showEmailNote: false,
+      },
+      missed: {
+        title: "Mark as Missed & Reissue",
+        confirmLabel: "Mark Missed & Reissue",
+        confirmClass: "btn-outline",
+        showReason: true,
+        reasonLabel: "Note (optional)",
+        reasonRequired: false,
+        showReschedule: true,
+        showEmailNote: false,
+      },
+      note: {
+        title: "Add Note",
+        confirmLabel: "Save Note",
+        confirmClass: "btn-primary",
+        showReason: true,
+        reasonLabel: "Note",
+        reasonRequired: false,
+        showReschedule: false,
+        showEmailNote: false,
+      },
+    };
+
+    let actionModalAppointment = null;
+    let actionModalKey = null;
+
+    function openActionModal(actionKey, a) {
+      const config = ACTION_CONFIG[actionKey];
+      actionModalAppointment = a;
+      actionModalKey = actionKey;
+
+      document.getElementById("actionModalTitle").textContent = config.title;
+      document.getElementById("actionModalMeta").textContent =
+        `${studentName(a)} · ${formatDate(a.appointment_date)} at ${formatTime(a.appointment_time)}`;
+
+      const reasonField = document.getElementById("actionReasonField");
+      const reasonInput = document.getElementById("actionReasonInput");
+      reasonField.style.display = config.showReason ? "" : "none";
+      document.getElementById("actionReasonLabel").textContent = config.reasonLabel || "Note";
+      reasonInput.required = !!config.reasonRequired;
+      reasonInput.value = actionKey === "note" ? a.counselor_note || "" : "";
+
+      const rescheduleFields = document.getElementById("actionRescheduleFields");
+      rescheduleFields.style.display = config.showReschedule ? "grid" : "none";
+      document.getElementById("actionDateInput").required = !!config.showReschedule;
+      document.getElementById("actionTimeInput").required = !!config.showReschedule;
+      if (config.showReschedule) {
+        document.getElementById("actionDateInput").value = a.appointment_date;
+        document.getElementById("actionTimeInput").value = a.appointment_time;
+      }
+
+      document.getElementById("actionEmailNote").style.display = config.showEmailNote ? "flex" : "none";
+
+      const confirmBtn = document.getElementById("actionModalConfirmBtn");
+      confirmBtn.textContent = config.confirmLabel;
+      confirmBtn.className = `btn ${config.confirmClass}`;
+
+      document.getElementById("actionModalOverlay").classList.add("show");
+      (config.showReason ? reasonInput : confirmBtn).focus();
+    }
+
+    function closeActionModal() {
+      document.getElementById("actionModalOverlay").classList.remove("show");
+      actionModalAppointment = null;
+      actionModalKey = null;
+    }
+
+    document.getElementById("actionModalCloseBtn").addEventListener("click", closeActionModal);
+    document.getElementById("actionModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "actionModalOverlay") closeActionModal();
+    });
+
+    document.getElementById("actionModalForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!actionModalAppointment || !actionModalKey) return;
+
+      const a = actionModalAppointment;
+      const reason = document.getElementById("actionReasonInput").value.trim();
+      const confirmBtn = document.getElementById("actionModalConfirmBtn");
+      confirmBtn.disabled = true;
+
+      let ok = false;
+      switch (actionModalKey) {
+        case "approve":
+          ok = await updateAppointment(a.appointment_id, { status: "approved" });
+          if (ok) {
+            await notifyStudentAboutAppointment(a, "Your appointment was approved");
+          }
+          break;
+        case "decline":
+          ok = await updateAppointment(a.appointment_id, { status: "declined", counselor_note: reason || null });
+          if (ok) {
+            await notifyStudentAboutAppointment(a, "Your appointment was declined");
+          }
+          break;
+        case "complete":
+          ok = await updateAppointment(a.appointment_id, { status: "completed", counselor_note: reason || null });
+          if (ok) await notifyStudentAboutAppointment(a, "Your appointment was marked complete");
+          break;
+        case "reschedule": {
+          const newDate = document.getElementById("actionDateInput").value;
+          const newTime = document.getElementById("actionTimeInput").value;
+          const { data: clashing, error: clashError } = await supabaseClient
+            .from("appointments")
+            .select("appointment_id")
+            .eq("counselor_id", currentCounselor.counselor_id)
+            .eq("appointment_date", newDate)
+            .eq("appointment_time", newTime)
+            .not("status", "in", "(cancelled,declined)")
+            .neq("appointment_id", a.appointment_id)
+            .limit(1);
+
+          if (clashError) {
+            showToast("Couldn't check that time slot: " + clashError.message, "error");
+            confirmBtn.disabled = false;
+            return;
+          }
+          if (clashing && clashing.length) {
+            showToast("You already have another appointment at that date and time.", "error");
+            confirmBtn.disabled = false;
+            return;
+          }
+
+          ok = await updateAppointment(a.appointment_id, {
+            appointment_date: newDate,
+            appointment_time: newTime,
+            counselor_note: reason || a.counselor_note || null,
+            was_rescheduled: true,
+          });
+          if (ok) await notifyStudentAboutAppointment(a, "Your appointment was rescheduled");
+          break;
+        }
+        case "missed": {
+          const newDate = document.getElementById("actionDateInput").value;
+          const newTime = document.getElementById("actionTimeInput").value;
+          const { data: clashing, error: clashError } = await supabaseClient
+            .from("appointments")
+            .select("appointment_id")
+            .eq("counselor_id", currentCounselor.counselor_id)
+            .eq("appointment_date", newDate)
+            .eq("appointment_time", newTime)
+            .not("status", "in", "(cancelled,declined)")
+            .neq("appointment_id", a.appointment_id)
+            .limit(1);
+
+          if (clashError) {
+            showToast("Couldn't check that time slot: " + clashError.message, "error");
+            confirmBtn.disabled = false;
+            return;
+          }
+          if (clashing && clashing.length) {
+            showToast("You already have another appointment at that date and time.", "error");
+            confirmBtn.disabled = false;
+            return;
+          }
+
+          // The missed session is never deleted or overwritten — it stays
+          // on record as "missed" — and the reissue is a brand-new
+          // appointment row for the new date, which is also how the
+          // student sees both the miss and the new schedule in their
+          // own history.
+          ok = await updateAppointment(a.appointment_id, { status: "missed", counselor_note: reason || a.counselor_note || null });
+          if (!ok) break;
+
+          const { error: reissueError } = await supabaseClient.from("appointments").insert({
+            student_id: a.student_id,
+            counselor_id: currentCounselor.counselor_id,
+            appointment_date: newDate,
+            appointment_time: newTime,
+            concern: a.concern,
+            status: "approved",
+            school_year: defaultSchoolYear(),
+          });
+
+          if (reissueError) {
+            showToast("Marked as missed, but couldn't create the new appointment: " + reissueError.message, "error");
+            console.error(reissueError);
+          } else {
+            await notifyStudentAboutAppointment(
+              a,
+              "You missed your guidance appointment",
+              `A new session has been scheduled for ${formatDate(newDate)} at ${formatTime(newTime)}.`
+            );
+            openInvitationLetter({
+              studentName: studentName(a),
+              section: a.students?.section,
+              counselorName: `${currentCounselor.first_name} ${currentCounselor.last_name}`,
+              date: formatDate(newDate),
+              time: formatTime(newTime),
+              concern: a.concern,
+              missed: true,
+            });
+          }
+          break;
+        }
+        case "note":
+          ok = await updateAppointment(a.appointment_id, { counselor_note: reason || null });
+          // Notes often carry things the student actually needs to act on
+          // (bring a parent, bring an ID, etc.) — only worth notifying
+          // when there's actually new text, not when a note is cleared.
+          if (ok && reason) {
+            await notifyStudentAboutAppointment(a, "Your counselor added a note to your appointment", reason);
+          }
+          break;
+      }
+
+      confirmBtn.disabled = false;
+
+      if (ok) {
+        closeActionModal();
+        await loadAppointments();
+      }
+    });
+
+    function appointmentRowHtml(a) {
+      const actions = [];
+      if (a.status === "pending") {
+        actions.push(`<button type="button" class="icon-btn sm primary" data-action="approve" title="Approve"><i class="fa-solid fa-check"></i></button>`);
+        actions.push(`<button type="button" class="icon-btn sm danger" data-action="decline" title="Decline"><i class="fa-solid fa-xmark"></i></button>`);
+      } else if (a.status === "approved") {
+        // No plain "Cancel" once a session is approved — the client's rule
+        // is that a scheduled session is never cancelled outright, only
+        // rescheduled (or marked missed, which itself reissues a new date).
+        // Declining is still fine at the "pending" stage above, since that's
+        // withdrawing a request that was never confirmed, not erasing a
+        // scheduled session.
+        actions.push(`<button type="button" class="icon-btn sm primary" data-action="complete" title="Mark Completed"><i class="fa-solid fa-check-double"></i></button>`);
+        actions.push(`<button type="button" class="icon-btn sm" data-action="invite" title="Print Invitation Letter"><i class="fa-solid fa-file-lines"></i></button>`);
+        actions.push(`<button type="button" class="icon-btn sm" data-action="reschedule" title="Reschedule"><i class="fa-regular fa-calendar-days"></i></button>`);
+        actions.push(`<button type="button" class="icon-btn sm danger" data-action="missed" title="Mark as Missed & Reissue"><i class="fa-solid fa-calendar-xmark"></i></button>`);
+      }
+      if (["approved", "completed"].includes(a.status)) {
+        actions.push(`<button type="button" class="icon-btn sm" data-action="note" title="${a.counselor_note ? "Edit Note" : "Add Note"}"><i class="fa-regular fa-note-sticky"></i></button>`);
+        const docCount = (a.appointment_attachments || []).length;
+        actions.push(
+          `<button type="button" class="icon-btn sm" data-action="signedDocs" title="${docCount ? `Signed Documents (${docCount})` : "Attach Signed Document"}"><i class="fa-solid fa-paperclip"></i></button>`
+        );
+      }
+      if (a.status === "completed") {
+        actions.push(`<button type="button" class="icon-btn sm" data-action="addToCase" title="Add to Case"><i class="fa-solid fa-folder-plus"></i></button>`);
+      }
+
+      const noteIndicator = a.counselor_note
+        ? `<i class="fa-solid fa-note-sticky note-indicator" title="${escapeHtml(a.counselor_note)}"></i>`
+        : "";
+
+      const rescheduledBadge = a.was_rescheduled
+        ? `<span class="badge badge-rescheduled" title="This appointment's date/time was changed at least once">Rescheduled</span>`
+        : "";
+
+      return `
+        <tr data-id="${a.appointment_id}">
+          <td>${escapeHtml(studentName(a))}</td>
+          <td>${formatDate(a.appointment_date)}</td>
+          <td>${formatTime(a.appointment_time)}</td>
+          <td class="col-concern">${escapeHtml(a.concern || "—")} ${noteIndicator}</td>
+          <td><span class="badge badge-${badgeClass(a.status)}">${capitalize(a.status)}</span> ${rescheduledBadge}</td>
+          <td><div class="table-actions">${actions.join("")}</div></td>
+        </tr>
+      `;
+    }
+
+    function attachRowActions(container, appointmentsById) {
+      container.querySelectorAll("tr[data-id]").forEach((row) => {
+        const a = appointmentsById[row.dataset.id];
+        row.querySelector('[data-action="approve"]')?.addEventListener("click", () => openActionModal("approve", a));
+        row.querySelector('[data-action="decline"]')?.addEventListener("click", () => openActionModal("decline", a));
+        row.querySelector('[data-action="complete"]')?.addEventListener("click", () => openActionModal("complete", a));
+        row.querySelector('[data-action="reschedule"]')?.addEventListener("click", () => openActionModal("reschedule", a));
+        row.querySelector('[data-action="missed"]')?.addEventListener("click", () => openActionModal("missed", a));
+        row.querySelector('[data-action="invite"]')?.addEventListener("click", () => printInvitationForAppointment(a));
+        row.querySelector('[data-action="note"]')?.addEventListener("click", () => openActionModal("note", a));
+        row.querySelector('[data-action="signedDocs"]')?.addEventListener("click", () => openSignedDocsModal(a));
+        row.querySelector('[data-action="addToCase"]')?.addEventListener("click", () => openAddToCaseModal(a));
+      });
+    }
+
+    // !inner (rather than the default left join) is required for the
+    // student-name search below to actually filter anything — PostgREST
+    // only applies filters on an embedded resource when it's joined as
+    // inner. Safe here since appointments.student_id is never null.
+    const APPOINTMENTS_SELECT =
+      "appointment_id, student_id, concern, appointment_date, appointment_time, status, counselor_note, was_rescheduled, students!inner(first_name, last_name, user_id, student_email, section), appointment_attachments(attachment_id, file_path, file_name)";
+    const APPOINTMENTS_PAGE_SIZE = 20;
+    let activeAppointmentsFilter = "pending";
+    let appointmentsOffset = 0;
+    let appointmentsHasMore = false;
+    let allAppointmentsById = {};
+    let appointmentsStudentQuery = "";
+
+    // Applies the student-name search (if any) to a query — combines with
+    // whichever status filter is active, e.g. "pending requests from
+    // students named Cruz."
+    function withStudentSearch(query) {
+      if (!appointmentsStudentQuery) return query;
+      return query.or(`first_name.ilike.%${appointmentsStudentQuery}%,last_name.ilike.%${appointmentsStudentQuery}%`, {
+        foreignTable: "students",
+      });
+    }
+
+    function buildAppointmentsQuery() {
+      let query = supabaseClient
+        .from("appointments")
+        .select(APPOINTMENTS_SELECT)
+        .eq("counselor_id", currentCounselor.counselor_id);
+
+      // "Rescheduled" isn't a status a row ever sits in (rescheduling keeps
+      // an appointment "approved," just on a new date/time) — it's a history
+      // flag, so this filter reads was_rescheduled instead of status.
+      if (activeAppointmentsFilter === "rescheduled") {
+        query = query.eq("was_rescheduled", true);
+      } else if (activeAppointmentsFilter !== "all") {
+        query = query.eq("status", activeAppointmentsFilter);
+      }
+      return withStudentSearch(query);
+    }
+
+    // The "Pending" dropdown option shows a live count so it's still
+    // glanceable while looking at a different filter, same as the old
+    // tab badge — just applied to the select's option text instead.
+    async function refreshPendingCount() {
+      const { count, error } = await supabaseClient
+        .from("appointments")
+        .select("appointment_id", { count: "exact", head: true })
+        .eq("counselor_id", currentCounselor.counselor_id)
+        .eq("status", "pending");
+
+      const option = document.querySelector('#appointmentsFilterSelect option[value="pending"]');
+      if (option && !error) option.textContent = count ? `Pending (${count})` : "Pending";
+    }
+
+    function appendAppointmentRows(container, data) {
+      data.forEach((a) => (allAppointmentsById[a.appointment_id] = a));
+
+      const wrapper = document.createElement("tbody");
+      wrapper.innerHTML = data.map(appointmentRowHtml).join("");
+      attachRowActions(wrapper, allAppointmentsById);
+
+      while (wrapper.firstChild) container.appendChild(wrapper.firstChild);
+    }
+
+    function renderLoadMoreAppointmentsButton() {
+      let btn = document.getElementById("loadMoreAppointmentsBtn");
+      if (!appointmentsHasMore) {
+        if (btn) btn.remove();
+        return;
+      }
+      if (!btn) {
+        btn = document.createElement("button");
+        btn.type = "button";
+        btn.id = "loadMoreAppointmentsBtn";
+        btn.className = "btn btn-outline btn-block";
+        btn.textContent = "Load More";
+        btn.addEventListener("click", loadMoreAppointments);
+        document.getElementById("appointmentsList").closest(".simple-table-wrap").after(btn);
+      }
+      btn.disabled = false;
+      btn.textContent = "Load More";
+    }
+
+    async function loadAppointments() {
+      const list = document.getElementById("appointmentsList");
+      list.innerHTML = `<tr class="table-empty"><td colspan="6">Loading…</td></tr>`;
+      document.getElementById("loadMoreAppointmentsBtn")?.remove();
+      appointmentsOffset = 0;
+      allAppointmentsById = {};
+
+      const { data, error } = await buildAppointmentsQuery()
+        .order("appointment_date", { ascending: false })
+        .order("appointment_time", { ascending: false })
+        .range(0, APPOINTMENTS_PAGE_SIZE - 1);
+
+      if (error) {
+        list.innerHTML = `<tr class="table-empty"><td colspan="6">Couldn't load appointments.</td></tr>`;
+        console.error(error);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        list.innerHTML = `<tr class="table-empty"><td colspan="6">No appointments found.</td></tr>`;
+        appointmentsHasMore = false;
+        return;
+      }
+
+      list.innerHTML = "";
+      appendAppointmentRows(list, data);
+
+      appointmentsOffset = data.length;
+      appointmentsHasMore = data.length === APPOINTMENTS_PAGE_SIZE;
+      renderLoadMoreAppointmentsButton();
+      refreshPendingCount();
+    }
+
+    async function loadMoreAppointments() {
+      const btn = document.getElementById("loadMoreAppointmentsBtn");
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Loading…";
+      }
+
+      const { data, error } = await buildAppointmentsQuery()
+        .order("appointment_date", { ascending: false })
+        .order("appointment_time", { ascending: false })
+        .range(appointmentsOffset, appointmentsOffset + APPOINTMENTS_PAGE_SIZE - 1);
+
+      if (error) {
+        showToast("Couldn't load more appointments: " + error.message, "error");
+        console.error(error);
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Load More";
+        }
+        return;
+      }
+
+      appendAppointmentRows(document.getElementById("appointmentsList"), data || []);
+      appointmentsOffset += (data || []).length;
+      appointmentsHasMore = (data || []).length === APPOINTMENTS_PAGE_SIZE;
+      renderLoadMoreAppointmentsButton();
+    }
+
+    document.getElementById("appointmentsFilterSelect").addEventListener("change", (e) => {
+      activeAppointmentsFilter = e.target.value;
+      loadAppointments();
+    });
+
+    document.getElementById("appointmentsStudentSearch").addEventListener("input", (e) => {
+      appointmentsStudentQuery = e.target.value.trim();
+      loadAppointments();
+    });
+
+    async function loadAvailability() {
+      document.getElementById("availabilityName").textContent =
+        `${currentCounselor.first_name} ${currentCounselor.last_name}`;
+
+      const { data, error } = await supabaseClient
+        .from("counselors")
+        .select("availability_status, work_days")
+        .eq("counselor_id", currentCounselor.counselor_id)
+        .single();
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      const available = (data?.availability_status || "available").toLowerCase() === "available";
+      document.getElementById("availabilityHours").textContent =
+        `${data?.work_days || "Mon–Sat"} · 8:00 AM – 5:00 PM`;
+
+      const toggleBtn = document.getElementById("availabilityToggleBtn");
+      toggleBtn.textContent = available ? "Set as Unavailable" : "Set as Available";
+      toggleBtn.onclick = () => setAvailability(available ? "unavailable" : "available");
+    }
+
+    async function setAvailability(newStatus) {
+      const toggleBtn = document.getElementById("availabilityToggleBtn");
+      toggleBtn.disabled = true;
+
+      const { error } = await supabaseClient
+        .from("counselors")
+        .update({ availability_status: newStatus })
+        .eq("counselor_id", currentCounselor.counselor_id);
+
+      toggleBtn.disabled = false;
+
+      if (error) {
+        showToast("Couldn't update availability: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      await loadAvailability();
+    }
+
+    window.addEventListener("app:notification", (e) => {
+      if (e.detail?.type === "appointment") loadAppointments();
+    });
+
+    (async () => {
+      const result = await requireCounselorAuth();
+      if (!result) return;
+
+      currentCounselor = result.counselor;
+      await Promise.all([loadAppointments(), loadAvailability()]);
+      hidePageLoadOverlay();
+    })();
+  </script>
+</body>
+</html>

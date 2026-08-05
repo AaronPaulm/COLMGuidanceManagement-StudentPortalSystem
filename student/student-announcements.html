@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Announcements</title>
+       <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+      <!-- Sidebar -->
+    <aside class="sidebar">
+
+        <header class="profile">
+
+            <img src="../images/COLM LOGO.png" alt="Student Profile">
+
+            <div class="info">
+                <h4 id="sidebarName"></h4>
+                <p>Student</p>
+                
+            </div>
+    
+        </header>
+
+
+   <hr>
+ 
+        <nav aria-label="Student Navigation">
+
+            <ul>
+
+                <li>
+            <a href="student-dashboard.html">
+              <i class="fa-solid fa-house"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="student-announcements.html">
+                        <i class="fa-solid fa-bullhorn"></i>
+                        <span>Announcements</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="student-appointments.html">
+                        <i class="fa-solid fa-calendar"></i>
+                        <span>Appointments</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="student-forms.html">
+                        <i class="fa-solid fa-book"></i>
+                        <span>Forms &amp; Interventions</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="student-history.html">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>History</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="student-profile.html">
+                        <i class="fa-solid fa-user"></i>
+                        <span>Profile</span>
+                    </a>
+                </li>
+                <li class="desktop-only">
+                    <button type="button" id="logoutBtn" title="Log Out">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Log Out</span>
+                    </button>
+                </li>
+
+                <li class="hamburger">
+                    <button type="button" onclick="toggleMenu()">
+                        <i class="fa-solid fa-bars"></i>
+                        <span>More</span>
+                    </button>
+                </li>
+
+            </ul>
+
+        </nav>
+
+    </aside>
+
+     <nav class="mobile-menu" id="mobileMenu" aria-label="More Navigation">
+
+        <a href="student-forms.html"><i class="fa-solid fa-book"></i> Forms &amp; Interventions</a>
+
+        <a href="student-history.html"><i class="fa-solid fa-clock-rotate-left"></i> History</a>
+
+        <a href="student-profile.html"><i class="fa-solid fa-user"></i> Profile</a>
+
+        <a href="#" id="mobileLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
+
+    </nav>
+    <main class="content">
+
+ <header class="GreetingsCard">
+            <h1>Announcements</h1>
+                <p>Stay updated with the latest news and announcements.</p>
+        </header>
+
+        <div class="CalendarLayout">
+            <div class="CalendarWrap">
+                <div class="CalendarHeader">
+                    <button type="button" class="cal-nav-btn" id="prevMonthBtn" aria-label="Previous month">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <h3 id="calendarMonthLabel"></h3>
+                    <button type="button" class="cal-nav-btn" id="nextMonthBtn" aria-label="Next month">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+
+                <div class="CalendarWeekdays">
+                    <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                </div>
+
+                <div class="CalendarGrid" id="calendarGrid"></div>
+
+                <div class="CalendarLegend">
+                    <span><i class="legend-dot event"></i> Has announcement</span>
+                </div>
+
+                <button type="button" class="btn btn-outline btn-block" id="todayBtn" style="margin-top:14px;">
+                    <i class="fa-solid fa-calendar-day"></i> Jump to Today
+                </button>
+            </div>
+
+            <div>
+                <div class="CalendarFilterBar">
+                    <span class="filter-label" id="selectedDateLabel">Today's Announcements</span>
+                </div>
+                <div class="AnnouncementsList" id="announcementsList"></div>
+            </div>
+        </div>
+
+</main>
+
+<!-- Announcement Detail Modal -->
+<div class="modal-overlay" id="announcementModalOverlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 id="modalTitle"></h3>
+            <button type="button" class="modal-close" id="modalCloseBtn" aria-label="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/supabaseClient.js"></script>
+  <script src="../js/student-common.js"></script>
+  <script>
+    let allAnnouncements = [];
+    let announcementsByDate = {};
+    let viewYear, viewMonth; // viewMonth is 0-indexed
+    let selectedDateStr;
+
+    function pad(n) {
+      return String(n).padStart(2, "0");
+    }
+
+    function toDateStr(y, m, d) {
+      return `${y}-${pad(m + 1)}-${pad(d)}`;
+    }
+
+    function todayStr() {
+      const t = new Date();
+      return toDateStr(t.getFullYear(), t.getMonth(), t.getDate());
+    }
+
+    function formatLong(dateStr) {
+      const [y, m, d] = dateStr.split("-").map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    }
+
+    function formatShort(dateStr) {
+      const [y, m, d] = dateStr.split("-").map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    }
+
+    function truncate(str, n) {
+      if (!str) return "";
+      return str.length > n ? str.slice(0, n).trim() + "…" : str;
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str ?? "";
+      return div.innerHTML;
+    }
+
+    function counselorName(a) {
+      return a.counselors
+        ? `${a.counselors.first_name} ${a.counselors.last_name}`
+        : "Guidance Office";
+    }
+
+    async function loadAnnouncements() {
+      const { data, error } = await supabaseClient
+        .from("announcements")
+        .select(
+          "announcement_id, title, announcement_content, announcement_date, created_at, counselors(first_name, last_name)"
+        )
+        .order("announcement_date", { ascending: false });
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      allAnnouncements = data || [];
+      announcementsByDate = {};
+      allAnnouncements.forEach((a) => {
+        const key = a.announcement_date;
+        if (!announcementsByDate[key]) announcementsByDate[key] = [];
+        announcementsByDate[key].push(a);
+      });
+
+      renderCalendar();
+      renderDayList(selectedDateStr);
+    }
+
+    function renderCalendar() {
+      const grid = document.getElementById("calendarGrid");
+      const monthLabel = document.getElementById("calendarMonthLabel");
+      const first = new Date(viewYear, viewMonth, 1);
+      const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+      const startOffset = first.getDay();
+      const today = todayStr();
+
+      monthLabel.textContent = first.toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      });
+
+      grid.innerHTML = "";
+
+      for (let i = 0; i < startOffset; i++) {
+        const empty = document.createElement("div");
+        empty.className = "cal-day empty";
+        grid.appendChild(empty);
+      }
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = toDateStr(viewYear, viewMonth, d);
+        const cell = document.createElement("div");
+        cell.className = "cal-day";
+        cell.textContent = d;
+
+        if (dateStr === today) cell.classList.add("today");
+        if (announcementsByDate[dateStr]) cell.classList.add("has-event");
+        if (dateStr === selectedDateStr) cell.classList.add("selected");
+
+        cell.addEventListener("click", () => {
+          selectedDateStr = dateStr;
+          renderCalendar();
+          renderDayList(dateStr);
+          if (announcementsByDate[dateStr] && announcementsByDate[dateStr].length > 0) {
+            openDayModal(dateStr);
+          }
+        });
+
+        grid.appendChild(cell);
+      }
+    }
+
+    function renderDayList(dateStr) {
+      const list = document.getElementById("announcementsList");
+      const label = document.getElementById("selectedDateLabel");
+      const items = announcementsByDate[dateStr] || [];
+
+      label.textContent =
+        dateStr === todayStr()
+          ? `Today's Announcements — ${formatLong(dateStr)}`
+          : formatLong(dateStr);
+
+      if (items.length === 0) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <i class="fa-solid fa-bullhorn" style="font-size:28px; margin-bottom:10px; color:#d1d5db;"></i>
+            <p>No announcements for this day.</p>
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = "";
+      items.forEach((a) => {
+        const card = document.createElement("div");
+        card.className = "announcement-card";
+        card.innerHTML = `
+          <div class="announcement-meta">
+            <small>${formatShort(a.announcement_date)}</small>
+          </div>
+          <h3>${escapeHtml(a.title)}</h3>
+          <p>${escapeHtml(truncate(a.announcement_content, 140))}</p>
+          <small>Posted by ${escapeHtml(counselorName(a))}</small>
+        `;
+        card.addEventListener("click", () => openAnnouncementModal(a));
+        list.appendChild(card);
+      });
+    }
+
+    function openAnnouncementModal(a) {
+      document.getElementById("modalTitle").textContent = a.title;
+      document.getElementById("modalBody").innerHTML = `
+        <p class="modal-meta">${formatLong(a.announcement_date)} · Posted by ${escapeHtml(counselorName(a))}</p>
+        <p class="modal-content-text">${escapeHtml(a.announcement_content)}</p>
+      `;
+      document.getElementById("announcementModalOverlay").classList.add("show");
+    }
+
+    function openDayModal(dateStr) {
+      const items = announcementsByDate[dateStr] || [];
+      if (items.length === 0) return;
+
+      if (items.length === 1) {
+        openAnnouncementModal(items[0]);
+        return;
+      }
+
+      document.getElementById("modalTitle").textContent = formatLong(dateStr);
+      document.getElementById("modalBody").innerHTML = items
+        .map(
+          (a) => `
+        <div class="modal-day-item">
+          <h4>${escapeHtml(a.title)}</h4>
+          <p class="modal-meta">Posted by ${escapeHtml(counselorName(a))}</p>
+          <p class="modal-content-text">${escapeHtml(a.announcement_content)}</p>
+        </div>
+      `
+        )
+        .join("");
+      document.getElementById("announcementModalOverlay").classList.add("show");
+    }
+
+    function closeAnnouncementModal() {
+      document.getElementById("announcementModalOverlay").classList.remove("show");
+    }
+
+    document.getElementById("modalCloseBtn").addEventListener("click", closeAnnouncementModal);
+    document.getElementById("announcementModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "announcementModalOverlay") closeAnnouncementModal();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeAnnouncementModal();
+    });
+
+    document.getElementById("prevMonthBtn").addEventListener("click", () => {
+      viewMonth--;
+      if (viewMonth < 0) {
+        viewMonth = 11;
+        viewYear--;
+      }
+      renderCalendar();
+    });
+
+    document.getElementById("nextMonthBtn").addEventListener("click", () => {
+      viewMonth++;
+      if (viewMonth > 11) {
+        viewMonth = 0;
+        viewYear++;
+      }
+      renderCalendar();
+    });
+
+    document.getElementById("todayBtn").addEventListener("click", () => {
+      const now = new Date();
+      viewYear = now.getFullYear();
+      viewMonth = now.getMonth();
+      selectedDateStr = todayStr();
+      renderCalendar();
+      renderDayList(selectedDateStr);
+    });
+
+    window.addEventListener("app:notification", (e) => {
+      if (e.detail?.type === "announcement") loadAnnouncements();
+    });
+
+    (async () => {
+      const result = await requireStudentAuth();
+      if (!result) return;
+
+      const now = new Date();
+      viewYear = now.getFullYear();
+      viewMonth = now.getMonth();
+      selectedDateStr = todayStr();
+
+      await loadAnnouncements();
+      hidePageLoadOverlay();
+    })();
+  </script>
+</body>
+</html>

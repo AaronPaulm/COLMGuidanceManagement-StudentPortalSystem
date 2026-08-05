@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Counselor Dashboard</title>
+       <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+        <header class="profile">
+
+            <img src="../images/COLM LOGO.png" alt="Counselor Profile">
+
+            <div class="info">
+                <h4 id="sidebarName"></h4>
+                <p>Counselor</p>
+
+            </div>
+
+        </header>
+
+
+   <hr>
+
+        <nav aria-label="Counselor Navigation">
+
+            <ul>
+
+                <li>
+            <a href="counselor-dashboard.html">
+              <i class="fa-solid fa-house"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+          <li>
+            <a href="counselor-student.html">
+              <i class="fa-solid fa-user-graduate"></i>
+                        <span>Students</span>
+                    </a>
+                </li>
+                
+                <li>
+                    <a href="counselor-announcements.html">
+                        <i class="fa-solid fa-bullhorn"></i>
+                        <span>Announcements</span>
+                    </a>
+                </li>
+
+                    <li class="desktop-only">
+                    <a href="counselor-appointments.html">
+                        <i class="fa-solid fa-calendar"></i>
+                        <span>Appointments</span>
+                    </a>
+                </li> 
+
+                   <li class="desktop-only">
+                    <a href="counselor-cases.html">
+                        <i class="fa-solid fa-folder-open"></i>
+                        <span>Cases</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-forms.html">
+                        <i class="fa-solid fa-book"></i>
+                        <span>Forms &amp; Interventions</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-reports.html">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>Reports</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-account.html">
+                        <i class="fa-solid fa-user"></i>
+                        <span>Account</span>
+                    </a>
+                </li>
+                <li class="desktop-only">
+                    <button type="button" id="logoutBtn" title="Log Out">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Log Out</span>
+                    </button>
+                </li>
+
+                <li class="hamburger">
+                    <button type="button" onclick="toggleMenu()">
+                        <i class="fa-solid fa-bars"></i>
+                        <span>More</span>
+                    </button>
+                </li>
+
+            </ul>
+
+        </nav>
+
+    </aside>
+
+     <nav class="mobile-menu" id="mobileMenu" aria-label="More Navigation">
+         <a href="counselor-appointments.html"><i class="fa-solid fa-calendar"></i> Appointments</a>
+        <a href="counselor-cases.html"><i class="fa-solid fa-folder-open"></i> Cases</a>
+         <a href="counselor-forms.html"><i class="fa-solid fa-book"></i> Forms &amp; Interventions</a>
+        <a href="counselor-reports.html"><i class="fa-solid fa-chart-line"></i> Reports</a>
+
+        <a href="counselor-account.html"><i class="fa-solid fa-user"></i> Account</a>
+
+        <a href="#" id="mobileLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
+
+    </nav>
+
+
+
+  <main class="content">
+
+        <header class="GreetingsCard">
+            <h1>Counselor Dashboard</h1>
+            <p id="welcomeMsg">Loading your info...</p>
+        </header>
+
+        <div id="counselorReminderBanner"></div>
+
+        <section class="stat-cards">
+
+            <button class="stat-card" onclick="location.href='counselor-appointments.html'">
+                <div class="stat-card-top">
+                    <span class="stat-card-label">Pending Appointments</span>
+                    <span class="stat-card-icon"><i class="fa-solid fa-calendar-check"></i></span>
+                </div>
+                <div class="stat-card-value" id="statPending">—</div>
+                <div class="stat-card-desc">Awaiting your response</div>
+            </button>
+
+            <button class="stat-card" onclick="location.href='counselor-cases.html'">
+                <div class="stat-card-top">
+                    <span class="stat-card-label">Open Cases</span>
+                    <span class="stat-card-icon"><i class="fa-solid fa-folder-open"></i></span>
+                </div>
+                <div class="stat-card-value" id="statOpenCases">—</div>
+                <div class="stat-card-desc">Open or being monitored</div>
+            </button>
+
+            <button class="stat-card" onclick="location.href='counselor-student.html'">
+                <div class="stat-card-top">
+                    <span class="stat-card-label">Students</span>
+                    <span class="stat-card-icon"><i class="fa-solid fa-user-graduate"></i></span>
+                </div>
+                <div class="stat-card-value" id="statStudents">—</div>
+                <div class="stat-card-desc">In the directory</div>
+            </button>
+
+            <button class="stat-card" onclick="location.href='counselor-reports.html'">
+                <div class="stat-card-top">
+                    <span class="stat-card-label">Completed This Month</span>
+                    <span class="stat-card-icon"><i class="fa-solid fa-check-double"></i></span>
+                </div>
+                <div class="stat-card-value" id="statCompleted">—</div>
+                <div class="stat-card-desc">Guidance sessions held</div>
+            </button>
+
+        </section>
+
+        <div class="section-title" style="margin-top:30px;">
+            <h2>Analytics</h2>
+        </div>
+        <div class="analytics-grid">
+            <div class="analytics-card">
+                <h3>Appointments by Status</h3>
+                <div id="apptStatusChart"></div>
+            </div>
+            <div class="analytics-card">
+                <h3>Cases by Status</h3>
+                <div id="caseStatusChart"></div>
+            </div>
+        </div>
+    </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/supabaseClient.js"></script>
+  <script src="../js/counselor-common.js"></script>
+  <script>
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str ?? "";
+      return div.innerHTML;
+    }
+
+    // Fixed order + reserved status colors, consistent with the badges used
+    // everywhere else in the app — never color-alone, each bar carries its
+    // own text label and count.
+    const APPOINTMENT_STATUS_META = [
+      { key: "pending", label: "Pending", color: "#f59e0b" },
+      { key: "approved", label: "Approved", color: "#22c55e" },
+      { key: "completed", label: "Completed", color: "#4338ca" },
+      { key: "declined", label: "Declined", color: "#ef4444" },
+      { key: "cancelled", label: "Cancelled", color: "#9ca3af" },
+    ];
+
+    const CASE_STATUS_META = [
+      { key: "open", label: "Open", color: "#f59e0b" },
+      { key: "monitoring", label: "Monitoring", color: "#3b82f6" },
+      { key: "resolved", label: "Resolved", color: "#22c55e" },
+    ];
+
+    function renderStatusChart(containerId, counts, meta) {
+      const container = document.getElementById(containerId);
+      const total = meta.reduce((sum, m) => sum + (counts[m.key] || 0), 0);
+
+      if (total === 0) {
+        container.innerHTML = `<div class="notif-empty" style="padding:12px 0;">No data yet.</div>`;
+        return;
+      }
+
+      container.innerHTML = meta
+        .map((m) => {
+          const value = counts[m.key] || 0;
+          const pct = total ? Math.round((value / total) * 100) : 0;
+          return `
+            <div class="status-bar-row">
+              <div class="status-bar-label">${escapeHtml(m.label)}</div>
+              <div class="status-bar-track">
+                <div class="status-bar-fill" style="width:${pct}%; background:${m.color};"></div>
+              </div>
+              <div class="status-bar-value">${value}</div>
+            </div>
+          `;
+        })
+        .join("");
+    }
+
+    function countByStatus(rows) {
+      const counts = {};
+      (rows || []).forEach((r) => {
+        counts[r.status] = (counts[r.status] || 0) + 1;
+      });
+      return counts;
+    }
+
+    function firstOfMonthStr() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, "0");
+      return `${y}-${m}-01`;
+    }
+
+    function tomorrowStr() {
+      const t = new Date();
+      t.setDate(t.getDate() + 1);
+      return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+    }
+
+    async function loadDashboardAnalytics(counselorId) {
+      const [
+        { count: pendingCount },
+        { count: openCasesCount },
+        { count: studentsCount },
+        { count: completedThisMonthCount },
+        { data: appointmentStatuses },
+        { data: caseStatuses },
+        { count: tomorrowCount },
+      ] = await Promise.all([
+        supabaseClient
+          .from("appointments")
+          .select("appointment_id", { count: "exact", head: true })
+          .eq("counselor_id", counselorId)
+          .eq("status", "pending"),
+        supabaseClient
+          .from("cases")
+          .select("case_id", { count: "exact", head: true })
+          .eq("counselor_id", counselorId)
+          .neq("status", "resolved"),
+        supabaseClient.from("students").select("student_id", { count: "exact", head: true }).eq("is_archived", false),
+        supabaseClient
+          .from("appointments")
+          .select("appointment_id", { count: "exact", head: true })
+          .eq("counselor_id", counselorId)
+          .eq("status", "completed")
+          .gte("appointment_date", firstOfMonthStr()),
+        supabaseClient.from("appointments").select("status").eq("counselor_id", counselorId),
+        supabaseClient.from("cases").select("status").eq("counselor_id", counselorId),
+        // Deployment-free stand-in for automated reminders (see the same
+        // note in student-dashboard.html) — surfaces tomorrow's approved
+        // load the moment the counselor opens their dashboard, no cron
+        // deployment required.
+        supabaseClient
+          .from("appointments")
+          .select("appointment_id", { count: "exact", head: true })
+          .eq("counselor_id", counselorId)
+          .eq("status", "approved")
+          .eq("appointment_date", tomorrowStr()),
+      ]);
+
+      document.getElementById("statPending").textContent = pendingCount ?? 0;
+      document.getElementById("statOpenCases").textContent = openCasesCount ?? 0;
+      document.getElementById("statStudents").textContent = studentsCount ?? 0;
+      document.getElementById("statCompleted").textContent = completedThisMonthCount ?? 0;
+
+      renderStatusChart("apptStatusChart", countByStatus(appointmentStatuses), APPOINTMENT_STATUS_META);
+      renderStatusChart("caseStatusChart", countByStatus(caseStatuses), CASE_STATUS_META);
+
+      const banner = document.getElementById("counselorReminderBanner");
+      banner.innerHTML = tomorrowCount
+        ? `<div class="form-note-banner"><i class="fa-solid fa-bell"></i> Reminder: you have ${tomorrowCount} appointment${tomorrowCount === 1 ? "" : "s"} scheduled tomorrow.</div>`
+        : "";
+    }
+
+    (async () => {
+      const result = await requireCounselorAuth();
+      if (!result) return;
+
+      const { counselor } = result;
+      document.getElementById("welcomeMsg").textContent =
+        `Welcome, ${counselor.first_name} ${counselor.last_name}. Here's how things are looking today.`;
+
+      hidePageLoadOverlay();
+      await loadDashboardAnalytics(counselor.counselor_id);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile</title>
+      <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+      <!-- Sidebar -->
+    <aside class="sidebar">
+
+        <header class="profile">
+
+            <img src="../images/COLM LOGO.png" alt="Student Profile">
+
+            <div class="info">
+                <h4 id="sidebarName"></h4>
+                <p>Student</p>
+                
+            </div>
+    
+        </header>
+
+
+   <hr>
+ 
+        <nav aria-label="Student Navigation">
+
+            <ul>
+
+                <li>
+            <a href="student-dashboard.html">
+              <i class="fa-solid fa-house"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="student-announcements.html">
+                        <i class="fa-solid fa-bullhorn"></i>
+                        <span>Announcements</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="student-appointments.html">
+                        <i class="fa-solid fa-calendar"></i>
+                        <span>Appointments</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="student-forms.html">
+                        <i class="fa-solid fa-book"></i>
+                        <span>Forms &amp; Interventions</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="student-history.html">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>History</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="student-profile.html">
+                        <i class="fa-solid fa-user"></i>
+                        <span>Profile</span>
+                    </a>
+                </li>
+                <li class="desktop-only">
+                    <button type="button" id="logoutBtn" title="Log Out">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Log Out</span>
+                    </button>
+                </li>
+
+                <li class="hamburger">
+                    <button type="button" onclick="toggleMenu()">
+                        <i class="fa-solid fa-bars"></i>
+                        <span>More</span>
+                    </button>
+                </li>
+
+            </ul>
+
+        </nav>
+
+    </aside>
+
+     <nav class="mobile-menu" id="mobileMenu" aria-label="More Navigation">
+
+        <a href="student-forms.html"><i class="fa-solid fa-book"></i> Forms &amp; Interventions</a>
+
+        <a href="student-history.html"><i class="fa-solid fa-clock-rotate-left"></i> History</a>
+
+        <a href="student-profile.html"><i class="fa-solid fa-user"></i> Profile</a>
+
+        <a href="#" id="mobileLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
+
+    </nav>
+    
+
+
+
+  <main class="content">
+       
+ <header class="GreetingsCard">
+            <h1>Profile</h1>
+                <p>View appointments and guidance records.</p>
+        </header>
+
+        <div class="profile-summary-card">
+            <div class="profile-avatar-wrap">
+                <img src="../images/COLM LOGO.png" alt="Student Avatar" class="profile-avatar">
+            </div>
+            <h2 id="profileFullName">—</h2>
+            <p class="profile-meta" id="profileMeta">—</p>
+            <span class="badge badge-info" id="profileDeptBadge">—</span>
+            <span class="badge badge-approved" id="profileSchoolYearBadge">—</span>
+
+            <div class="profile-contact-rows">
+                <div class="profile-contact-row">
+                    <span class="contact-icon"><i class="fa-solid fa-envelope"></i></span>
+                    <span id="profileEmail">—</span>
+                </div>
+                <div class="profile-contact-row">
+                    <span class="contact-icon"><i class="fa-solid fa-phone"></i></span>
+                    <span id="profilePhone">—</span>
+                </div>
+                <div class="profile-contact-row">
+                    <span class="contact-icon"><i class="fa-solid fa-user-group"></i></span>
+                    <span id="profileGuardian">—</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-title" style="margin-top:30px;">
+            <h2>Edit your Information</h2>
+        </div>
+        <div class="profile-edit-card">
+            <form id="profileEditForm">
+                <div class="info-edit-grid">
+                    <div class="form-field">
+                        <label for="editFullName">Full Name</label>
+                        <input type="text" id="editFullName" disabled>
+                    </div>
+                    <div class="form-field">
+                        <label for="editEducationLevel">Education Level</label>
+                        <input type="text" id="editEducationLevel" disabled>
+                    </div>
+                    <div class="form-field">
+                        <label for="editYearLevel">Year / Level</label>
+                        <input type="text" id="editYearLevel" disabled>
+                    </div>
+                    <div class="form-field">
+                        <label for="editPhone">Phone Number</label>
+                        <input type="text" id="editPhone" placeholder="e.g. 0917-123-4567">
+                    </div>
+                    <div class="form-field">
+                        <label for="editGuardian">Parent / Guardian</label>
+                        <input type="text" id="editGuardian" placeholder="Full name">
+                    </div>
+                </div>
+                <span class="hint">Name, Education Level, and Year Level are managed by the guidance office. Contact us if these need to change.</span>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="profileSaveBtn">Save Changes</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="section-title" style="margin-top:30px;">
+            <h2>Change Password</h2>
+        </div>
+        <div class="profile-edit-card">
+            <form id="changePasswordForm">
+                <div class="info-edit-grid">
+                    <div class="form-field">
+                        <label for="newPasswordInput">New Password</label>
+                        <input type="password" id="newPasswordInput" autocomplete="new-password" required minlength="6">
+                    </div>
+                    <div class="form-field">
+                        <label for="confirmPasswordInput">Confirm New Password</label>
+                        <input type="password" id="confirmPasswordInput" autocomplete="new-password" required minlength="6">
+                    </div>
+                </div>
+                <span class="hint">Must be at least 6 characters.</span>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="changePasswordBtn">Update Password</button>
+                </div>
+            </form>
+        </div>
+
+</main>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/supabaseClient.js"></script>
+  <script src="../js/student-common.js"></script>
+  <script>
+    let currentStudent = null;
+
+    function educationLevelLabel(value) {
+      return { college: "College", junior_high: "Junior High School", senior_high: "Senior High School" }[value] || "—";
+    }
+
+    async function loadProfile() {
+      const { data, error } = await supabaseClient
+        .from("students")
+        .select(
+          "student_id, student_number, first_name, middle_name, last_name, education_level, year_level, contact_number, parent_guardian, student_email"
+        )
+        .eq("student_id", currentStudent.student_id)
+        .single();
+
+      if (error) {
+        console.error(error);
+        document.getElementById("profileFullName").textContent = "Couldn't load profile";
+        document.getElementById("profileMeta").textContent = error.message;
+        return;
+      }
+
+      const fullName = [data.first_name, data.middle_name, data.last_name].filter(Boolean).join(" ");
+
+      document.getElementById("profileFullName").textContent = fullName;
+      document.getElementById("profileMeta").textContent = `${data.year_level || "—"} · ${data.student_number}`;
+      document.getElementById("profileDeptBadge").textContent = educationLevelLabel(data.education_level);
+      document.getElementById("profileSchoolYearBadge").textContent = `S.Y. ${defaultSchoolYear()}`;
+
+      document.getElementById("profileEmail").textContent = data.student_email || "—";
+      document.getElementById("profilePhone").textContent = data.contact_number || "—";
+      document.getElementById("profileGuardian").textContent = `Parent/Guardian: ${data.parent_guardian || "—"}`;
+
+      document.getElementById("editFullName").value = fullName;
+      document.getElementById("editEducationLevel").value = educationLevelLabel(data.education_level);
+      document.getElementById("editYearLevel").value = data.year_level || "";
+      document.getElementById("editPhone").value = data.contact_number || "";
+      document.getElementById("editGuardian").value = data.parent_guardian || "";
+    }
+
+    document.getElementById("profileEditForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const payload = {
+        contact_number: document.getElementById("editPhone").value.trim() || null,
+        parent_guardian: document.getElementById("editGuardian").value.trim() || null,
+      };
+
+      const btn = document.getElementById("profileSaveBtn");
+      btn.disabled = true;
+      btn.textContent = "Saving…";
+
+      const { error } = await supabaseClient
+        .from("students")
+        .update(payload)
+        .eq("student_id", currentStudent.student_id);
+
+      btn.disabled = false;
+      btn.textContent = "Save Changes";
+
+      if (error) {
+        showToast("Couldn't save changes: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      showToast("Profile updated.", "success");
+      await loadProfile();
+    });
+
+    document.getElementById("changePasswordForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const newPassword = document.getElementById("newPasswordInput").value;
+      const confirmPassword = document.getElementById("confirmPasswordInput").value;
+
+      if (newPassword !== confirmPassword) {
+        showToast("Passwords don't match.", "error");
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        showToast("Password must be at least 6 characters.", "error");
+        return;
+      }
+
+      const btn = document.getElementById("changePasswordBtn");
+      btn.disabled = true;
+      btn.textContent = "Updating…";
+
+      const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+
+      btn.disabled = false;
+      btn.textContent = "Update Password";
+
+      if (error) {
+        showToast("Couldn't update password: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      document.getElementById("changePasswordForm").reset();
+      showToast("Password updated.", "success");
+    });
+
+    (async () => {
+      const result = await requireStudentAuth();
+      if (!result) return;
+
+      currentStudent = result.student;
+      await loadProfile();
+      hidePageLoadOverlay();
+    })();
+  </script>
+</body>
+</html>

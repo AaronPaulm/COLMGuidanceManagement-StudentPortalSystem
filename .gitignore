@@ -1,0 +1,8 @@
+# Secrets — never commit these
+apikeyresend.txt
+*.env
+.env.*
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db

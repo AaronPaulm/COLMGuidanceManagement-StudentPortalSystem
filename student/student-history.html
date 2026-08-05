@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History</title>
+      <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+      <!-- Sidebar -->
+    <aside class="sidebar">
+
+        <header class="profile">
+
+            <img src="../images/COLM LOGO.png" alt="Student Profile">
+
+            <div class="info">
+                <h4 id="sidebarName"></h4>
+                <p>Student</p>
+                
+            </div>
+    
+        </header>
+
+
+   <hr>
+ 
+        <nav aria-label="Student Navigation">
+
+            <ul>
+
+                <li>
+            <a href="student-dashboard.html">
+              <i class="fa-solid fa-house"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="student-announcements.html">
+                        <i class="fa-solid fa-bullhorn"></i>
+                        <span>Announcements</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="student-appointments.html">
+                        <i class="fa-solid fa-calendar"></i>
+                        <span>Appointments</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="student-forms.html">
+                        <i class="fa-solid fa-book"></i>
+                        <span>Forms &amp; Interventions</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="student-history.html">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>History</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="student-profile.html">
+                        <i class="fa-solid fa-user"></i>
+                        <span>Profile</span>
+                    </a>
+                </li>
+                <li class="desktop-only">
+                    <button type="button" id="logoutBtn" title="Log Out">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Log Out</span>
+                    </button>
+                </li>
+
+                <li class="hamburger">
+                    <button type="button" onclick="toggleMenu()">
+                        <i class="fa-solid fa-bars"></i>
+                        <span>More</span>
+                    </button>
+                </li>
+
+            </ul>
+
+        </nav>
+
+    </aside>
+
+     <nav class="mobile-menu" id="mobileMenu" aria-label="More Navigation">
+
+        <a href="student-forms.html"><i class="fa-solid fa-book"></i> Forms &amp; Interventions</a>
+
+        <a href="student-history.html"><i class="fa-solid fa-clock-rotate-left"></i> History</a>
+
+        <a href="student-profile.html"><i class="fa-solid fa-user"></i> Profile</a>
+
+        <a href="#" id="mobileLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
+
+    </nav>
+    
+
+
+  <main class="content">
+       
+ <header class="GreetingsCard">
+            <h1>History</h1>
+                <p>View your past activities and interactions.</p>
+        </header>
+
+        <div class="section-title">
+            <h2>Records</h2>
+            <div class="filter-tabs" id="historyFilterTabs">
+                <button type="button" class="active" data-filter="all">All</button>
+                <button type="button" data-filter="appointment">Appointments</button>
+                <button type="button" data-filter="form">Forms</button>
+            </div>
+        </div>
+
+        <div class="toolbar-row">
+            <select id="historySchoolYearFilter" class="table-search" style="width:auto;">
+                <option value="all">All school years</option>
+            </select>
+        </div>
+
+        <div class="simple-table-wrap">
+            <table class="simple-table">
+                <thead>
+                    <tr><th>Date</th><th>Category</th><th>Description</th><th>School Year</th><th>Status</th></tr>
+                </thead>
+                <tbody id="historyTableBody"></tbody>
+            </table>
+        </div>
+
+</main>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/supabaseClient.js"></script>
+  <script src="../js/student-common.js"></script>
+  <script>
+    let allHistoryItems = [];
+    let activeFilter = "all";
+    let activeHistorySchoolYear = "all";
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str ?? "";
+      return div.innerHTML;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return "—";
+      const d = new Date(dateStr);
+      return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+    }
+
+    function appointmentStatusBadge(status) {
+      if (status === "completed") return { label: "Resolved", cls: "badge-approved" };
+      if (status === "cancelled") return { label: "Cancelled", cls: "badge-cancelled" };
+      if (status === "declined") return { label: "Declined", cls: "badge-cancelled" };
+      return { label: status, cls: "badge-info" };
+    }
+
+    async function loadHistory(studentId) {
+      const tbody = document.getElementById("historyTableBody");
+      tbody.innerHTML = `<tr><td colspan="4" class="empty-state">Loading…</td></tr>`;
+
+      const [{ data: appts, error: apptErr }, { data: forms, error: formErr }] = await Promise.all([
+        supabaseClient
+          .from("appointments")
+          .select("appointment_id, concern, appointment_date, status, school_year, counselors(first_name, last_name)")
+          .eq("student_id", studentId)
+          .in("status", ["completed", "cancelled", "declined"]),
+        supabaseClient
+          .from("form_assignments")
+          .select("assignment_id, submitted_at, school_year, forms(form_name)")
+          .eq("student_id", studentId)
+          .eq("status", "submitted"),
+      ]);
+
+      if (apptErr || formErr) {
+        tbody.innerHTML = `<tr><td colspan="5" class="empty-state">Couldn't load history.</td></tr>`;
+        console.error(apptErr || formErr);
+        return;
+      }
+
+      const apptItems = (appts || []).map((a) => {
+        const counselorName = a.counselors ? `${a.counselors.first_name} ${a.counselors.last_name}` : "Guidance Office";
+        const badge = appointmentStatusBadge(a.status);
+        return {
+          type: "appointment",
+          date: a.appointment_date,
+          category: "Counseling",
+          description: a.concern ? `${a.concern} — ${counselorName}` : `Session with ${counselorName}`,
+          schoolYear: a.school_year,
+          statusLabel: badge.label,
+          statusClass: badge.cls,
+        };
+      });
+
+      const formItems = (forms || []).map((f) => ({
+        type: "form",
+        date: f.submitted_at,
+        category: "Form",
+        description: f.forms?.form_name || "Untitled form",
+        schoolYear: f.school_year,
+        statusLabel: "Submitted",
+        statusClass: "badge-approved",
+      }));
+
+      allHistoryItems = [...apptItems, ...formItems].sort((a, b) => new Date(b.date) - new Date(a.date));
+      populateHistorySchoolYearFilter();
+      renderHistoryTable();
+    }
+
+    function populateHistorySchoolYearFilter() {
+      const select = document.getElementById("historySchoolYearFilter");
+      const years = new Set(allHistoryItems.map((i) => i.schoolYear).filter(Boolean));
+      const sortedYears = Array.from(years).sort((a, b) => b.localeCompare(a));
+
+      select.innerHTML =
+        `<option value="all">All school years</option>` +
+        sortedYears.map((y) => `<option value="${escapeHtml(y)}">${escapeHtml(y)}</option>`).join("");
+      select.value = sortedYears.includes(activeHistorySchoolYear) ? activeHistorySchoolYear : "all";
+    }
+
+    function renderHistoryTable() {
+      const tbody = document.getElementById("historyTableBody");
+      let items = activeFilter === "all" ? allHistoryItems : allHistoryItems.filter((i) => i.type === activeFilter);
+      if (activeHistorySchoolYear !== "all") {
+        items = items.filter((i) => i.schoolYear === activeHistorySchoolYear);
+      }
+
+      if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No records found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = items
+        .map(
+          (i) => `
+        <tr>
+          <td>${formatDate(i.date)}</td>
+          <td>${escapeHtml(i.category)}</td>
+          <td>${escapeHtml(i.description)}</td>
+          <td>${escapeHtml(i.schoolYear || "—")}</td>
+          <td><span class="badge ${i.statusClass}">${escapeHtml(i.statusLabel)}</span></td>
+        </tr>
+      `
+        )
+        .join("");
+    }
+
+    document.getElementById("historyFilterTabs").addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-filter]");
+      if (!btn) return;
+      document.querySelectorAll("#historyFilterTabs button").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      activeFilter = btn.dataset.filter;
+      renderHistoryTable();
+    });
+
+    document.getElementById("historySchoolYearFilter").addEventListener("change", (e) => {
+      activeHistorySchoolYear = e.target.value;
+      renderHistoryTable();
+    });
+
+    (async () => {
+      const result = await requireStudentAuth();
+      if (!result) return;
+
+      await loadHistory(result.student.student_id);
+      hidePageLoadOverlay();
+    })();
+  </script>
+</body>
+</html>

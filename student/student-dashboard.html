@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Dashboard</title>
+   <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+        <header class="profile">
+
+            <img src="../images/COLM LOGO.png" alt="Student Profile">
+
+            <div class="info">
+                <h4 id="sidebarName"></h4>
+                <p>Student</p>
+
+            </div>
+
+        </header>
+
+
+   <hr>
+
+        <nav aria-label="Student Navigation">
+
+            <ul>
+
+                <li>
+            <a href="student-dashboard.html">
+              <i class="fa-solid fa-house"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="student-announcements.html">
+                        <i class="fa-solid fa-bullhorn"></i>
+                        <span>Announcements</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="student-appointments.html">
+                        <i class="fa-solid fa-calendar"></i>
+                        <span>Appointments</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="student-forms.html">
+                        <i class="fa-solid fa-book"></i>
+                        <span>Forms &amp; Interventions</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="student-history.html">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>History</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="student-profile.html">
+                        <i class="fa-solid fa-user"></i>
+                        <span>Profile</span>
+                    </a>
+                </li>
+                <li class="desktop-only">
+                    <button type="button" id="logoutBtn" title="Log Out">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Log Out</span>
+                    </button>
+                </li>
+
+                <li class="hamburger">
+                    <button type="button" onclick="toggleMenu()">
+                        <i class="fa-solid fa-bars"></i>
+                        <span>More</span>
+                    </button>
+                </li>
+
+            </ul>
+
+        </nav>
+
+    </aside>
+
+      <main class="content">
+
+        <header class="GreetingsCard">
+            <h1>Student Dashboard</h1>
+            <p id="welcomeMsg">Loading your info...</p>
+        </header>
+
+        <section class="stat-cards">
+
+            <button class="stat-card" onclick="location.href='student-appointments.html'">
+                <div class="stat-card-top">
+                    <span class="stat-card-label">Appointments</span>
+                    <span class="stat-card-icon"><i class="fa-solid fa-calendar-check"></i></span>
+                </div>
+                <div class="stat-card-value" id="statAppointments">—</div>
+                <div class="stat-card-desc">Your counseling requests</div>
+            </button>
+
+            <button class="stat-card" onclick="location.href='student-forms.html'">
+                <div class="stat-card-top">
+                    <span class="stat-card-label">Assigned Forms</span>
+                    <span class="stat-card-icon"><i class="fa-solid fa-file-lines"></i></span>
+                </div>
+                <div class="stat-card-value" id="statForms">—</div>
+                <div class="stat-card-desc">Review Assigned Forms</div>
+            </button>
+
+            <button class="stat-card" onclick="location.href='student-history.html'">
+                <div class="stat-card-top">
+                    <span class="stat-card-label">Guidance Records</span>
+                    <span class="stat-card-icon"><i class="fa-solid fa-folder-open"></i></span>
+                </div>
+                <div class="stat-card-value" id="statRecords">—</div>
+                <div class="stat-card-desc">View your guidance records</div>
+            </button>
+
+            <button class="stat-card" onclick="location.href='student-appointments.html'">
+                <div class="stat-card-top">
+                    <span class="stat-card-label">Guidance Support</span>
+                    <span class="stat-card-icon"><i class="fa-solid fa-comments"></i></span>
+                </div>
+                <div class="stat-card-value" id="statSupport">—</div>
+                <div class="stat-card-desc">View and request counseling schedule</div>
+            </button>
+
+        </section>
+
+        <section class="upcoming-card">
+            <h2>Upcoming</h2>
+            <p class="upcoming-subtitle">Next scheduled sessions</p>
+            <div id="upcomingWrap">
+                <div class="empty-state">Loading…</div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Mobile Menu -->
+    <nav class="mobile-menu" id="mobileMenu" aria-label="More Navigation">
+
+        <a href="student-forms.html"><i class="fa-solid fa-book"></i> Forms &amp; Interventions</a>
+
+        <a href="student-history.html"><i class="fa-solid fa-clock-rotate-left"></i> History</a>
+
+        <a href="student-profile.html"><i class="fa-solid fa-user"></i> Profile</a>
+
+        <a href="#" id="mobileLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
+
+    </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/supabaseClient.js"></script>
+  <script src="../js/student-common.js"></script>
+  <script>
+    function pad(n) {
+      return String(n).padStart(2, "0");
+    }
+
+    function todayStr() {
+      const t = new Date();
+      return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
+    }
+
+    function tomorrowStr() {
+      const t = new Date();
+      t.setDate(t.getDate() + 1);
+      return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str ?? "";
+      return div.innerHTML;
+    }
+
+    function formatDate(dateStr) {
+      const [y, m, d] = dateStr.split("-").map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    }
+
+    function formatTime(timeStr) {
+      if (!timeStr) return "";
+      const [h, m] = timeStr.split(":").map(Number);
+      const period = h >= 12 ? "PM" : "AM";
+      const h12 = h % 12 === 0 ? 12 : h % 12;
+      return `${h12}:${pad(m)} ${period}`;
+    }
+
+    async function loadDashboardStats(studentId) {
+      const [
+        { count: apptCount },
+        { count: formsCount },
+        { count: recordsCount },
+        { data: availableCounselors },
+        { data: upcoming },
+      ] = await Promise.all([
+        supabaseClient
+          .from("appointments")
+          .select("appointment_id", { count: "exact", head: true })
+          .eq("student_id", studentId),
+        supabaseClient
+          .from("form_assignments")
+          .select("assignment_id", { count: "exact", head: true })
+          .eq("student_id", studentId)
+          .neq("status", "submitted"),
+        supabaseClient
+          .from("appointments")
+          .select("appointment_id", { count: "exact", head: true })
+          .eq("student_id", studentId)
+          .eq("status", "completed"),
+        supabaseClient.from("counselors").select("counselor_id").eq("availability_status", "available").limit(1),
+        supabaseClient
+          .from("appointments")
+          .select("appointment_id, concern, appointment_date, appointment_time, counselors(first_name, last_name)")
+          .eq("student_id", studentId)
+          .eq("status", "approved")
+          .gte("appointment_date", todayStr())
+          .order("appointment_date", { ascending: true })
+          .order("appointment_time", { ascending: true })
+          .limit(1),
+      ]);
+
+      document.getElementById("statAppointments").textContent = apptCount ?? 0;
+      document.getElementById("statForms").textContent = formsCount ?? 0;
+      document.getElementById("statRecords").textContent = recordsCount ?? 0;
+
+      const supportEl = document.getElementById("statSupport");
+      const available = (availableCounselors || []).length > 0;
+      supportEl.textContent = available ? "Available" : "Unavailable";
+      supportEl.className = `stat-card-value ${available ? "status-available" : "status-unavailable"}`;
+
+      const upcomingWrap = document.getElementById("upcomingWrap");
+      const item = (upcoming || [])[0];
+
+      if (!item) {
+        upcomingWrap.innerHTML = `<div class="empty-state">No upcoming sessions.</div>`;
+        return;
+      }
+
+      const counselorName = item.counselors
+        ? `${item.counselors.first_name} ${item.counselors.last_name}`
+        : "Guidance Office";
+
+      // Deployment-free stand-in for automated reminders: the client has
+      // none today, and a full cron-based version needs someone with
+      // Supabase project access to deploy it (see
+      // supabase/functions/send-appointment-reminders). This surfaces the
+      // same "your session is coming up" reminder the moment the student
+      // opens their dashboard, with no server-side setup required.
+      let reminderHtml = "";
+      if (item.appointment_date === todayStr()) {
+        reminderHtml = `<div class="form-note-banner"><i class="fa-solid fa-bell"></i> Reminder: you have a guidance appointment today at ${formatTime(item.appointment_time)}.</div>`;
+      } else if (item.appointment_date === tomorrowStr()) {
+        reminderHtml = `<div class="form-note-banner"><i class="fa-solid fa-bell"></i> Reminder: you have a guidance appointment tomorrow at ${formatTime(item.appointment_time)}.</div>`;
+      }
+
+      upcomingWrap.innerHTML = `
+        ${reminderHtml}
+        <div class="upcoming-item">
+          <div class="upcoming-item-body">
+            <h3>${escapeHtml(item.concern || "Guidance Session")}</h3>
+            <small>${formatDate(item.appointment_date)} · ${formatTime(item.appointment_time)} · ${escapeHtml(counselorName)}</small>
+          </div>
+          <span class="badge badge-approved">Approved</span>
+        </div>
+      `;
+    }
+
+    (async () => {
+      const cachedName = sessionStorage.getItem("studentName");
+      if (cachedName) {
+        document.getElementById("welcomeMsg").textContent =
+          `Welcome, ${cachedName}. This is where your appointments, cases, and forms will appear.`;
+      }
+
+      const result = await requireStudentAuth();
+      if (!result) return;
+
+      const { student } = result;
+      document.getElementById("welcomeMsg").textContent =
+        `Welcome, ${student.first_name} ${student.last_name}. This is where your appointments, cases, and forms will appear.`;
+
+      hidePageLoadOverlay();
+      await loadDashboardStats(student.student_id);
+    })();
+  </script>
+</body>
+</html>
