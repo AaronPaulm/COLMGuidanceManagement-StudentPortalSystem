@@ -1339,17 +1339,6 @@ p  { font-size: clamp(14px, 2vw, 16px); margin: 0 0 .5em; }
     .AnnouncementsList { grid-template-columns: 1fr; }
     .assigned-forms-grid { grid-template-columns: repeat(2, 1fr); }
 
-    .appt-form-row {
-        grid-template-columns: 1fr 1fr;
-        grid-template-areas:
-            "counselor counselor"
-            "date time";
-    }
-
-    .appt-form-row .field-counselor { grid-area: counselor; }
-    .appt-form-row .field-date { grid-area: date; }
-    .appt-form-row .field-time { grid-area: time; }
-
     /* Table columns get squeezed instead of overflowing safely once this
        rule stopped being 640px-only — every .simple-table on every page
        needs the scroll fallback well before phone width. */
@@ -1383,16 +1372,6 @@ p  { font-size: clamp(14px, 2vw, 16px); margin: 0 0 .5em; }
 }
 
 @media (max-width: 640px) {
-    .appt-form-row {
-        grid-template-columns: 1fr;
-        grid-template-areas:
-            "counselor"
-            "date"
-            "time";
-    }
-}
-
-@media (max-width: 640px) {
     .assigned-forms-grid { grid-template-columns: 1fr; }
 
     /* Was stacking to a column, which dropped the Available/Unavailable
@@ -1418,10 +1397,6 @@ p  { font-size: clamp(14px, 2vw, 16px); margin: 0 0 .5em; }
 
     .counselor-row > .badge {
         flex-shrink: 0;
-    }
-
-    .info-edit-grid {
-        grid-template-columns: 1fr;
     }
 
     .profile-avatar {
@@ -2572,6 +2547,29 @@ button:disabled {
     white-space: nowrap;
 }
 
+@media (max-width: 1024px) {
+    .appt-form-row {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+            "counselor counselor"
+            "date time";
+    }
+
+    .appt-form-row .field-counselor { grid-area: counselor; }
+    .appt-form-row .field-date { grid-area: date; }
+    .appt-form-row .field-time { grid-area: time; }
+}
+
+@media (max-width: 640px) {
+    .appt-form-row {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "counselor"
+            "date"
+            "time";
+    }
+}
+
 /* =========================================================
    Filter Tabs (History, etc.)
    ========================================================= */
@@ -2679,6 +2677,12 @@ button:disabled {
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
     margin-bottom: 10px;
+}
+
+@media (max-width: 640px) {
+    .info-edit-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .form-field input:disabled {

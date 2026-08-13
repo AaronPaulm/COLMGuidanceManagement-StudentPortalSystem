@@ -162,11 +162,11 @@
           const actualRole = userRow?.role?.toLowerCase();
 
           if (selectedRole === "counselor" && actualRole !== "counselor") {
-            throw new Error("This account is not registered as a Guidance Counselor.");
+            throw new Error("Invalid email or password.");
           }
 
           if (selectedRole === "student" && actualRole !== "student") {
-            throw new Error("This account is not registered as a student.");
+            throw new Error("Invalid email or password.");
           }
 
           if (actualRole === "counselor") {
