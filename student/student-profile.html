@@ -158,6 +158,10 @@
                         <input type="text" id="editYearLevel" disabled>
                     </div>
                     <div class="form-field">
+                        <label for="editEmail">Email (Gmail)</label>
+                        <input type="email" id="editEmail" placeholder="e.g. juandelacruz@gmail.com">
+                    </div>
+                    <div class="form-field">
                         <label for="editPhone">Phone Number</label>
                         <input type="text" id="editPhone" placeholder="e.g. 0917-123-4567">
                     </div>
@@ -253,6 +257,7 @@
       document.getElementById("editFullName").value = fullName;
       document.getElementById("editEducationLevel").value = educationLevelLabel(data.education_level);
       document.getElementById("editYearLevel").value = data.year_level || "";
+      document.getElementById("editEmail").value = data.student_email || "";
       document.getElementById("editPhone").value = data.contact_number || "";
       document.getElementById("editGuardian").value = data.parent_guardian || "";
     }
@@ -261,6 +266,7 @@
       e.preventDefault();
 
       const payload = {
+        student_email: document.getElementById("editEmail").value.trim() || null,
         contact_number: document.getElementById("editPhone").value.trim() || null,
         parent_guardian: document.getElementById("editGuardian").value.trim() || null,
       };

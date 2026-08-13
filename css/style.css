@@ -2137,6 +2137,63 @@ button:disabled {
     background: #f9fafb;
 }
 
+/* Flags a row for the counselor's attention without blocking anything —
+   e.g. a possible duplicate row in the bulk-import preview. */
+.simple-table tbody tr.row-warning {
+    background: #fffbeb;
+}
+
+.simple-table tbody tr.row-warning:hover {
+    background: #fef3c7;
+}
+
+/* ---------- Pagination bar (long tables: history, student/case/
+   appointment/account/form lists) ---------- */
+
+.pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px 4px;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.pagination-buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pagination-current {
+    font-size: 13px;
+    color: #374151;
+}
+
+.pagination-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    color: #374151;
+    cursor: pointer;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background: #f3f4f6;
+}
+
+.pagination-btn:disabled {
+    opacity: .4;
+    cursor: default;
+}
+
 /* ---------- Assign-to-student modal ---------- */
 
 .assign-select-all-row {

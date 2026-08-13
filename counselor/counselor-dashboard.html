@@ -126,8 +126,6 @@
             <p id="welcomeMsg">Loading your info...</p>
         </header>
 
-        <div id="counselorReminderBanner"></div>
-
         <section class="stat-cards">
 
             <button class="stat-card" onclick="location.href='counselor-appointments.html'">
@@ -251,12 +249,6 @@
       return `${y}-${m}-01`;
     }
 
-    function tomorrowStr() {
-      const t = new Date();
-      t.setDate(t.getDate() + 1);
-      return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
-    }
-
     async function loadDashboardAnalytics(counselorId) {
       const [
         { count: pendingCount },
@@ -265,7 +257,6 @@
         { count: completedThisMonthCount },
         { data: appointmentStatuses },
         { data: caseStatuses },
-        { count: tomorrowCount },
       ] = await Promise.all([
         supabaseClient
           .from("appointments")
@@ -286,16 +277,6 @@
           .gte("appointment_date", firstOfMonthStr()),
         supabaseClient.from("appointments").select("status").eq("counselor_id", counselorId),
         supabaseClient.from("cases").select("status").eq("counselor_id", counselorId),
-        // Deployment-free stand-in for automated reminders (see the same
-        // note in student-dashboard.html) — surfaces tomorrow's approved
-        // load the moment the counselor opens their dashboard, no cron
-        // deployment required.
-        supabaseClient
-          .from("appointments")
-          .select("appointment_id", { count: "exact", head: true })
-          .eq("counselor_id", counselorId)
-          .eq("status", "approved")
-          .eq("appointment_date", tomorrowStr()),
       ]);
 
       document.getElementById("statPending").textContent = pendingCount ?? 0;
@@ -305,11 +286,6 @@
 
       renderStatusChart("apptStatusChart", countByStatus(appointmentStatuses), APPOINTMENT_STATUS_META);
       renderStatusChart("caseStatusChart", countByStatus(caseStatuses), CASE_STATUS_META);
-
-      const banner = document.getElementById("counselorReminderBanner");
-      banner.innerHTML = tomorrowCount
-        ? `<div class="form-note-banner"><i class="fa-solid fa-bell"></i> Reminder: you have ${tomorrowCount} appointment${tomorrowCount === 1 ? "" : "s"} scheduled tomorrow.</div>`
-        : "";
     }
 
     (async () => {

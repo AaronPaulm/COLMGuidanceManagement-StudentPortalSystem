@@ -136,6 +136,7 @@
                 <tbody id="historyTableBody"></tbody>
             </table>
         </div>
+        <div class="pagination-bar" id="historyPagination"></div>
 
 </main>
 
@@ -159,10 +160,13 @@
       <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/supabaseClient.js"></script>
   <script src="../js/student-common.js"></script>
+  <script src="../js/pagination.js"></script>
   <script>
     let allHistoryItems = [];
     let activeFilter = "all";
     let activeHistorySchoolYear = "all";
+    let historyPage = 1;
+    const HISTORY_PAGE_SIZE = 20;
 
     function escapeHtml(str) {
       const div = document.createElement("div");
@@ -248,6 +252,7 @@
 
     function renderHistoryTable() {
       const tbody = document.getElementById("historyTableBody");
+      const pager = document.getElementById("historyPagination");
       let items = activeFilter === "all" ? allHistoryItems : allHistoryItems.filter((i) => i.type === activeFilter);
       if (activeHistorySchoolYear !== "all") {
         items = items.filter((i) => i.schoolYear === activeHistorySchoolYear);
@@ -255,10 +260,21 @@
 
       if (items.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No records found.</td></tr>`;
+        pager.innerHTML = "";
         return;
       }
 
-      tbody.innerHTML = items
+      historyPage = renderPaginationControls(pager, {
+        totalItems: items.length,
+        page: historyPage,
+        pageSize: HISTORY_PAGE_SIZE,
+        onPageChange: (p) => {
+          historyPage = p;
+          renderHistoryTable();
+        },
+      });
+
+      tbody.innerHTML = paginateItems(items, historyPage, HISTORY_PAGE_SIZE)
         .map(
           (i) => `
         <tr>
@@ -279,11 +295,13 @@
       document.querySelectorAll("#historyFilterTabs button").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       activeFilter = btn.dataset.filter;
+      historyPage = 1;
       renderHistoryTable();
     });
 
     document.getElementById("historySchoolYearFilter").addEventListener("change", (e) => {
       activeHistorySchoolYear = e.target.value;
+      historyPage = 1;
       renderHistoryTable();
     });
 

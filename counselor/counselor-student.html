@@ -170,6 +170,7 @@
                 <tbody id="studentsList"></tbody>
             </table>
         </div>
+        <div class="pagination-bar" id="studentsPagination"></div>
 
     </main>
 
@@ -350,10 +351,13 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/supabaseClient.js"></script>
   <script src="../js/counselor-common.js"></script>
+  <script src="../js/pagination.js"></script>
   <script>
     let currentCounselor = null;
     let allStudents = [];
     let activeStudentsTab = "active";
+    let studentsPage = 1;
+    const STUDENTS_PAGE_SIZE = 20;
     let currentDetailStudent = null;
     let selectedStudentIds = new Set();
 
@@ -469,9 +473,26 @@
 
     function renderStudentsTable(students) {
       const list = document.getElementById("studentsList");
-      list.innerHTML = students.length
-        ? students.map(studentRowHtml).join("")
-        : `<tr class="table-empty"><td colspan="8">No students found.</td></tr>`;
+      const pager = document.getElementById("studentsPagination");
+
+      if (!students.length) {
+        list.innerHTML = `<tr class="table-empty"><td colspan="8">No students found.</td></tr>`;
+        pager.innerHTML = "";
+        return;
+      }
+
+      studentsPage = renderPaginationControls(pager, {
+        totalItems: students.length,
+        page: studentsPage,
+        pageSize: STUDENTS_PAGE_SIZE,
+        onPageChange: (p) => {
+          studentsPage = p;
+          renderStudentsTable(students);
+        },
+      });
+
+      const pageStudents = paginateItems(students, studentsPage, STUDENTS_PAGE_SIZE);
+      list.innerHTML = pageStudents.map(studentRowHtml).join("");
 
       list.querySelectorAll("tr[data-id]").forEach((row) => {
         row.querySelector('[data-action="view"]')?.addEventListener("click", () => openStudentDetail(Number(row.dataset.id)));
@@ -512,6 +533,7 @@
 
     function applyStudentFilters() {
       selectedStudentIds.clear();
+      studentsPage = 1;
 
       const query = document.getElementById("studentSearchInput").value.trim().toLowerCase();
       const section = document.getElementById("sectionFilterSelect").value;

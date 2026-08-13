@@ -283,6 +283,7 @@
                         <tbody id="submissionsList"></tbody>
                     </table>
                 </div>
+                <div class="pagination-bar" id="submissionsPagination"></div>
             </div>
         </div>
     </div>
@@ -334,6 +335,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/supabaseClient.js"></script>
   <script src="../js/counselor-common.js"></script>
+  <script src="../js/pagination.js"></script>
   <script>
     let currentCounselor = null;
     let editingFormId = null;
@@ -1084,6 +1086,8 @@
 
     let submissionsForm = null;
     let submissionAssignmentsById = {};
+    let submissionsPage = 1;
+    const SUBMISSIONS_PAGE_SIZE = 20;
 
     function submissionBadgeClass(status) {
       return status === "submitted" ? "approved" : "pending";
@@ -1107,8 +1111,40 @@
       `;
     }
 
+    function renderSubmissionsTable(assignments) {
+      const list = document.getElementById("submissionsList");
+      const pager = document.getElementById("submissionsPagination");
+
+      if (!assignments.length) {
+        list.innerHTML = `<tr class="table-empty"><td colspan="5">Not assigned to any students yet.</td></tr>`;
+        pager.innerHTML = "";
+        return;
+      }
+
+      submissionsPage = renderPaginationControls(pager, {
+        totalItems: assignments.length,
+        page: submissionsPage,
+        pageSize: SUBMISSIONS_PAGE_SIZE,
+        onPageChange: (p) => {
+          submissionsPage = p;
+          renderSubmissionsTable(assignments);
+        },
+      });
+
+      list.innerHTML = paginateItems(assignments, submissionsPage, SUBMISSIONS_PAGE_SIZE)
+        .map(submissionRowHtml)
+        .join("");
+
+      list.querySelectorAll("tr[data-id]").forEach((row) => {
+        row.querySelector('[data-action="view"]')?.addEventListener("click", () => {
+          openSubmissionDetail(submissionAssignmentsById[row.dataset.id]);
+        });
+      });
+    }
+
     async function openSubmissionsModal(form) {
       submissionsForm = form;
+      submissionsPage = 1;
       document.getElementById("submissionsFormName").textContent = form.form_name;
 
       const list = document.getElementById("submissionsList");
@@ -1131,15 +1167,7 @@
       submissionAssignmentsById = {};
       assignments.forEach((a) => (submissionAssignmentsById[a.assignment_id] = a));
 
-      list.innerHTML = assignments.length
-        ? assignments.map(submissionRowHtml).join("")
-        : `<tr class="table-empty"><td colspan="5">Not assigned to any students yet.</td></tr>`;
-
-      list.querySelectorAll("tr[data-id]").forEach((row) => {
-        row.querySelector('[data-action="view"]')?.addEventListener("click", () => {
-          openSubmissionDetail(submissionAssignmentsById[row.dataset.id]);
-        });
-      });
+      renderSubmissionsTable(assignments);
     }
 
     function closeSubmissionsModal() {

@@ -176,6 +176,7 @@
                 <tbody id="appointmentsList"></tbody>
             </table>
         </div>
+        <div class="pagination-bar" id="appointmentsPagination"></div>
 
     </main>
 
@@ -277,6 +278,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/supabaseClient.js"></script>
   <script src="../js/counselor-common.js"></script>
+  <script src="../js/pagination.js"></script>
   <script>
     let currentCounselor = null;
 
@@ -891,8 +893,7 @@
       "appointment_id, student_id, concern, appointment_date, appointment_time, status, counselor_note, was_rescheduled, students!inner(first_name, last_name, user_id, student_email, section), appointment_attachments(attachment_id, file_path, file_name)";
     const APPOINTMENTS_PAGE_SIZE = 20;
     let activeAppointmentsFilter = "pending";
-    let appointmentsOffset = 0;
-    let appointmentsHasMore = false;
+    let appointmentsPage = 1;
     let allAppointmentsById = {};
     let appointmentsStudentQuery = "";
 
@@ -909,7 +910,7 @@
     function buildAppointmentsQuery() {
       let query = supabaseClient
         .from("appointments")
-        .select(APPOINTMENTS_SELECT)
+        .select(APPOINTMENTS_SELECT, { count: "exact" })
         .eq("counselor_id", currentCounselor.counselor_id);
 
       // "Rescheduled" isn't a status a row ever sits in (rescheduling keeps
@@ -947,36 +948,20 @@
       while (wrapper.firstChild) container.appendChild(wrapper.firstChild);
     }
 
-    function renderLoadMoreAppointmentsButton() {
-      let btn = document.getElementById("loadMoreAppointmentsBtn");
-      if (!appointmentsHasMore) {
-        if (btn) btn.remove();
-        return;
-      }
-      if (!btn) {
-        btn = document.createElement("button");
-        btn.type = "button";
-        btn.id = "loadMoreAppointmentsBtn";
-        btn.className = "btn btn-outline btn-block";
-        btn.textContent = "Load More";
-        btn.addEventListener("click", loadMoreAppointments);
-        document.getElementById("appointmentsList").closest(".simple-table-wrap").after(btn);
-      }
-      btn.disabled = false;
-      btn.textContent = "Load More";
-    }
-
     async function loadAppointments() {
       const list = document.getElementById("appointmentsList");
+      const pager = document.getElementById("appointmentsPagination");
       list.innerHTML = `<tr class="table-empty"><td colspan="6">Loading…</td></tr>`;
-      document.getElementById("loadMoreAppointmentsBtn")?.remove();
-      appointmentsOffset = 0;
+      pager.innerHTML = "";
       allAppointmentsById = {};
 
-      const { data, error } = await buildAppointmentsQuery()
+      const from = (appointmentsPage - 1) * APPOINTMENTS_PAGE_SIZE;
+      const to = from + APPOINTMENTS_PAGE_SIZE - 1;
+
+      const { data, error, count } = await buildAppointmentsQuery()
         .order("appointment_date", { ascending: false })
         .order("appointment_time", { ascending: false })
-        .range(0, APPOINTMENTS_PAGE_SIZE - 1);
+        .range(from, to);
 
       if (error) {
         list.innerHTML = `<tr class="table-empty"><td colspan="6">Couldn't load appointments.</td></tr>`;
@@ -986,54 +971,34 @@
 
       if (!data || data.length === 0) {
         list.innerHTML = `<tr class="table-empty"><td colspan="6">No appointments found.</td></tr>`;
-        appointmentsHasMore = false;
         return;
       }
 
       list.innerHTML = "";
       appendAppointmentRows(list, data);
 
-      appointmentsOffset = data.length;
-      appointmentsHasMore = data.length === APPOINTMENTS_PAGE_SIZE;
-      renderLoadMoreAppointmentsButton();
+      appointmentsPage = renderPaginationControls(pager, {
+        totalItems: count || 0,
+        page: appointmentsPage,
+        pageSize: APPOINTMENTS_PAGE_SIZE,
+        onPageChange: (p) => {
+          appointmentsPage = p;
+          loadAppointments();
+        },
+      });
+
       refreshPendingCount();
-    }
-
-    async function loadMoreAppointments() {
-      const btn = document.getElementById("loadMoreAppointmentsBtn");
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = "Loading…";
-      }
-
-      const { data, error } = await buildAppointmentsQuery()
-        .order("appointment_date", { ascending: false })
-        .order("appointment_time", { ascending: false })
-        .range(appointmentsOffset, appointmentsOffset + APPOINTMENTS_PAGE_SIZE - 1);
-
-      if (error) {
-        showToast("Couldn't load more appointments: " + error.message, "error");
-        console.error(error);
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = "Load More";
-        }
-        return;
-      }
-
-      appendAppointmentRows(document.getElementById("appointmentsList"), data || []);
-      appointmentsOffset += (data || []).length;
-      appointmentsHasMore = (data || []).length === APPOINTMENTS_PAGE_SIZE;
-      renderLoadMoreAppointmentsButton();
     }
 
     document.getElementById("appointmentsFilterSelect").addEventListener("change", (e) => {
       activeAppointmentsFilter = e.target.value;
+      appointmentsPage = 1;
       loadAppointments();
     });
 
     document.getElementById("appointmentsStudentSearch").addEventListener("input", (e) => {
       appointmentsStudentQuery = e.target.value.trim();
+      appointmentsPage = 1;
       loadAppointments();
     });
 

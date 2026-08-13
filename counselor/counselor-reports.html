@@ -126,7 +126,7 @@
 
         <header class="GreetingsCard">
             <h1>Report Generation &amp; Printing</h1>
-            <p>Export student records, incident reports, counseling history, and progress reports.</p>
+            <p>Export incident reports, case notes, accomplishment reports, and narrative reports.</p>
         </header>
 
         <div class="section-title" style="margin-top:30px;">
@@ -135,32 +135,14 @@
                 <option value="">All time</option>
             </select>
         </div>
-        <span class="hint" style="display:block; margin-bottom:16px;">School Year applies to Incident Reports, Counseling History, Progress Reports, Case Notes, Accomplishment Reports, and Narrative Reports. Leave on "All time" for no date filtering. Student Records is always the full current roster.</span>
+        <span class="hint" style="display:block; margin-bottom:16px;">School Year applies to Incident Reports, Case Notes, Accomplishment Reports, and Narrative Reports. Leave on "All time" for no date filtering.</span>
 
         <div class="report-grid reports-grid-2x2">
-            <div class="report-card">
-                <div class="report-card-icon"><i class="fa-solid fa-id-card"></i></div>
-                <h3>Student Records</h3>
-                <p>Full roster with contact and parent/guardian details, ready to print.</p>
-                <button type="button" class="btn btn-outline" id="genStudentRecordsBtn">Generate</button>
-            </div>
             <div class="report-card">
                 <div class="report-card-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
                 <h3>Incident Reports</h3>
                 <p>All logged cases and their current status.</p>
                 <button type="button" class="btn btn-outline" id="genIncidentReportsBtn">Generate</button>
-            </div>
-            <div class="report-card">
-                <div class="report-card-icon"><i class="fa-solid fa-comments"></i></div>
-                <h3>Counseling History</h3>
-                <p>Completed guidance sessions and notes.</p>
-                <button type="button" class="btn btn-outline" id="genCounselingHistoryBtn">Generate</button>
-            </div>
-            <div class="report-card">
-                <div class="report-card-icon"><i class="fa-solid fa-chart-line"></i></div>
-                <h3>Progress Reports</h3>
-                <p>Per-student rollup of cases and completed sessions.</p>
-                <button type="button" class="btn btn-outline" id="genProgressReportsBtn">Generate</button>
             </div>
             <div class="report-card">
                 <div class="report-card-icon"><i class="fa-solid fa-note-sticky"></i></div>
@@ -327,10 +309,6 @@
       win.document.close();
     }
 
-    function educationLevelLabel(value) {
-      return { college: "College", junior_high: "Junior High School", senior_high: "Senior High School" }[value] || "—";
-    }
-
     // Shared by every date-filterable report. "To" needs the end-of-day
     // time appended for timestamptz columns (created_at) — otherwise
     // "2026-07-27" means midnight at the start of that day and silently
@@ -371,44 +349,6 @@
       // page loads.
       select.innerHTML =
         `<option value="">All time</option>` + years.map((y) => `<option value="${y}">S.Y. ${y}</option>`).join("");
-    }
-
-    async function generateStudentRecords() {
-      const { data, error } = await supabaseClient
-        .from("students")
-        .select("student_number, first_name, middle_name, last_name, education_level, year_level, section, contact_number, parent_guardian")
-        .eq("is_archived", false)
-        .order("last_name", { ascending: true });
-
-      if (error) {
-        showToast("Couldn't load student records: " + error.message, "error");
-        console.error(error);
-        return;
-      }
-
-      const rows = (data || []).map((s) => ({
-        name: `${s.first_name} ${s.middle_name ? s.middle_name + " " : ""}${s.last_name}`,
-        student_number: s.student_number || "—",
-        education_level: educationLevelLabel(s.education_level),
-        year_level: s.year_level || "—",
-        section: s.section || "—",
-        contact_number: s.contact_number || "—",
-        parent_guardian: s.parent_guardian || "—",
-      }));
-
-      openPrintableReport(
-        "Student Records",
-        [
-          { key: "name", label: "Name" },
-          { key: "student_number", label: "Student No." },
-          { key: "education_level", label: "Education Level" },
-          { key: "year_level", label: "Year Level" },
-          { key: "section", label: "Section" },
-          { key: "contact_number", label: "Contact" },
-          { key: "parent_guardian", label: "Parent/Guardian" },
-        ],
-        rows
-      );
     }
 
     async function generateIncidentReports() {
@@ -452,127 +392,6 @@
           { key: "nature", label: "Nature of Incident" },
           { key: "status", label: "Status" },
           { key: "date", label: "Date Opened" },
-        ],
-        rows
-      );
-    }
-
-    async function generateCounselingHistory() {
-      const { from, to } = getReportDateRange();
-
-      // appointment_date is a plain date column (not timestamptz), so
-      // unlike created_at above, "to" doesn't need an end-of-day suffix —
-      // "2026-07-27" already matches that whole day correctly as-is.
-      let query = supabaseClient
-        .from("appointments")
-        .select("appointment_date, concern, counselor_note, students(first_name, last_name)")
-        .eq("counselor_id", currentCounselor.counselor_id)
-        .eq("status", "completed");
-      if (from) query = query.gte("appointment_date", from);
-      if (to) query = query.lte("appointment_date", to);
-
-      const { data, error } = await query.order("appointment_date", { ascending: false });
-
-      if (error) {
-        showToast("Couldn't load counseling history: " + error.message, "error");
-        console.error(error);
-        return;
-      }
-
-      if (!data || data.length === 0) {
-        showToast(
-          "No completed counseling sessions found. This report only includes appointments explicitly marked \"Completed\" on the Appointments page — pending/approved ones don't count yet.",
-          "info"
-        );
-        return;
-      }
-
-      const rows = data.map((a) => ({
-        student: a.students ? `${a.students.first_name} ${a.students.last_name}` : "Unknown",
-        date: formatDate(a.appointment_date),
-        concern: a.concern || "—",
-        note: a.counselor_note || "—",
-      }));
-
-      openPrintableReport(
-        "Counseling History",
-        [
-          { key: "student", label: "Student" },
-          { key: "date", label: "Date" },
-          { key: "concern", label: "Concern" },
-          { key: "note", label: "Session Note" },
-        ],
-        rows
-      );
-    }
-
-    async function generateProgressReports() {
-      const { from, toEndOfDay, to } = getReportDateRange();
-
-      let casesQuery = supabaseClient
-        .from("cases")
-        .select("student_id, status, created_at, students(first_name, last_name)")
-        .eq("counselor_id", currentCounselor.counselor_id);
-      if (from) casesQuery = casesQuery.gte("created_at", from);
-      if (toEndOfDay) casesQuery = casesQuery.lte("created_at", toEndOfDay);
-
-      let apptsQuery = supabaseClient
-        .from("appointments")
-        .select("student_id, status, appointment_date, students(first_name, last_name)")
-        .eq("counselor_id", currentCounselor.counselor_id)
-        .eq("status", "completed");
-      if (from) apptsQuery = apptsQuery.gte("appointment_date", from);
-      if (to) apptsQuery = apptsQuery.lte("appointment_date", to);
-
-      const [{ data: cases, error: casesError }, { data: appts, error: apptsError }] = await Promise.all([
-        casesQuery,
-        apptsQuery,
-      ]);
-
-      if (casesError || apptsError) {
-        showToast("Couldn't load progress reports.", "error");
-        console.error(casesError || apptsError);
-        return;
-      }
-
-      if ((!cases || cases.length === 0) && (!appts || appts.length === 0)) {
-        showToast("No cases or completed sessions found for the selected range.", "info");
-        return;
-      }
-
-      const byStudent = {};
-      const ensure = (studentId, name) => {
-        if (!byStudent[studentId]) byStudent[studentId] = { name, openCases: 0, resolvedCases: 0, sessions: 0 };
-        return byStudent[studentId];
-      };
-
-      (cases || []).forEach((c) => {
-        const name = c.students ? `${c.students.first_name} ${c.students.last_name}` : "Unknown";
-        const entry = ensure(c.student_id, name);
-        if (c.status === "resolved") entry.resolvedCases++;
-        else entry.openCases++;
-      });
-
-      (appts || []).forEach((a) => {
-        const name = a.students ? `${a.students.first_name} ${a.students.last_name}` : "Unknown";
-        const entry = ensure(a.student_id, name);
-        entry.sessions++;
-      });
-
-      const rows = Object.values(byStudent).map((e) => ({
-        name: e.name,
-        openCases: e.openCases,
-        resolvedCases: e.resolvedCases,
-        sessions: e.sessions,
-      }));
-
-      openPrintableReport(
-        "Progress Reports",
-        [
-          { key: "name", label: "Student" },
-          { key: "openCases", label: "Open/Monitoring Cases" },
-          { key: "resolvedCases", label: "Resolved Cases" },
-          { key: "sessions", label: "Completed Sessions" },
         ],
         rows
       );
@@ -890,10 +709,7 @@
       });
     }
 
-    wireReportButton("genStudentRecordsBtn", generateStudentRecords);
     wireReportButton("genIncidentReportsBtn", generateIncidentReports);
-    wireReportButton("genCounselingHistoryBtn", generateCounselingHistory);
-    wireReportButton("genProgressReportsBtn", generateProgressReports);
     wireReportButton("genCaseNotesBtn", generateCaseNotes);
     wireReportButton("genAccomplishmentReportsBtn", generateAccomplishmentReports);
     wireReportButton("genNarrativeReportsBtn", generateNarrativeReports);

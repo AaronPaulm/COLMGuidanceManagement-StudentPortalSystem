@@ -230,6 +230,14 @@
     let currentStudent = null;
     let allCounselors = [];
     let allAppointments = [];
+
+    // Caps how many unresolved requests one student can have queued up at
+    // once, so a burst of submissions can't flood a counselor's pending
+    // list. A database trigger (see
+    // migrations/appointments_pending_limit.sql) backstops this the same
+    // way appointments_no_double_booking.sql backstops the slot-clash
+    // check just below.
+    const PENDING_APPOINTMENT_LIMIT = 3;
     let activeAppointmentsFilter = "pending";
 
     function escapeHtml(str) {
@@ -518,6 +526,15 @@
       }
       if (appointmentTime < "08:00" || appointmentTime > "17:00") {
         showToast("Guidance office hours are 8:00 AM–5:00 PM. Please choose a time within that range.", "error");
+        return;
+      }
+
+      const pendingCount = allAppointments.filter((a) => a.status === "pending").length;
+      if (pendingCount >= PENDING_APPOINTMENT_LIMIT) {
+        showToast(
+          `You already have ${PENDING_APPOINTMENT_LIMIT} pending appointment requests. Wait for a response before submitting more.`,
+          "error"
+        );
         return;
       }
 

@@ -155,13 +155,25 @@ Deno.serve(async (req) => {
 
     // firstname.lastname@colm.edu.ph is a lot friendlier than the old
     // firstname.lastname.stu-yymmdd-001@guidance.local, but it's no longer
-    // unique on its own — two same-named students would collide. The old
-    // format leaned on the student number to sidestep that entirely; this
-    // just handles the collision directly by appending 2, 3, etc. for
-    // repeats within this same import (a cross-batch collision, i.e. a new
-    // student sharing a name with someone already imported earlier, still
-    // fails at createUser() below and shows up as a normal failed row).
+    // unique on its own — two same-named students would collide. This set
+    // skips straight past slugs already used earlier in this same batch;
+    // usedEmailSlugs.add() happens once an email is confirmed to work
+    // below, so it only ever holds real, successfully-created emails.
     const usedEmailSlugs = new Set<string>();
+    // A same-named student showing up in a *later* import (different
+    // year, re-enrollment, etc.) isn't something usedEmailSlugs alone can
+    // catch — Supabase itself is the only source of truth for emails
+    // outside this batch. So instead of guessing whether an email is
+    // free, just try it and, if Supabase says it's taken, bump the
+    // number and try again. Capped so a pathological run of collisions
+    // can't loop forever.
+    const MAX_EMAIL_ATTEMPTS = 20;
+
+    function isEmailTakenError(error: { code?: string; message?: string } | null): boolean {
+      if (!error) return false;
+      if (error.code === "email_exists") return true;
+      return /already\s+(registered|exists|been registered)/i.test(error.message || "");
+    }
 
     for (let i = 0; i < students.length; i++) {
       const row = students[i];
@@ -177,9 +189,7 @@ Deno.serve(async (req) => {
         emailSlug = `${baseSlug}${suffix}`;
         suffix++;
       }
-      usedEmailSlugs.add(emailSlug);
 
-      const email = `${emailSlug}@colm.edu.ph`;
       const tempPassword = STUDENT_TEMP_PASSWORD;
 
       if (!firstName) {
@@ -187,7 +197,7 @@ Deno.serve(async (req) => {
           firstName,
           lastName,
           studentNumber,
-          email,
+          email: `${emailSlug}@colm.edu.ph`,
           tempPassword: "",
           success: false,
           error: "Missing first name",
@@ -195,11 +205,25 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const { data: created, error: createError } = await adminClient.auth.admin.createUser({
-        email,
-        password: tempPassword,
-        email_confirm: true,
-      });
+      let email = `${emailSlug}@colm.edu.ph`;
+      let created: { user?: { id: string } } | null = null;
+      let createError: { code?: string; message?: string } | null = null;
+
+      for (let attempt = 0; attempt < MAX_EMAIL_ATTEMPTS; attempt++) {
+        const result = await adminClient.auth.admin.createUser({
+          email,
+          password: tempPassword,
+          email_confirm: true,
+        });
+        created = result.data;
+        createError = result.error;
+
+        if (!createError || !isEmailTakenError(createError)) break;
+
+        emailSlug = `${baseSlug}${suffix}`;
+        suffix++;
+        email = `${emailSlug}@colm.edu.ph`;
+      }
 
       if (createError || !created?.user) {
         results.push({
@@ -214,6 +238,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      usedEmailSlugs.add(emailSlug);
       const newUserId = created.user.id;
 
       const { error: usersError } = await adminClient.from("users").insert({

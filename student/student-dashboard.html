@@ -176,12 +176,6 @@
       return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
     }
 
-    function tomorrowStr() {
-      const t = new Date();
-      t.setDate(t.getDate() + 1);
-      return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
-    }
-
     function escapeHtml(str) {
       const div = document.createElement("div");
       div.textContent = str ?? "";
@@ -260,21 +254,7 @@
         ? `${item.counselors.first_name} ${item.counselors.last_name}`
         : "Guidance Office";
 
-      // Deployment-free stand-in for automated reminders: the client has
-      // none today, and a full cron-based version needs someone with
-      // Supabase project access to deploy it (see
-      // supabase/functions/send-appointment-reminders). This surfaces the
-      // same "your session is coming up" reminder the moment the student
-      // opens their dashboard, with no server-side setup required.
-      let reminderHtml = "";
-      if (item.appointment_date === todayStr()) {
-        reminderHtml = `<div class="form-note-banner"><i class="fa-solid fa-bell"></i> Reminder: you have a guidance appointment today at ${formatTime(item.appointment_time)}.</div>`;
-      } else if (item.appointment_date === tomorrowStr()) {
-        reminderHtml = `<div class="form-note-banner"><i class="fa-solid fa-bell"></i> Reminder: you have a guidance appointment tomorrow at ${formatTime(item.appointment_time)}.</div>`;
-      }
-
       upcomingWrap.innerHTML = `
-        ${reminderHtml}
         <div class="upcoming-item">
           <div class="upcoming-item-body">
             <h3>${escapeHtml(item.concern || "Guidance Session")}</h3>
