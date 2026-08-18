@@ -157,7 +157,7 @@
 
             <button class="stat-card" onclick="location.href='counselor-reports.html'">
                 <div class="stat-card-top">
-                    <span class="stat-card-label">Completed This Month</span>
+                    <span class="stat-card-label">Conducted This Month</span>
                     <span class="stat-card-icon"><i class="fa-solid fa-check-double"></i></span>
                 </div>
                 <div class="stat-card-value" id="statCompleted">—</div>
@@ -197,7 +197,7 @@
     const APPOINTMENT_STATUS_META = [
       { key: "pending", label: "Pending", color: "#f59e0b" },
       { key: "approved", label: "Approved", color: "#22c55e" },
-      { key: "completed", label: "Completed", color: "#4338ca" },
+      { key: "conducted", label: "Conducted", color: "#4338ca" },
       { key: "declined", label: "Declined", color: "#ef4444" },
       { key: "cancelled", label: "Cancelled", color: "#9ca3af" },
     ];
@@ -273,7 +273,7 @@
           .from("appointments")
           .select("appointment_id", { count: "exact", head: true })
           .eq("counselor_id", counselorId)
-          .eq("status", "completed")
+          .eq("status", "conducted")
           .gte("appointment_date", firstOfMonthStr()),
         supabaseClient.from("appointments").select("status").eq("counselor_id", counselorId),
         supabaseClient.from("cases").select("status").eq("counselor_id", counselorId),

@@ -154,7 +154,7 @@
                 <option value="all">All</option>
                 <option value="pending" selected>Pending</option>
                 <option value="approved">Approved</option>
-                <option value="completed">Completed</option>
+                <option value="conducted">Conducted</option>
                 <option value="missed">Missed</option>
                 <option value="cancelled">Cancelled</option>
                 <option value="declined">Declined</option>
@@ -283,7 +283,7 @@
 
     function badgeClass(status) {
       if (status === "declined") return "cancelled";
-      if (status === "completed") return "info";
+      if (status === "conducted") return "info";
       if (status === "missed") return "missed";
       return status;
     }

@@ -220,7 +220,7 @@
           .from("appointments")
           .select("appointment_id", { count: "exact", head: true })
           .eq("student_id", studentId)
-          .eq("status", "completed"),
+          .eq("status", "conducted"),
         supabaseClient.from("counselors").select("counselor_id").eq("availability_status", "available").limit(1),
         supabaseClient
           .from("appointments")

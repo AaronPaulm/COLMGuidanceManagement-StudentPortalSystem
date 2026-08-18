@@ -181,7 +181,7 @@
     }
 
     function appointmentStatusBadge(status) {
-      if (status === "completed") return { label: "Resolved", cls: "badge-approved" };
+      if (status === "conducted") return { label: "Resolved", cls: "badge-approved" };
       if (status === "cancelled") return { label: "Cancelled", cls: "badge-cancelled" };
       if (status === "declined") return { label: "Declined", cls: "badge-cancelled" };
       return { label: status, cls: "badge-info" };
@@ -196,7 +196,7 @@
           .from("appointments")
           .select("appointment_id, concern, appointment_date, status, school_year, counselors(first_name, last_name)")
           .eq("student_id", studentId)
-          .in("status", ["completed", "cancelled", "declined"]),
+          .in("status", ["conducted", "cancelled", "declined"]),
         supabaseClient
           .from("form_assignments")
           .select("assignment_id, submitted_at, school_year, forms(form_name)")

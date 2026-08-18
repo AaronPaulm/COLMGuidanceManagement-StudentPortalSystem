@@ -35,7 +35,7 @@
             <a href="student-dashboard.html">
               <i class="fa-solid fa-house"></i>
                         <span>Dashboard</span>
-                    </a>
+                  </a>
                 </li>
 
                 <li>
@@ -141,7 +141,7 @@
                 <div class="CalendarFilterBar">
                     <span class="filter-label" id="selectedDateLabel">Today's Announcements</span>
                 </div>
-                <div class="AnnouncementsList" id="announcementsList"></div>
+                <div id="announcementsList"></div>
             </div>
         </div>
 
@@ -325,18 +325,21 @@
 
       list.innerHTML = "";
       items.forEach((a) => {
-        const card = document.createElement("div");
-        card.className = "announcement-card";
-        card.innerHTML = `
-          <div class="announcement-meta">
-            <small>${formatShort(a.announcement_date)}</small>
+        const posted = a.counselors
+          ? `${a.counselors.first_name} ${a.counselors.last_name}`
+          : "Guidance Office";
+        const row = document.createElement("div");
+        row.className = "staff-list-item";
+        row.style.cursor = "pointer";
+        row.innerHTML = `
+          <div>
+            <h3>${escapeHtml(a.title)}</h3>
+            <p>${escapeHtml(a.announcement_content)}</p>
+            <small>Posted by ${escapeHtml(posted)}</small>
           </div>
-          <h3>${escapeHtml(a.title)}</h3>
-          <p>${escapeHtml(truncate(a.announcement_content, 140))}</p>
-          <small>Posted by ${escapeHtml(counselorName(a))}</small>
         `;
-        card.addEventListener("click", () => openAnnouncementModal(a));
-        list.appendChild(card);
+        row.addEventListener("click", () => openAnnouncementModal(a));
+        list.appendChild(row);
       });
     }
 

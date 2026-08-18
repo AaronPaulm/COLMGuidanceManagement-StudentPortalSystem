@@ -149,7 +149,7 @@
                 <option value="all">All</option>
                 <option value="pending" selected>Pending</option>
                 <option value="approved">Approved</option>
-                <option value="completed">Completed</option>
+                <option value="conducted">Conducted</option>
                 <option value="missed">Missed</option>
                 <option value="cancelled">Cancelled</option>
                 <option value="declined">Declined</option>
@@ -217,40 +217,6 @@
         </div>
     </div>
 
-    <!-- Add to Case modal -->
-    <div class="modal-overlay" id="addToCaseModalOverlay">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h3>Add to Case</h3>
-                <button type="button" class="modal-close" id="addToCaseCloseBtn" aria-label="Close">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p class="modal-meta" id="addToCaseMeta"></p>
-                <form id="addToCaseForm">
-                    <div class="form-field">
-                        <label for="caseChoiceSelect">Case</label>
-                        <select id="caseChoiceSelect" required>
-                            <option value="new">Create a new case</option>
-                        </select>
-                    </div>
-                    <div class="form-field" id="newCaseNatureField" style="margin-top:14px;">
-                        <label for="newCaseNatureInput">Nature of Incident</label>
-                        <input type="text" id="newCaseNatureInput" maxlength="150">
-                    </div>
-                    <div class="form-field" style="margin-top:14px;">
-                        <label for="caseSessionNoteInput">Session Note</label>
-                        <textarea id="caseSessionNoteInput" rows="3"></textarea>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary" id="addToCaseSaveBtn">Save</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
     <!-- Signed Documents modal (B3 — attach the scanned, signed invitation letter) -->
     <div class="modal-overlay" id="signedDocsModalOverlay">
         <div class="modal-box">
@@ -292,6 +258,16 @@
       return String(n).padStart(2, "0");
     }
 
+    function isSunday(dateStr) {
+      const [y, m, d] = dateStr.split("-").map(Number);
+      return new Date(y, m - 1, d).getDay() === 0;
+    }
+
+    function todayStr() {
+      const t = new Date();
+      return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
+    }
+
     function formatDate(dateStr) {
       const [y, m, d] = dateStr.split("-").map(Number);
       return new Date(y, m - 1, d).toLocaleDateString("en-US", {
@@ -315,7 +291,7 @@
 
     function badgeClass(status) {
       if (status === "declined") return "cancelled";
-      if (status === "completed") return "info";
+      if (status === "conducted") return "info";
       if (status === "missed") return "missed";
       return status;
     }
@@ -344,112 +320,6 @@
         link: "student-appointments.html",
       });
     }
-
-    // ---------- Add to Case modal ----------
-
-    let addToCaseAppointment = null;
-
-    async function openAddToCaseModal(a) {
-      addToCaseAppointment = a;
-      document.getElementById("addToCaseMeta").textContent =
-        `${studentName(a)} · ${formatDate(a.appointment_date)} at ${formatTime(a.appointment_time)}`;
-
-      document.getElementById("newCaseNatureInput").value = a.concern || "";
-      document.getElementById("caseSessionNoteInput").value = "";
-
-      const choiceSelect = document.getElementById("caseChoiceSelect");
-      choiceSelect.innerHTML = `<option value="new">Create a new case</option>`;
-
-      const { data: existingCases, error } = await supabaseClient
-        .from("cases")
-        .select("case_id, nature_of_incident, status")
-        .eq("counselor_id", currentCounselor.counselor_id)
-        .eq("student_id", a.student_id)
-        .neq("status", "resolved")
-        .order("created_at", { ascending: false });
-
-      if (!error && existingCases?.length) {
-        existingCases.forEach((c) => {
-          const opt = document.createElement("option");
-          opt.value = String(c.case_id);
-          opt.textContent = `Add to: ${c.nature_of_incident}`;
-          choiceSelect.appendChild(opt);
-        });
-      }
-
-      toggleNewCaseNatureField();
-      document.getElementById("addToCaseModalOverlay").classList.add("show");
-    }
-
-    function toggleNewCaseNatureField() {
-      const isNew = document.getElementById("caseChoiceSelect").value === "new";
-      document.getElementById("newCaseNatureField").style.display = isNew ? "" : "none";
-      document.getElementById("newCaseNatureInput").required = isNew;
-    }
-
-    document.getElementById("caseChoiceSelect").addEventListener("change", toggleNewCaseNatureField);
-
-    function closeAddToCaseModal() {
-      document.getElementById("addToCaseModalOverlay").classList.remove("show");
-      addToCaseAppointment = null;
-    }
-
-    document.getElementById("addToCaseCloseBtn").addEventListener("click", closeAddToCaseModal);
-    document.getElementById("addToCaseModalOverlay").addEventListener("click", (e) => {
-      if (e.target.id === "addToCaseModalOverlay") closeAddToCaseModal();
-    });
-
-    document.getElementById("addToCaseForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!addToCaseAppointment) return;
-
-      const a = addToCaseAppointment;
-      const choice = document.getElementById("caseChoiceSelect").value;
-      const note = document.getElementById("caseSessionNoteInput").value.trim();
-      const saveBtn = document.getElementById("addToCaseSaveBtn");
-      saveBtn.disabled = true;
-
-      let caseId = choice === "new" ? null : Number(choice);
-
-      if (choice === "new") {
-        const nature = document.getElementById("newCaseNatureInput").value.trim();
-        const { data: newCase, error } = await supabaseClient
-          .from("cases")
-          .insert({
-            student_id: a.student_id,
-            counselor_id: currentCounselor.counselor_id,
-            nature_of_incident: nature,
-            school_year: defaultSchoolYear(),
-          })
-          .select("case_id")
-          .single();
-
-        if (error) {
-          saveBtn.disabled = false;
-          showToast("Couldn't create case: " + error.message, "error");
-          console.error(error);
-          return;
-        }
-        caseId = newCase.case_id;
-      }
-
-      const { error: sessionError } = await supabaseClient.from("case_sessions").insert({
-        case_id: caseId,
-        appointment_id: a.appointment_id,
-        session_note: note || a.concern || null,
-      });
-
-      saveBtn.disabled = false;
-
-      if (sessionError) {
-        showToast("Couldn't add session to case: " + sessionError.message, "error");
-        console.error(sessionError);
-        return;
-      }
-
-      closeAddToCaseModal();
-      showToast(choice === "new" ? "Case created." : "Session added to case.", "success");
-    });
 
     // ---------- Signed Documents modal (B3) ----------
 
@@ -590,8 +460,8 @@
         showEmailNote: true,
       },
       complete: {
-        title: "Mark as Completed",
-        confirmLabel: "Mark Completed",
+        title: "Mark as Conducted",
+        confirmLabel: "Mark Conducted",
         confirmClass: "btn-primary",
         showReason: true,
         reasonLabel: "Session note (optional)",
@@ -655,7 +525,9 @@
       document.getElementById("actionDateInput").required = !!config.showReschedule;
       document.getElementById("actionTimeInput").required = !!config.showReschedule;
       if (config.showReschedule) {
-        document.getElementById("actionDateInput").value = a.appointment_date;
+        const dateInput = document.getElementById("actionDateInput");
+        dateInput.min = todayStr();
+        dateInput.value = a.appointment_date;
         document.getElementById("actionTimeInput").value = a.appointment_time;
       }
 
@@ -704,12 +576,29 @@
           }
           break;
         case "complete":
-          ok = await updateAppointment(a.appointment_id, { status: "completed", counselor_note: reason || null });
-          if (ok) await notifyStudentAboutAppointment(a, "Your appointment was marked complete");
+          ok = await updateAppointment(a.appointment_id, { status: "conducted", counselor_note: reason || null });
+          if (ok) await notifyStudentAboutAppointment(a, "Your appointment was marked as conducted");
           break;
         case "reschedule": {
           const newDate = document.getElementById("actionDateInput").value;
           const newTime = document.getElementById("actionTimeInput").value;
+
+          if (newDate === a.appointment_date) {
+            showToast("Rescheduling must be to a different day.", "error");
+            confirmBtn.disabled = false;
+            return;
+          }
+          if (isSunday(newDate)) {
+            showToast("Guidance is closed on Sundays. Please choose a date from Monday to Saturday.", "error");
+            confirmBtn.disabled = false;
+            return;
+          }
+          if (newTime < "08:00" || newTime > "17:00") {
+            showToast("Guidance office hours are 8:00 AM-5:00 PM. Please choose a time within that range.", "error");
+            confirmBtn.disabled = false;
+            return;
+          }
+
           const { data: clashing, error: clashError } = await supabaseClient
             .from("appointments")
             .select("appointment_id")
@@ -743,6 +632,18 @@
         case "missed": {
           const newDate = document.getElementById("actionDateInput").value;
           const newTime = document.getElementById("actionTimeInput").value;
+
+          if (isSunday(newDate)) {
+            showToast("Guidance is closed on Sundays. Please choose a date from Monday to Saturday.", "error");
+            confirmBtn.disabled = false;
+            return;
+          }
+          if (newTime < "08:00" || newTime > "17:00") {
+            showToast("Guidance office hours are 8:00 AM-5:00 PM. Please choose a time within that range.", "error");
+            confirmBtn.disabled = false;
+            return;
+          }
+
           const { data: clashing, error: clashError } = await supabaseClient
             .from("appointments")
             .select("appointment_id")
@@ -834,20 +735,17 @@
         // Declining is still fine at the "pending" stage above, since that's
         // withdrawing a request that was never confirmed, not erasing a
         // scheduled session.
-        actions.push(`<button type="button" class="icon-btn sm primary" data-action="complete" title="Mark Completed"><i class="fa-solid fa-check-double"></i></button>`);
+        actions.push(`<button type="button" class="icon-btn sm primary" data-action="complete" title="Mark Conducted"><i class="fa-solid fa-check-double"></i></button>`);
         actions.push(`<button type="button" class="icon-btn sm" data-action="invite" title="Print Invitation Letter"><i class="fa-solid fa-file-lines"></i></button>`);
         actions.push(`<button type="button" class="icon-btn sm" data-action="reschedule" title="Reschedule"><i class="fa-regular fa-calendar-days"></i></button>`);
         actions.push(`<button type="button" class="icon-btn sm danger" data-action="missed" title="Mark as Missed & Reissue"><i class="fa-solid fa-calendar-xmark"></i></button>`);
       }
-      if (["approved", "completed"].includes(a.status)) {
+      if (["approved", "conducted"].includes(a.status)) {
         actions.push(`<button type="button" class="icon-btn sm" data-action="note" title="${a.counselor_note ? "Edit Note" : "Add Note"}"><i class="fa-regular fa-note-sticky"></i></button>`);
         const docCount = (a.appointment_attachments || []).length;
         actions.push(
           `<button type="button" class="icon-btn sm" data-action="signedDocs" title="${docCount ? `Signed Documents (${docCount})` : "Attach Signed Document"}"><i class="fa-solid fa-paperclip"></i></button>`
         );
-      }
-      if (a.status === "completed") {
-        actions.push(`<button type="button" class="icon-btn sm" data-action="addToCase" title="Add to Case"><i class="fa-solid fa-folder-plus"></i></button>`);
       }
 
       const noteIndicator = a.counselor_note
@@ -881,7 +779,6 @@
         row.querySelector('[data-action="invite"]')?.addEventListener("click", () => printInvitationForAppointment(a));
         row.querySelector('[data-action="note"]')?.addEventListener("click", () => openActionModal("note", a));
         row.querySelector('[data-action="signedDocs"]')?.addEventListener("click", () => openSignedDocsModal(a));
-        row.querySelector('[data-action="addToCase"]')?.addEventListener("click", () => openAddToCaseModal(a));
       });
     }
 
@@ -987,7 +884,7 @@
         },
       });
 
-      refreshPendingCount();
+      await refreshPendingCount();
     }
 
     document.getElementById("appointmentsFilterSelect").addEventListener("change", (e) => {
