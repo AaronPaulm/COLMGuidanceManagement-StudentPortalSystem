@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Appointments</title>
+    
+        <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
       <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../css/style.css">
@@ -14,7 +15,7 @@
 
         <header class="profile">
 
-            <img src="../images/COLM LOGO.png" alt="Student Profile">
+            <div class="avatar-initials" id="userAvatar"></div>
 
             <div class="info">
                 <h4 id="sidebarName"></h4>
@@ -55,7 +56,7 @@
                 <li class="desktop-only">
                     <a href="student-forms.html">
                         <i class="fa-solid fa-book"></i>
-                        <span>Forms &amp; Interventions</span>
+                        <span>Forms</span>
                     </a>
                 </li>
 
@@ -94,7 +95,7 @@
 
      <nav class="mobile-menu" id="mobileMenu" aria-label="More Navigation">
 
-        <a href="student-forms.html"><i class="fa-solid fa-book"></i> Forms &amp; Interventions</a>
+        <a href="student-forms.html"><i class="fa-solid fa-book"></i> Forms</a>
 
         <a href="student-history.html"><i class="fa-solid fa-clock-rotate-left"></i> History</a>
 
@@ -124,7 +125,19 @@
         <div class="appointment-form-card">
             <form id="appointmentForm">
                 <div class="form-field">
-                    <label for="apptConcernInput">Concern</label>
+                    <label for="apptConcernTypeInput">Concern Type</label>
+                    <select id="apptConcernTypeInput" required>
+                        <option value="">Select a concern type...</option>
+                        <option value="Academic">Academic</option>
+                        <option value="Career Guidance">Career Guidance</option>
+                        <option value="Family Concerns">Family Concerns</option>
+                        <option value="Bullying & Peer Relations">Bullying &amp; Peer Relations</option>
+                        <option value="Emotional & Mental Health">Emotional &amp; Mental Health</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="apptConcernInput">Concern Details</label>
                     <textarea id="apptConcernInput" rows="4" required placeholder="Briefly describe what you'd like to talk about"></textarea>
                 </div>
                 <div class="appt-form-row">
@@ -155,7 +168,6 @@
                 <option value="pending" selected>Pending</option>
                 <option value="approved">Approved</option>
                 <option value="conducted">Conducted</option>
-                <option value="missed">Missed</option>
                 <option value="cancelled">Cancelled</option>
                 <option value="declined">Declined</option>
                 <option value="rescheduled">Rescheduled</option>
@@ -284,7 +296,6 @@
     function badgeClass(status) {
       if (status === "declined") return "cancelled";
       if (status === "conducted") return "info";
-      if (status === "missed") return "missed";
       return status;
     }
 
@@ -544,6 +555,7 @@
         appointment_date: appointmentDate,
         appointment_time: appointmentTime,
         concern: document.getElementById("apptConcernInput").value.trim(),
+        concern_category: document.getElementById("apptConcernTypeInput").value,
         school_year: defaultSchoolYear(),
       };
 

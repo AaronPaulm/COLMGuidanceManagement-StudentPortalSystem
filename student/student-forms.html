@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forms &amp; Interventions</title>
+    
+        <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
       <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../css/style.css">
@@ -14,7 +15,7 @@
 
         <header class="profile">
 
-            <img src="../images/COLM LOGO.png" alt="Student Profile">
+            <div class="avatar-initials" id="userAvatar"></div>
 
             <div class="info">
                 <h4 id="sidebarName"></h4>
@@ -55,7 +56,7 @@
                 <li class="desktop-only">
                     <a href="student-forms.html">
                         <i class="fa-solid fa-book"></i>
-                        <span>Forms &amp; Interventions</span>
+                        <span>Forms</span>
                     </a>
                 </li>
 
@@ -94,7 +95,7 @@
 
      <nav class="mobile-menu" id="mobileMenu" aria-label="More Navigation">
 
-        <a href="student-forms.html"><i class="fa-solid fa-book"></i> Forms &amp; Interventions</a>
+        <a href="student-forms.html"><i class="fa-solid fa-book"></i> Forms</a>
 
         <a href="student-history.html"><i class="fa-solid fa-clock-rotate-left"></i> History</a>
 
@@ -114,6 +115,11 @@
         </header>
 
         <div class="section-title">
+            <h2>Student Information Sheet</h2>
+        </div>
+        <div class="assigned-forms-grid" id="sisGrid" style="grid-template-columns:1fr;"></div>
+
+        <div class="section-title" style="margin-top:30px;">
             <h2>Assigned Forms</h2>
         </div>
         <div class="assigned-forms-grid" id="assignedFormsGrid"></div>
@@ -179,9 +185,52 @@
         </div>
     </div>
 
+    <!-- Student Information Sheet wizard -->
+    <div class="modal-overlay" id="sisModalOverlay">
+        <div class="modal-box wide">
+            <div class="modal-header">
+                <h3 id="sisModalTitle">Student Information Sheet</h3>
+                <button type="button" class="modal-close" id="sisModalCloseBtn" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-meta" id="sisModalDesc"></p>
+
+                <div class="section-progress-track">
+                    <div class="section-progress-fill" id="sisProgressFill"></div>
+                </div>
+
+                <div class="section-indicator-row">
+                    <span class="section-indicator-pill" id="sisSectionIndicator"></span>
+                </div>
+
+                <div class="section-card">
+                    <h4 id="sisSectionTitle" style="margin:0 0 4px;"></h4>
+                    <p class="modal-meta" id="sisSectionDesc"></p>
+                    <div id="sisFieldsContainer"></div>
+                </div>
+
+                <div class="section-wizard-nav">
+                    <button type="button" class="wizard-nav-btn" id="sisPrevBtn">
+                        <i class="fa-solid fa-chevron-left"></i> Previous
+                    </button>
+                    <button type="button" class="wizard-nav-btn primary" id="sisNextBtn">
+                        Next <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary" id="sisSubmitBtn">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
       <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/supabaseClient.js"></script>
   <script src="../js/student-common.js"></script>
+  <script src="../js/student-info-schema.js"></script>
   <script>
     let currentStudent = null;
     let assignments = [];
@@ -630,12 +679,617 @@
       if (e.detail?.type === "form") loadAssignments();
     });
 
+    // ============================================================
+    // Student Information Sheet — annual multi-section form stored
+    // one row per school year in student_info_sheets (see
+    // migrations/student_info_sheets.sql). Sections/fields come from
+    // js/student-info-schema.js; the last wizard step is the
+    // certification checkbox + drawn e-signature. Old years' sheets
+    // are never touched — this page only ever reads/writes the row
+    // matching defaultSchoolYear().
+    // ============================================================
+
+    let sisSheet = null; // this school year's row, if any (draft or submitted)
+    let sisPastSubmitted = null; // most recent SUBMITTED sheet from any year
+    let studentRecord = null; // fuller profile row for prefill/auto fields
+    let sisAnswers = {};
+    let sisStep = 0;
+    let sisReadOnly = false;
+    let sisDirty = false;
+    let signCanvasHasInk = false;
+    // Holds the most recent DOB whose year was a valid 4-digit value, so a
+    // 5th (or larger) keystroke can be reverted to it instead of letting
+    // the native date input grow an unbounded year.
+    let lastValidDob = "";
+
+    const SIS_CERT_STEP = { id: "cert", numeral: "", title: "Signature", description: "Sign above your printed name to finalize your Information Sheet." };
+
+    function sisSteps() {
+      return [...STUDENT_INFO_SCHEMA.sections, SIS_CERT_STEP];
+    }
+
+    async function loadStudentRecord() {
+      const { data, error } = await supabaseClient
+        .from("students")
+        .select("first_name, last_name, middle_name, year_level, section, student_email, contact_number, parent_guardian")
+        .eq("student_id", currentStudent.student_id)
+        .single();
+      if (error) {
+        console.error(error);
+        return;
+      }
+      studentRecord = data;
+    }
+
+    async function loadSisData() {
+      const sy = defaultSchoolYear();
+      const { data, error } = await supabaseClient
+        .from("student_info_sheets")
+        .select("sheet_id, school_year, answers, signature, status, submitted_at")
+        .eq("student_id", currentStudent.student_id)
+        .order("school_year", { ascending: false });
+
+      if (error) {
+        console.error(error);
+      }
+
+      const rows = data || [];
+      sisSheet = rows.find((r) => r.school_year === sy) || null;
+      sisPastSubmitted = rows.find((r) => r.status === "submitted") || null;
+      renderSisCard();
+    }
+
+    function renderSisCard() {
+      const grid = document.getElementById("sisGrid");
+      const sy = defaultSchoolYear();
+
+      let badgeHtml;
+      let btnLabel;
+      if (sisSheet?.status === "submitted") {
+        badgeHtml = `<span class="badge badge-approved">Submitted</span>`;
+        btnLabel = `<i class="fa-solid fa-pen"></i> View / Edit`;
+      } else {
+        badgeHtml = `<span class="badge badge-pending">Not Submitted</span>`;
+        btnLabel = `<i class="fa-solid fa-file-lines"></i> Fill Out`;
+      }
+
+      grid.innerHTML = `
+        <div class="assigned-form-tile">
+          ${badgeHtml}
+          <h3>Student Information Sheet</h3>
+          <p>School Year ${escapeHtml(sy)} · kept permanently as part of your guidance record</p>
+          <div class="form-actions">
+            <button type="button" class="btn btn-outline" id="sisOpenBtn">${btnLabel}</button>
+          </div>
+        </div>
+      `;
+      document.getElementById("sisOpenBtn").addEventListener("click", () => openSisWizard(false));
+    }
+
+    // Prefill order: last submitted sheet's answers → current profile
+    // values. Auto fields (name, year & section) always come from the
+    // live record so the sheet snapshots who/where the student IS at
+    // fill-out time.
+    function buildPrefilledAnswers() {
+      const a = {};
+      if (sisPastSubmitted?.answers) Object.assign(a, sisPastSubmitted.answers);
+
+      const p = studentRecord || {};
+      a.last_name = p.last_name || "";
+      a.first_name = p.first_name || "";
+      a.middle_name = p.middle_name || "";
+      a.year_level = p.year_level || "";
+      a.section = p.section || "";
+      if (!a.email) a.email = p.student_email || "";
+      if (!a.contact) a.contact = p.contact_number || "";
+      if (!a.guardian_name) a.guardian_name = p.parent_guardian || "";
+      return a;
+    }
+
+    function openSisWizard(viewOnly) {
+      sisReadOnly = viewOnly;
+      sisDirty = false;
+      sisStep = 0;
+      signCanvasHasInk = false;
+
+      if (viewOnly) {
+        sisAnswers = { ...(sisSheet?.answers || {}) };
+        document.getElementById("sisModalDesc").textContent = `School Year ${defaultSchoolYear()} · read-only submission`;
+      } else if (sisSheet?.status === "submitted") {
+        // Re-editing this school year's already-submitted sheet: start from
+        // what was actually saved, not profile defaults, so the student edits
+        // their real answers in place.
+        sisAnswers = { ...(sisSheet.answers || {}) };
+        document.getElementById("sisModalDesc").textContent =
+          `School Year ${defaultSchoolYear()} · updating your submitted sheet`;
+      } else {
+        sisAnswers = buildPrefilledAnswers();
+        document.getElementById("sisModalDesc").textContent =
+          `School Year ${defaultSchoolYear()} · complete every part, then sign on the last step.`;
+      }
+
+      renderSisStep();
+      document.getElementById("sisModalOverlay").classList.add("show");
+    }
+
+    function collectCurrentSection() {
+      if (sisReadOnly) return;
+      const step = sisSteps()[sisStep];
+      if (step.id === "cert") return;
+      STUDENT_INFO_SCHEMA.collectSection(document.getElementById("sisFieldsContainer"), step.fields, sisAnswers);
+    }
+
+    function certName() {
+      const p = studentRecord || currentStudent;
+      return `${p.first_name || ""} ${p.last_name || ""}`.trim();
+    }
+
+    function certStepHtml() {
+      const signedDate = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+      if (sisReadOnly) {
+        return `
+          <div class="form-field">
+            <label>Signature</label>
+            <div class="sis-sign-preview">
+              ${sisSheet?.signature ? `<img src="${sisSheet.signature}" alt="Student signature">` : `<p class="submission-answer-empty">No signature captured.</p>`}
+            </div>
+            <div class="sis-sign-meta">
+              <span class="sis-sign-name">${escapeHtml(certName())}</span><br>
+              Signature over printed name — submitted ${sisSheet?.submitted_at ? formatDate(sisSheet.submitted_at) : "—"}
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="form-field">
+          <label>Signature</label>
+          <div class="sis-sign-wrap">
+            <canvas id="sisSignCanvas" class="sis-sign-canvas"></canvas>
+            <button type="button" class="btn btn-outline btn-sm" id="sisClearSignBtn"><i class="fa-solid fa-eraser"></i> Clear</button>
+          </div>
+          <span class="hint">Draw your signature above using your mouse or finger.</span>
+        </div>
+        <div class="sis-sign-meta">
+          <span class="sis-sign-name">${escapeHtml(certName())}</span><br>
+          Signature over printed name — ${signedDate}
+        </div>
+      `;
+    }
+
+    function initSignCanvas() {
+      const canvas = document.getElementById("sisSignCanvas");
+      if (!canvas) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const cssWidth = canvas.clientWidth || 380;
+      canvas.width = cssWidth * dpr;
+      canvas.height = 140 * dpr;
+
+      const ctx = canvas.getContext("2d");
+      ctx.scale(dpr, dpr);
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "#111827";
+      signCanvasHasInk = false;
+
+      let drawing = false;
+      const pos = (e) => {
+        const r = canvas.getBoundingClientRect();
+        return { x: e.clientX - r.left, y: e.clientY - r.top };
+      };
+
+      canvas.addEventListener("pointerdown", (e) => {
+        drawing = true;
+        signCanvasHasInk = true;
+        sisDirty = true;
+        canvas.setPointerCapture(e.pointerId);
+        const pt = pos(e);
+        ctx.beginPath();
+        ctx.moveTo(pt.x, pt.y);
+        ctx.lineTo(pt.x + 0.5, pt.y + 0.5);
+        ctx.stroke();
+      });
+      canvas.addEventListener("pointermove", (e) => {
+        if (!drawing) return;
+        const pt = pos(e);
+        ctx.lineTo(pt.x, pt.y);
+        ctx.stroke();
+      });
+      ["pointerup", "pointercancel"].forEach((ev) => canvas.addEventListener(ev, () => (drawing = false)));
+
+      document.getElementById("sisClearSignBtn")?.addEventListener("click", () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        signCanvasHasInk = false;
+        sisDirty = true;
+      });
+    }
+
+    function renderSisStep() {
+      const steps = sisSteps();
+      const n = steps.length;
+      const s = steps[sisStep];
+      const isCert = s.id === "cert";
+
+      document.getElementById("sisSectionIndicator").textContent = `Part ${sisStep + 1} of ${n}`;
+      document.getElementById("sisProgressFill").style.width = `${((sisStep + 1) / n) * 100}%`;
+      document.getElementById("sisPrevBtn").disabled = sisStep === 0;
+      document.getElementById("sisSectionTitle").textContent = isCert ? s.title : `${s.numeral}. ${s.title}`;
+      document.getElementById("sisSectionDesc").textContent = s.description || "";
+
+      const container = document.getElementById("sisFieldsContainer");
+      container.innerHTML = isCert
+        ? certStepHtml()
+        : `<div class="sis-grid">${s.fields.map((f) => STUDENT_INFO_SCHEMA.fieldHtml(f, sisAnswers[f.key], sisReadOnly)).join("")}</div>`;
+
+      document.getElementById("sisNextBtn").style.display = sisStep === n - 1 ? "none" : "";
+      document.getElementById("sisSubmitBtn").style.display = isCert && !sisReadOnly ? "" : "none";
+
+      if (!isCert) STUDENT_INFO_SCHEMA.applyFieldStates(container, sisAnswers, sisReadOnly);
+      // Re-derive Age whenever a DOB is already on file so it can never
+      // go stale mid-school-year (birthdays happen).
+      if (!isCert && !sisReadOnly && sisAnswers.dob) {
+        if (isCompleteDate(sisAnswers.dob)) lastValidDob = sisAnswers.dob;
+        syncAgeFromDob(container, sisAnswers.dob);
+      }
+      if (isCert && !sisReadOnly) initSignCanvas();
+    }
+
+    function renumberRows(wrap) {
+      wrap.querySelectorAll("tbody tr").forEach((tr, i) => {
+        tr.dataset.row = i;
+        const numCell = tr.querySelector(".sis-row-num");
+        if (numCell) numCell.textContent = i + 1;
+      });
+    }
+
+    // Dynamic-table add/remove — delegated so cloned rows just work.
+    document.getElementById("sisFieldsContainer").addEventListener("click", (e) => {
+      if (sisReadOnly) return;
+
+      const addBtn = e.target.closest(".sis-add-row");
+      if (addBtn) {
+        const wrap = addBtn.closest("[data-table-field]");
+        const tbody = wrap.querySelector("tbody");
+        const clone = tbody.querySelector("tr").cloneNode(true);
+        clone.querySelectorAll("input").forEach((i) => (i.value = ""));
+        tbody.appendChild(clone);
+        renumberRows(wrap);
+        sisDirty = true;
+        return;
+      }
+
+      const rm = e.target.closest(".sis-remove-row");
+      if (rm) {
+        const wrap = rm.closest("[data-table-field]");
+        const tbody = wrap.querySelector("tbody");
+        if (tbody.querySelectorAll("tr").length <= 1) return; // keep at least one row
+        rm.closest("tr").remove();
+        renumberRows(wrap);
+        sisDirty = true;
+      }
+    });
+
+    ["input", "change"].forEach((evt) =>
+      document.getElementById("sisFieldsContainer").addEventListener(evt, () => {
+        if (!sisReadOnly) sisDirty = true;
+      })
+    );
+
+    // Age is derived from Date of Birth: picking a DOB computes the age
+    // (in whole years) and locks the box; clearing the DOB re-enables
+    // manual entry. A complete-but-future date is rejected outright.
+    function calcAge(dobStr) {
+      const dob = new Date(dobStr);
+      if (isNaN(dob)) return null;
+      const today = new Date();
+      let age = today.getFullYear() - dob.getFullYear();
+      const m = today.getMonth() - dob.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+      return age;
+    }
+
+    // True only for a fully-typed YYYY-MM-DD. A native <input type="date">
+    // fires "change" while the user is still typing the year (e.g. just
+    // "2"), and that partial value must NOT be treated as a real date —
+    // otherwise we'd wrongly flag a valid 2004 as being in the future.
+    function isCompleteDate(dobStr) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dobStr || "")) return false;
+      const [y, m, d] = dobStr.split("-").map(Number);
+      const dt = new Date(y, m - 1, d);
+      return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
+    }
+
+    // Age is derived from Date of Birth. This function only fills/locks
+    // (or unlocks) the derived Age field — it NEVER modifies the DOB input,
+    // and it NEVER shows an error toast. Nothing fires while the student is
+    // still typing: a native date input isn't treated as a real date until
+    // the full YYYY-MM-DD is present. Future-date feedback happens ONLY on
+    // blur and on Next-button validation, so the "can't be in the future"
+    // toast can't pop up mid-entry.
+    function syncAgeFromDob(container, dobValue) {
+      const ageEl = container.querySelector('[data-field="age"]');
+      if (!ageEl) return;
+
+      // Empty or incomplete value → unlock Age so it can be typed manually.
+      if (!dobValue || !isCompleteDate(dobValue)) {
+        sisAnswers.age = "";
+        ageEl.value = "";
+        ageEl.disabled = false;
+        return;
+      }
+
+      const age = calcAge(dobValue);
+      if (age !== null && age >= 0 && age <= 130) {
+        sisAnswers.age = String(age);
+        ageEl.value = age;
+        ageEl.disabled = true;
+      }
+    }
+
+    // Called only when the student leaves the DOB field (blur) or clicks
+    // Next, i.e. once the full 4-digit year has been entered. Shows the
+    // future-date error there — never while typing. Returns true when the
+    // date is complete AND invalid (future), so callers can block nav.
+    function validateDobComplete(container) {
+      const dobEl = container.querySelector('[data-field="dob"]');
+      if (!dobEl) return false;
+      const dob = dobEl.value || "";
+      if (!dob || !isCompleteDate(dob)) return false;
+      const age = calcAge(dob);
+      if (age === null || age < 0 || age > 130) {
+        showToast("Date of birth can't be in the future.", "error");
+        return true;
+      }
+      return false;
+    }
+
+    // Like validateDobComplete: the email check runs only when the student
+    // leaves the field or clicks Next — never mid-typing. Returns true if
+    // the email is filled in but not a valid address, so callers can block
+    // navigation. Empty email is allowed (it's validated for "missing" by
+    // validateSection, not for format here).
+    function validateEmailField(container) {
+      const emailEl = container.querySelector('[data-field="email"]');
+      if (!emailEl) return false;
+      const val = emailEl.value || "";
+      if (!val.trim()) return false;
+      if (!STUDENT_INFO_SCHEMA.isValidEmail(val)) {
+        showToast("Please enter a valid email address (name@domain.com).", "error");
+        return true;
+      }
+      return false;
+    }
+
+    // Immediate reaction to radio/checkbox changes: keep the controlling
+    // answer fresh in sisAnswers, apply "None" exclusivity inside checks
+    // groups, then re-evaluate conditional fields (e.g. the Interrupted
+    // reason box only typing while "Interrupted" is selected).
+    document.getElementById("sisFieldsContainer").addEventListener("change", (e) => {
+      if (sisReadOnly) return;
+      const t = e.target;
+      const key = t.dataset?.field;
+      if (!key) return;
+
+      const step = sisSteps()[sisStep];
+      if (step.id === "cert") return;
+
+      const container = document.getElementById("sisFieldsContainer");
+      if (t.type === "checkbox") STUDENT_INFO_SCHEMA.handleChecksChange(container, t);
+
+      if (t.type === "radio") {
+        sisAnswers[key] = t.value;
+      } else if (t.type === "checkbox") {
+        sisAnswers[key] = Array.from(
+          container.querySelectorAll(`input[type="checkbox"][data-field="${key}"]:checked`)
+        ).map((cb) => cb.value);
+      }
+
+      if (key === "dob") {
+        // Block a 5th digit in the year by collapsing it to "000<digit>"
+        // (e.g. typing "2" after 2004 turns the year into 0002). A native
+        // date input only reports a full value once month+day+year are all
+        // present, so this runs once the finished (never mid-typing) 5+-digit
+        // year has been committed — we cannot stop the keystroke earlier, the
+        // browser owns the internal year spinner.
+        const parts = t.value ? t.value.split("-") : [];
+        const rawYear = parts[0] || "";
+        const oversized = rawYear.length > 4 || (rawYear && Number(rawYear) > 9999);
+        if (t.value && oversized) {
+          const lastDigit = rawYear[4] || "0";
+          const mm = parts[1] || "01";
+          const dd = parts[2] || "01";
+          t.value = `000${lastDigit}-${mm}-${dd}`;
+          if (isCompleteDate(t.value)) lastValidDob = t.value;
+          showToast("Year is limited to 4 digits.", "info");
+        } else if (t.value && isCompleteDate(t.value)) {
+          lastValidDob = t.value;
+        }
+        syncAgeFromDob(container, t.value);
+      }
+
+      STUDENT_INFO_SCHEMA.applyFieldStates(container, sisAnswers, false);
+    });
+
+    // Input masks run on every keystroke (and paste/autofill): block digits
+    // in word-only fields, keep digits+decimal in amounts, and auto-format
+    // mobile numbers to 09XX-XXX-XXXX. Enforcement is by stripping, so a
+    // disallowed character simply never appears. Mirrors the sanitization
+    // already applied at render time, so data stays consistent.
+    document.getElementById("sisFieldsContainer").addEventListener("input", (e) => {
+      if (sisReadOnly) return;
+      const el = e.target;
+      const ds = el.dataset || {};
+      if (ds.nodigits === "1") {
+        const clean = el.value.replace(/\d/g, "");
+        if (clean !== el.value) el.value = clean;
+      } else if (ds.decimalonly === "1") {
+        let digits = el.value.replace(/[^\d.]/g, "");
+        const firstDot = digits.indexOf(".");
+        if (firstDot !== -1) {
+          digits = digits.slice(0, firstDot + 1) + digits.slice(firstDot + 1).replace(/\./g, "");
+        }
+        if (digits !== el.value) el.value = digits;
+      } else if (ds.phone === "1") {
+        const d = el.value.replace(/\D/g, "").slice(0, 11);
+        let out = "";
+        if (d.length > 7) out = `${d.slice(0, 4)}-${d.slice(4, 7)}-${d.slice(7)}`;
+        else if (d.length > 4) out = `${d.slice(0, 4)}-${d.slice(4)}`;
+        else out = d;
+        if (out !== el.value) el.value = out;
+      }
+    });
+
+    // Focus feedback only fires once the student has FILLED IN the field
+    // and moved focus away (or clicked Next) — never mid-typing.
+    document.getElementById("sisFieldsContainer").addEventListener("focusout", (e) => {
+      if (sisReadOnly) return;
+      const key = e.target?.dataset?.field;
+      const container = document.getElementById("sisFieldsContainer");
+      if (key === "dob") {
+        syncAgeFromDob(container, e.target.value);
+        validateDobComplete(container);
+      } else if (key === "email") {
+        validateEmailField(container);
+      }
+    });
+
+    document.getElementById("sisPrevBtn").addEventListener("click", () => {
+      collectCurrentSection();
+      if (sisStep > 0) {
+        sisStep--;
+        renderSisStep();
+      }
+    });
+
+    document.getElementById("sisNextBtn").addEventListener("click", () => {
+      collectCurrentSection();
+
+      const step = sisSteps()[sisStep];
+      if (step.id !== "cert") {
+        const container = document.getElementById("sisFieldsContainer");
+        // A fully-typed future date is the one genuinely-invalid case that
+        // isn't "missing" — flag it here (once, on a complete value) rather
+        // than interrupting the student mid-typing.
+        if (validateDobComplete(container)) return;
+        if (validateEmailField(container)) return;
+        const missing = STUDENT_INFO_SCHEMA.validateSection(container, step);
+        if (missing.length) {
+          showToast(
+            "Please complete: " + missing.slice(0, 3).join(", ") + (missing.length > 3 ? ` +${missing.length - 3} more` : ""),
+            "error"
+          );
+          return;
+        }
+      }
+
+      if (sisStep < sisSteps().length - 1) {
+        sisStep++;
+        renderSisStep();
+      }
+    });
+
+    function closeSisModal(opts = {}) {
+      const finish = () => {
+        document.getElementById("sisModalOverlay").classList.remove("show");
+        sisAnswers = {};
+        sisDirty = false;
+      };
+
+      if (!opts.force && sisDirty && !sisReadOnly) {
+        confirmDialog("Discard unsaved changes to your Student Information Sheet?", {
+          confirmLabel: "Discard",
+          danger: true,
+        }).then((ok) => {
+          if (ok) finish();
+        });
+        return;
+      }
+      finish();
+    }
+
+    document.getElementById("sisModalCloseBtn").addEventListener("click", () => closeSisModal());
+    document.getElementById("sisModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "sisModalOverlay") closeSisModal();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.getElementById("sisModalOverlay").classList.contains("show")) closeSisModal();
+    });
+
+    document.getElementById("sisSubmitBtn").addEventListener("click", async () => {
+      collectCurrentSection();
+
+      if (!signCanvasHasInk) {
+        showToast("Please draw your signature before submitting.", "error");
+        return;
+      }
+
+      const ok = await confirmDialog(
+        "Submit your Student Information Sheet? Your changes will be saved to this school year's sheet in your permanent guidance record.",
+        { confirmLabel: "Submit" }
+      );
+      if (!ok) return;
+
+      const btn = document.getElementById("sisSubmitBtn");
+      btn.disabled = true;
+      btn.textContent = "Submitting…";
+
+      try {
+        // Re-edits keep the ORIGINAL submission date (the official audit
+        // stamp) and only refresh updated_at. A first-time submit sets both.
+        const isReEdit = !!sisSheet?.status;
+        const { error } = await supabaseClient
+          .from("student_info_sheets")
+          .upsert(
+            {
+              student_id: currentStudent.student_id,
+              school_year: defaultSchoolYear(),
+              answers: sisAnswers,
+              signature: document.getElementById("sisSignCanvas").toDataURL("image/png"),
+              status: "submitted",
+              submitted_at: isReEdit && sisSheet?.submitted_at ? sisSheet.submitted_at : new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "student_id,school_year" }
+          );
+        if (error) throw error;
+
+        // One-way sync of approved fields into the official student
+        // record — the record stays the single authority for current
+        // data; the sheet keeps its own snapshot either way.
+        const updates = {};
+        STUDENT_INFO_SCHEMA.syncToStudentRecord.forEach(({ field, column }) => {
+          const v = sisAnswers[field];
+          if (v && String(v).trim()) updates[column] = String(v).trim();
+        });
+        if (Object.keys(updates).length) {
+          const { error: syncError } = await supabaseClient
+            .from("students")
+            .update(updates)
+            .eq("student_id", currentStudent.student_id);
+          if (syncError) console.error(syncError); // non-fatal — sheet itself saved fine
+        }
+
+        showToast("Student Information Sheet submitted.", "success");
+        closeSisModal({ force: true });
+        await loadSisData();
+      } catch (error) {
+        showToast("Couldn't submit: " + error.message, "error");
+        console.error(error);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Submit";
+      }
+    });
+
     (async () => {
       const result = await requireStudentAuth();
       if (!result) return;
 
       currentStudent = result.student;
-      await Promise.all([loadAssignments(), loadInterventions()]);
+      await Promise.all([loadAssignments(), loadInterventions(), loadStudentRecord(), loadSisData()]);
       hidePageLoadOverlay();
     })();
   </script>

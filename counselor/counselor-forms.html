@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forms &amp; Interventions</title>
+    
+        <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
        <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../css/style.css">
@@ -15,7 +16,7 @@
 
         <header class="profile">
 
-            <img src="../images/COLM LOGO.png" alt="Counselor Profile">
+            <div class="avatar-initials" id="userAvatar"></div>
 
             <div class="info">
                 <h4 id="sidebarName"></h4>
@@ -68,9 +69,16 @@
                 </li>
 
                 <li class="desktop-only">
+                    <a href="counselor-visit-logs.html">
+                        <i class="fa-solid fa-clipboard-list"></i>
+                        <span>Visit Logs</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
                     <a href="counselor-forms.html">
                         <i class="fa-solid fa-book"></i>
-                        <span>Forms &amp; Interventions</span>
+                        <span>Forms</span>
                     </a>
                 </li>
 
@@ -113,7 +121,9 @@
 
         <a href="counselor-cases.html"><i class="fa-solid fa-folder-open"></i> Cases</a>
 
-        <a href="counselor-forms.html"><i class="fa-solid fa-book"></i> Forms &amp; Interventions</a>
+        <a href="counselor-visit-logs.html"><i class="fa-solid fa-clipboard-list"></i> Visit Logs</a>
+
+        <a href="counselor-forms.html"><i class="fa-solid fa-book"></i> Forms</a>
 
         <a href="counselor-reports.html"><i class="fa-solid fa-chart-line"></i> Reports</a>
 

@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Student Dashboard</title>
+  
+        <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
    <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
@@ -16,7 +17,7 @@
 
         <header class="profile">
 
-            <img src="../images/COLM LOGO.png" alt="Student Profile">
+            <div class="avatar-initials" id="userAvatar"></div>
 
             <div class="info">
                 <h4 id="sidebarName"></h4>
@@ -57,7 +58,7 @@
                 <li class="desktop-only">
                     <a href="student-forms.html">
                         <i class="fa-solid fa-book"></i>
-                        <span>Forms &amp; Interventions</span>
+                        <span>Forms</span>
                     </a>
                 </li>
 
@@ -100,6 +101,19 @@
             <h1>Student Dashboard</h1>
             <p id="welcomeMsg">Loading your info...</p>
         </header>
+
+        <!-- Annual Student Information Sheet nudge — gentle reminder
+             until this school year's sheet is submitted (nudge only,
+             nothing is blocked). -->
+        <div class="banner" id="sisNudgeBanner" style="display:none; margin-top:22px; margin-bottom:20px;">
+            <i class="fa-solid fa-file-pen"></i>
+            <div class="banner-content">
+                <strong>Student Information Sheet pending</strong> — please fill it out for S.Y. <span id="sisNudgeYear"></span> so your guidance record stays up to date.
+            </div>
+            <div class="banner-actions">
+                <button type="button" class="btn btn-primary" onclick="location.href='student-forms.html'">Fill It Out</button>
+            </div>
+        </div>
 
         <section class="stat-cards">
 
@@ -148,12 +162,17 @@
                 <div class="empty-state">Loading…</div>
             </div>
         </section>
+
+        <section class="dash-card">
+            <h3><i class="fa-solid fa-bullhorn"></i> Today's Announcements <a class="dash-more" href="student-announcements.html">View all</a></h3>
+            <div id="todayAnnouncementsList"><div class="empty-state">Loading…</div></div>
+        </section>
     </main>
 
     <!-- Mobile Menu -->
     <nav class="mobile-menu" id="mobileMenu" aria-label="More Navigation">
 
-        <a href="student-forms.html"><i class="fa-solid fa-book"></i> Forms &amp; Interventions</a>
+        <a href="student-forms.html"><i class="fa-solid fa-book"></i> Forms</a>
 
         <a href="student-history.html"><i class="fa-solid fa-clock-rotate-left"></i> History</a>
 
@@ -206,6 +225,7 @@
         { count: recordsCount },
         { data: availableCounselors },
         { data: upcoming },
+        { data: todayAnnouncements },
       ] = await Promise.all([
         supabaseClient
           .from("appointments")
@@ -231,6 +251,11 @@
           .order("appointment_date", { ascending: true })
           .order("appointment_time", { ascending: true })
           .limit(1),
+        supabaseClient
+          .from("announcements")
+          .select("announcement_id, title, announcement_content, announcement_date, counselors(first_name, last_name)")
+          .eq("announcement_date", todayStr())
+          .order("announcement_date", { ascending: false }),
       ]);
 
       document.getElementById("statAppointments").textContent = apptCount ?? 0;
@@ -247,22 +272,48 @@
 
       if (!item) {
         upcomingWrap.innerHTML = `<div class="empty-state">No upcoming sessions.</div>`;
+      } else {
+        const counselorName = item.counselors
+          ? `${item.counselors.first_name} ${item.counselors.last_name}`
+          : "Guidance Office";
+
+        upcomingWrap.innerHTML = `
+          <div class="upcoming-item">
+            <div class="upcoming-item-body">
+              <h3>${escapeHtml(item.concern || "Guidance Session")}</h3>
+              <small>${formatDate(item.appointment_date)} · ${formatTime(item.appointment_time)} · ${escapeHtml(counselorName)}</small>
+            </div>
+            <span class="badge badge-approved">Approved</span>
+          </div>
+        `;
+      }
+
+      renderTodayAnnouncements(todayAnnouncements || []);
+    }
+
+    function renderTodayAnnouncements(rows) {
+      const wrap = document.getElementById("todayAnnouncementsList");
+      if (!wrap) return;
+
+      if (!rows.length) {
+        wrap.innerHTML = `<div class="empty-state">No announcements today.</div>`;
         return;
       }
 
-      const counselorName = item.counselors
-        ? `${item.counselors.first_name} ${item.counselors.last_name}`
-        : "Guidance Office";
-
-      upcomingWrap.innerHTML = `
-        <div class="upcoming-item">
-          <div class="upcoming-item-body">
-            <h3>${escapeHtml(item.concern || "Guidance Session")}</h3>
-            <small>${formatDate(item.appointment_date)} · ${formatTime(item.appointment_time)} · ${escapeHtml(counselorName)}</small>
-          </div>
-          <span class="badge badge-approved">Approved</span>
-        </div>
-      `;
+      wrap.innerHTML = rows
+        .map((a) => {
+          const posted = a.counselors ? `${a.counselors.first_name} ${a.counselors.last_name}` : "Guidance Office";
+          return `
+            <div class="dash-item">
+              <div class="dash-item-text">
+                <h4>${escapeHtml(a.title)}</h4>
+                <small>${formatDate(a.announcement_date)} · Posted by ${escapeHtml(posted)}</small>
+                ${a.announcement_content ? `<p class="clamp-2">${escapeHtml(a.announcement_content)}</p>` : ""}
+              </div>
+            </div>
+          `;
+        })
+        .join("");
     }
 
     (async () => {
@@ -281,7 +332,29 @@
 
       hidePageLoadOverlay();
       await loadDashboardStats(student.student_id);
+      await loadSisNudge(student.student_id);
     })();
+
+    // Shows the info-sheet banner only when this school year's sheet
+    // hasn't been submitted yet. A missing table (migration not run)
+    // just means no banner — never block the dashboard.
+    async function loadSisNudge(studentId) {
+      const { data, error } = await supabaseClient
+        .from("student_info_sheets")
+        .select("sheet_id, status")
+        .eq("student_id", studentId)
+        .eq("school_year", defaultSchoolYear())
+        .maybeSingle();
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      const submitted = data?.status === "submitted";
+      document.getElementById("sisNudgeBanner").style.display = submitted ? "none" : "flex";
+      document.getElementById("sisNudgeYear").textContent = defaultSchoolYear();
+    }
   </script>
 </body>
 </html>

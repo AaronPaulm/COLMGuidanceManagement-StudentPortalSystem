@@ -17,9 +17,30 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// Dev-only allowlist — widen this to the real deployed origin(s)
-// once the site is hosted somewhere other than localhost.
-const ALLOWED_ORIGIN_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+// CORS origin allowlist.
+// 1. Built-in defaults: localhost, 127.0.0.1, and private LAN ranges
+//    (10.x, 172.16-31.x, 192.168.x), plus "null" for file:// origins.
+// 2. Extra origins via ALLOWED_ORIGINS secret (comma-separated, supports
+//    "*" wildcard, e.g. "https://*.vercel.app,https://myschool.com").
+//    Set with: supabase secrets set ALLOWED_ORIGINS="https://*.vercel.app"
+//    Changes apply instantly — no redeploy needed.
+const DEFAULT_ALLOWED_ORIGIN_PATTERN =
+  /^https?:\/\/(?:(?:localhost|127\.0\.0\.1|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})(:\d+)?)$/;
+
+function isOriginAllowed(origin: string): boolean {
+  if (origin === "null") return true;
+  if (DEFAULT_ALLOWED_ORIGIN_PATTERN.test(origin)) return true;
+  const extra = (Deno.env.get("ALLOWED_ORIGINS") || "")
+    .split(",")
+    .map((s: string) => s.trim())
+    .filter(Boolean);
+  return extra.some((pattern: string) => {
+    const re = new RegExp(
+      "^" + pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + "$"
+    );
+    return re.test(origin);
+  });
+}
 
 function corsHeadersFor(req: Request): Record<string, string> {
   const origin = req.headers.get("Origin") || "";
@@ -27,7 +48,7 @@ function corsHeadersFor(req: Request): Record<string, string> {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     Vary: "Origin",
   };
-  if (origin === "null" || ALLOWED_ORIGIN_PATTERN.test(origin)) headers["Access-Control-Allow-Origin"] = origin;
+  if (isOriginAllowed(origin)) headers["Access-Control-Allow-Origin"] = origin;
   return headers;
 }
 

@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+        <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
+       <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .visits-search-wrap { position:relative; }
+    .visits-results { position:absolute; top:100%; left:0; right:0; z-index:50; margin-top:4px; background:#fff; border:1px solid #d1d5db; border-radius:10px; max-height:240px; overflow-y:auto; box-shadow:0 10px 24px rgba(0,0,0,.12); display:none; }
+    .visits-results.show { display:block; }
+    .visits-results .result-item { padding:9px 12px; font-size:13px; cursor:pointer; }
+    .visits-results .result-item:hover, .visits-results .result-item.active { background:#eff6ff; color:#2456b3; }
+    .visits-results .result-empty { padding:9px 12px; font-size:13px; color:#6b7280; }
+    .visit-name-sub { font-size:11px; color:#6b7280; font-weight:400; }
+    .visit-sig-thumb { height:44px; width:auto; max-width:120px; object-fit:contain; background:#fff; border:1px solid #e5e7eb; border-radius:6px; padding:4px; cursor:pointer; display:inline-block; vertical-align:middle; }
+    .visit-sig-none { color:#9ca3af; font-size:12px; }
+    .form-field { margin-bottom:14px; }
+
+    .visit-type-options {
+        display: flex;
+        gap: 8px;
+    }
+
+    .visit-type-options .visit-type-btn {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 6px;
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        background: #fff;
+        color: #374151;
+        font-weight: 600;
+        font-size: 12.5px;
+        line-height: 1.2;
+        cursor: pointer;
+        transition: .15s;
+        text-align: center;
+    }
+
+    .visit-type-options .visit-type-btn:hover {
+        background: #f9fafb;
+    }
+
+    .visit-type-options .visit-type-btn.active {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: #fff;
+    }
+
+    .visit-type-options .visit-type-btn i {
+        font-size: 16px;
+    }
+
+    .visit-date-field {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12.5px;
+        color: #6b7280;
+    }
+
+    .visit-date-field .table-search {
+        width: 150px;
+    }
+
+    .form-actions {
+        gap: 12px;
+    }
+
+    @media (max-width: 768px) {
+        .toolbar-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .toolbar-row > select,
+        .toolbar-row > .table-search,
+        .toolbar-row > .visit-date-field,
+        .toolbar-row > .btn {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .toolbar-row > select,
+        .toolbar-row > .table-search {
+            grid-column: 1 / -1;
+        }
+
+        .toolbar-row > .visit-date-field,
+        .toolbar-row > .btn {
+            grid-column: span 1;
+        }
+
+        .toolbar-row > .visit-date-field .table-search {
+            width: 100%;
+        }
+
+        .toolbar-row > span {
+            display: none;
+        }
+    }
+  </style>
+</head>
+<body>
+
+      <!-- Sidebar -->
+    <aside class="sidebar">
+
+        <header class="profile">
+
+            <div class="avatar-initials" id="userAvatar"></div>
+
+            <div class="info">
+                <h4 id="sidebarName"></h4>
+                <p>Counselor</p>
+
+            </div>
+
+        </header>
+
+
+   <hr>
+
+        <nav aria-label="Counselor Navigation">
+
+            <ul>
+
+                <li>
+            <a href="counselor-dashboard.html">
+              <i class="fa-solid fa-house"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="counselor-student.html">
+                        <i class="fa-solid fa-user-graduate"></i>
+                        <span>Students</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="counselor-announcements.html">
+                        <i class="fa-solid fa-bullhorn"></i>
+                        <span>Announcements</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-appointments.html">
+                        <i class="fa-solid fa-calendar"></i>
+                        <span>Appointments</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-cases.html">
+                        <i class="fa-solid fa-folder-open"></i>
+                        <span>Cases</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-visit-logs.html">
+                        <i class="fa-solid fa-clipboard-list"></i>
+                        <span>Visit Logs</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-forms.html">
+                        <i class="fa-solid fa-book"></i>
+                        <span>Forms</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-reports.html">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>Reports</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-account.html">
+                        <i class="fa-solid fa-user"></i>
+                        <span>Account</span>
+                    </a>
+                </li>
+                <li class="desktop-only">
+                    <button type="button" id="logoutBtn" title="Log Out">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Log Out</span>
+                    </button>
+                </li>
+
+                <li class="hamburger">
+                    <button type="button" onclick="toggleMenu()">
+                        <i class="fa-solid fa-bars"></i>
+                        <span>More</span>
+                    </button>
+                </li>
+
+            </ul>
+
+        </nav>
+
+    </aside>
+
+     <nav class="mobile-menu" id="mobileMenu" aria-label="More Navigation">
+
+        <a href="counselor-appointments.html"><i class="fa-solid fa-calendar"></i> Appointments</a>
+
+        <a href="counselor-cases.html"><i class="fa-solid fa-folder-open"></i> Cases</a>
+
+        <a href="counselor-visit-logs.html"><i class="fa-solid fa-clipboard-list"></i> Visit Logs</a>
+
+        <a href="counselor-forms.html"><i class="fa-solid fa-book"></i> Forms</a>
+
+        <a href="counselor-reports.html"><i class="fa-solid fa-chart-line"></i> Reports</a>
+
+        <a href="counselor-account.html"><i class="fa-solid fa-user"></i> Account</a>
+
+        <a href="#" id="mobileLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
+
+    </nav>
+
+  <main class="content">
+
+        <header class="GreetingsCard">
+            <h1>Guidance Office Visit Logs</h1>
+            <p>A running record of everyone who uses the guidance office or its services.</p>
+        </header>
+
+        <div class="toolbar-row" style="margin-top:28px;">
+            <select id="visitsTypeFilter" class="table-search" style="width:auto;">
+                <option value="all">All visitors</option>
+                <option value="student">Students</option>
+                <option value="teacher">Teachers</option>
+                <option value="parent">Parent / Guardian</option>
+                <option value="other">Other visitors</option>
+            </select>
+            <label class="visit-date-field">From
+                <input type="date" id="visitsFromFilter" class="table-search">
+            </label>
+            <label class="visit-date-field">To
+                <input type="date" id="visitsToFilter" class="table-search">
+            </label>
+            <input type="text" id="visitsSearch" class="table-search" placeholder="Search visitor, reason, or case…">
+            <span style="flex:1;"></span>
+            <button type="button" class="btn btn-outline" id="printVisitLogsBtn"><i class="fa-solid fa-print"></i> Print</button>
+            <button type="button" class="btn btn-primary" id="logVisitBtn"><i class="fa-solid fa-pen"></i> Log a Visit</button>
+        </div>
+
+        <div class="section-title" style="margin-top:26px;">
+            <h2>Visit Log</h2>
+        </div>
+
+        <div class="simple-table-wrap">
+            <table class="simple-table visits-table">
+                <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>Date &amp; Time</th>
+                        <th>Visitor</th>
+                        <th>Reason for Visit</th>
+                        <th>Related Case</th>
+                        <th>Signature</th>
+                        <th style="width:80px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="visitsTableBody"></tbody>
+            </table>
+        </div>
+
+    </main>
+
+    <!-- Log a Visit modal -->
+    <div class="modal-overlay" id="visitModalOverlay">
+        <div class="modal-box wide">
+            <div class="modal-header">
+                <h3>Log a Visit</h3>
+                <button type="button" class="modal-close" id="visitModalCloseBtn" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="visitForm">
+                    <div class="form-field">
+                        <label>Visitor Type</label>
+                        <div class="visit-type-options">
+                            <button type="button" class="visit-type-btn active" data-type="student">
+                                <i class="fa-solid fa-user-graduate"></i> Student
+                            </button>
+                            <button type="button" class="visit-type-btn" data-type="teacher">
+                                <i class="fa-solid fa-chalkboard-user"></i> Teacher
+                            </button>
+                            <button type="button" class="visit-type-btn" data-type="parent">
+                                <i class="fa-solid fa-people-roof"></i> Guardian
+                            </button>
+                            <button type="button" class="visit-type-btn" data-type="other">
+                                <i class="fa-solid fa-user"></i> Other
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-field" id="visitStudentField">
+                        <label for="visitStudentSearch">Student</label>
+                        <div class="visits-search-wrap">
+                            <input type="text" id="visitStudentSearch" placeholder="Type to search name, section, or grade…" autocomplete="off">
+                            <div class="visits-results" id="visitStudentResults"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-field" id="visitNameField" style="display:none;">
+                        <label for="visitNameInput">Visitor Name</label>
+                        <input type="text" id="visitNameInput" placeholder="e.g. Mr. Ricky Dela Rosa">
+                    </div>
+
+                    <div class="form-field" id="visitCaseField" style="display:none;">
+                        <label for="visitCaseSelect">Related Case (optional)</label>
+                        <select id="visitCaseSelect"><option value="">— none —</option></select>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="visitReasonInput">Reason for Visit</label>
+                        <textarea id="visitReasonInput" rows="3" placeholder="e.g. Witness for a case, collect a form, counseling check-in…"></textarea>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div class="form-field">
+                            <label for="visitDateInput">Visit Date</label>
+                            <input type="date" id="visitDateInput">
+                        </div>
+                        <div class="form-field">
+                            <label for="visitTimeInput">Visit Time</label>
+                            <input type="time" id="visitTimeInput">
+                        </div>
+                    </div>
+
+                    <div class="form-field">
+                        <label>Signature</label>
+                        <canvas id="visitSignCanvas" class="sis-sign-canvas"></canvas>
+                        <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:6px;">
+                            <button type="button" class="icon-btn sm" id="visitClearSignBtn" title="Clear Signature">
+                                <i class="fa-solid fa-eraser"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" id="visitCancelBtn">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="visitSaveBtn">Save Visit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Signature viewer -->
+    <div class="modal-overlay" id="signatureViewOverlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Signature</h3>
+                <button type="button" class="modal-close" id="signatureViewCloseBtn" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+                <img id="signatureViewImage" alt="Visitor signature" style="max-width:100%; height:auto; background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:12px;">
+            </div>
+        </div>
+    </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/supabaseClient.js"></script>
+  <script src="../js/counselor-common.js"></script>
+  <script>
+    let currentCounselor = null;
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str ?? "";
+      return div.innerHTML;
+    }
+
+    let allVisitLogs = [];
+    let visitStudents = [];
+    let visitStudentCases = [];
+    let visitSelectedStudentId = null;
+
+    const VISITOR_TYPE_LABELS = {
+      student: "Student",
+      teacher: "Teacher",
+      parent: "Parent / Guardian",
+      other: "Other",
+    };
+
+    let currentVisitType = "student";
+
+    function setVisitType(type) {
+      currentVisitType = type;
+      document.querySelectorAll(".visit-type-options .visit-type-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.type === type);
+      });
+      const studentField = document.getElementById("visitStudentField");
+      const nameField = document.getElementById("visitNameField");
+      studentField.style.display = type === "student" ? "" : "none";
+      nameField.style.display = type === "student" ? "none" : "";
+      if (type !== "student") document.getElementById("visitCaseField").style.display = "none";
+    }
+
+    // ---------- Signing canvas (same drawn-signature pattern as the Student Info Sheet) ----------
+
+    let visitSignCanvas = null;
+    let visitSignCtx = null;
+    let visitSignInited = false;
+    let visitSignHasInk = false;
+
+    function initVisitSignCanvas() {
+      const canvas = document.getElementById("visitSignCanvas");
+      if (!canvas) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      let visitCtx = null;
+
+      const config = () => {
+        const cssWidth = canvas.clientWidth || 380;
+        canvas.width = cssWidth * dpr;
+        canvas.height = 140 * dpr;
+        visitCtx = canvas.getContext("2d");
+        visitCtx.scale(dpr, dpr);
+        visitCtx.lineWidth = 3;
+        visitCtx.lineCap = "round";
+        visitCtx.lineJoin = "round";
+        visitCtx.strokeStyle = "#111827";
+        visitSignHasInk = false;
+      };
+
+      const attach = () => {
+        if (visitSignInited || !visitCtx) return;
+        visitSignInited = true;
+        visitSignCanvas = canvas;
+        visitSignCtx = visitCtx;
+
+        let drawing = false;
+        let last = { x: 0, y: 0 };
+        let rect = canvas.getBoundingClientRect();
+        const clamp = (v, max) => Math.max(0, Math.min(max, v));
+        const pos = (e) => ({
+          x: clamp(e.clientX - rect.left, rect.width),
+          y: clamp(e.clientY - rect.top, rect.height),
+        });
+
+        canvas.addEventListener("pointerdown", (e) => {
+          drawing = true;
+          visitSignHasInk = true;
+          rect = canvas.getBoundingClientRect();
+          canvas.setPointerCapture(e.pointerId);
+          const pt = pos(e);
+          last = pt;
+          visitCtx.beginPath();
+          visitCtx.moveTo(pt.x, pt.y);
+          visitCtx.arc(pt.x, pt.y, 1, 0, Math.PI * 2);
+          visitCtx.stroke();
+        });
+        canvas.addEventListener("pointermove", (e) => {
+          if (!drawing) return;
+          const pt = pos(e);
+          const mid = { x: (last.x + pt.x) / 2, y: (last.y + pt.y) / 2 };
+          visitCtx.quadraticCurveTo(last.x, last.y, mid.x, mid.y);
+          last = pt;
+          visitCtx.stroke();
+        });
+        ["pointerup", "pointercancel"].forEach((ev) =>
+          canvas.addEventListener(ev, () => {
+            drawing = false;
+            rect = canvas.getBoundingClientRect();
+          })
+        );
+
+        document.getElementById("visitClearSignBtn")?.addEventListener("click", () => {
+          visitCtx.clearRect(0, 0, canvas.width, canvas.height);
+          visitSignHasInk = false;
+        });
+      };
+
+      if (canvas.clientWidth > 0) {
+        config();
+        attach();
+      } else {
+        requestAnimationFrame(() => {
+          config();
+          attach();
+        });
+      }
+    }
+
+    // ---------- Visit Log list + filtering ----------
+
+    const VISIT_LOGS_SELECT = [
+      "log_id, visitor_type, visitor_name, student_id, related_case_id, reason_for_visit, signature, visit_time",
+      "students(first_name, last_name, section, year_level)",
+      "cases(file_number, nature_of_incident)",
+    ].join(", ");
+
+    function loadVisitLogs(silent) {
+      if (!silent) document.getElementById("visitsTableBody").innerHTML = `<tr><td colspan="7" style="text-align:center; color:#9ca3af; padding:24px;">Loading…</td></tr>`;
+      return supabaseClient
+        .from("visit_logs")
+        .select(VISIT_LOGS_SELECT)
+        .eq("counselor_id", currentCounselor.counselor_id)
+        .order("visit_time", { ascending: false })
+        .then(({ data, error }) => {
+          if (error) {
+            showToast("Couldn't load visit logs: " + error.message, "error");
+            console.error(error);
+            return;
+          }
+          allVisitLogs = data || [];
+          renderVisitLogs();
+        });
+    }
+
+    function visitorName(log) {
+      if (log.visitor_type === "student" && log.students) {
+        return `${log.students.first_name} ${log.students.last_name}`;
+      }
+      return log.visitor_name || "—";
+    }
+
+    function visitorSub(log) {
+      if (log.visitor_type === "student" && log.students && log.students.year_level) {
+        return [log.students.year_level, log.students.section].filter(Boolean).join(" – ");
+      }
+      return "";
+    }
+
+    function relatedCaseLabel(log) {
+      const c = log.cases;
+      if (!c) return "—";
+      return `${c.file_number ? c.file_number + " — " : ""}${c.nature_of_incident || ""}`;
+    }
+
+    function fmtVisitDateTime(ts) {
+      if (!ts) return "—";
+      const d = new Date(ts);
+      const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      return `${date} · ${time}`;
+    }
+
+    function renderVisitLogs() {
+      const body = document.getElementById("visitsTableBody");
+      const typeFilter = document.getElementById("visitsTypeFilter").value;
+      const from = document.getElementById("visitsFromFilter").value;
+      const to = document.getElementById("visitsToFilter").value;
+      const q = document.getElementById("visitsSearch").value.trim().toLowerCase();
+
+      const fromMs = from ? new Date(from + "T00:00:00").getTime() : null;
+      const toMs = to ? new Date(to + "T23:59:59.999").getTime() : null;
+
+      const rows = allVisitLogs
+        .filter((l) => typeFilter === "all" || l.visitor_type === typeFilter)
+        .filter((l) => {
+          if (fromMs && new Date(l.visit_time).getTime() < fromMs) return false;
+          if (toMs && new Date(l.visit_time).getTime() > toMs) return false;
+          return true;
+        })
+        .filter((l) => {
+          if (!q) return true;
+          const hay = `${visitorName(l)} ${l.reason_for_visit || ""} ${visitorSub(l)} ${relatedCaseLabel(l)}`.toLowerCase();
+          return hay.includes(q);
+        });
+
+      if (!rows.length) {
+        body.innerHTML = `<tr class="table-empty"><td colspan="7">No visits recorded${from || to ? " in the selected date range" : ""}.</td></tr>`;
+        return;
+      }
+
+      body.innerHTML = rows
+        .map(
+          (l, i) => `
+            <tr data-id="${l.log_id}">
+              <td>${rows.length - i}</td>
+              <td class="mono-cell">${fmtVisitDateTime(l.visit_time)}</td>
+              <td>
+                <div style="font-weight:600;">${escapeHtml(visitorName(l))}</div>
+                <div class="visit-name-sub">${escapeHtml(VISITOR_TYPE_LABELS[l.visitor_type] || l.visitor_type)}${visitorSub(l) ? " · " + escapeHtml(visitorSub(l)) : ""}</div>
+              </td>
+              <td>${escapeHtml(l.reason_for_visit || "—")}</td>
+              <td>${escapeHtml(relatedCaseLabel(l))}</td>
+              <td>
+                ${l.signature ? `<img class="visit-sig-thumb" src="${l.signature}" alt="Signature" data-signature="${l.log_id}">` : `<span class="visit-sig-none">—</span>`}
+              </td>
+              <td>
+                <div class="table-actions">
+                  <button type="button" class="icon-btn sm danger" data-action="delete" title="Delete Entry"><i class="fa-solid fa-trash"></i></button>
+                </div>
+              </td>
+            </tr>
+          `
+        )
+        .join("");
+    }
+
+    // ---------- Student picker ----------
+
+    function visitStudentDisplay(s) {
+      return `${s.first_name} ${s.last_name}` +
+        (s.section ? ` — ${s.section}` : "") +
+        (s.year_level ? `, ${s.year_level}` : "");
+    }
+
+    function renderVisitStudentResults(query) {
+      const resultsEl = document.getElementById("visitStudentResults");
+      const q = (query || "").trim().toLowerCase();
+      if (!q) {
+        resultsEl.classList.remove("show");
+        resultsEl.innerHTML = "";
+        return;
+      }
+      const matches = visitStudents
+        .filter((s) => {
+          const hay = `${s.first_name} ${s.last_name} ${s.section || ""} ${s.year_level || ""}`.toLowerCase();
+          return hay.includes(q);
+        })
+        .slice(0, 10);
+      if (!matches.length) {
+        resultsEl.innerHTML = `<div class="result-empty">No students match “${escapeHtml(query)}”.</div>`;
+        resultsEl.classList.add("show");
+        return;
+      }
+      resultsEl.innerHTML = matches
+        .map((s) => `<div class="result-item" data-id="${s.student_id}">${escapeHtml(visitStudentDisplay(s))}</div>`)
+        .join("");
+      resultsEl.classList.add("show");
+    }
+
+    function closeVisitStudentResults() {
+      const el = document.getElementById("visitStudentResults");
+      el.classList.remove("show");
+      el.innerHTML = "";
+    }
+
+    function pickVisitStudent(id) {
+      const s = visitStudents.find((x) => x.student_id === id);
+      if (!s) return;
+      visitSelectedStudentId = id;
+      document.getElementById("visitStudentSearch").value = visitStudentDisplay(s);
+      closeVisitStudentResults();
+
+      const caseField = document.getElementById("visitCaseField");
+      const caseSelect = document.getElementById("visitCaseSelect");
+      caseSelect.innerHTML = `<option value="">— none —</option>`;
+
+      supabaseClient
+        .from("cases")
+        .select("case_id, file_number, nature_of_incident, status")
+        .eq("student_id", id)
+        .order("created_at", { ascending: false })
+        .then(({ data, error }) => {
+          if (error) {
+            showToast("Couldn't load the student's cases: " + error.message, "error");
+            return;
+          }
+          visitStudentCases = data || [];
+          caseSelect.innerHTML =
+            `<option value="">— none —</option>` +
+            visitStudentCases
+              .map((c) => `<option value="${c.case_id}">${c.file_number ? c.file_number + " — " : ""}${escapeHtml(c.nature_of_incident)}</option>`)
+              .join("");
+          caseField.style.display = visitStudentCases.length ? "" : "none";
+        });
+    }
+
+    // ---------- Visit modal ----------
+
+    function resetVisitForm() {
+      visitSelectedStudentId = null;
+      visitStudentCases = [];
+      document.getElementById("visitStudentSearch").value = "";
+      closeVisitStudentResults();
+      document.getElementById("visitNameInput").value = "";
+      document.getElementById("visitReasonInput").value = "";
+      const caseSelect = document.getElementById("visitCaseSelect");
+      caseSelect.innerHTML = `<option value="">— none —</option>`;
+      document.getElementById("visitCaseField").style.display = "none";
+    }
+
+    function openVisitModal() {
+      resetVisitForm();
+      setVisitType("student");
+
+      const now = new Date();
+      document.getElementById("visitDateInput").value = now.toISOString().slice(0, 10);
+      document.getElementById("visitTimeInput").value =
+        String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+
+      document.getElementById("visitModalOverlay").classList.add("show");
+      initVisitSignCanvas();
+    }
+
+    function closeVisitModal() {
+      document.getElementById("visitModalOverlay").classList.remove("show");
+    }
+
+    async function saveVisit(e) {
+      e.preventDefault();
+      const type = currentVisitType;
+      let visitorName = null;
+      let studentId = null;
+      let relatedCaseId = null;
+
+      if (type === "student") {
+        if (!visitSelectedStudentId) {
+          showToast("Please choose a student.", "error");
+          return;
+        }
+        const s = visitStudents.find((x) => x.student_id === visitSelectedStudentId);
+        visitorName = s ? `${s.first_name} ${s.last_name}` : null;
+        studentId = visitSelectedStudentId;
+        const caseVal = Number(document.getElementById("visitCaseSelect").value);
+        relatedCaseId = caseVal || null;
+      } else {
+        visitorName = document.getElementById("visitNameInput").value.trim();
+        if (!visitorName) {
+          showToast("Please enter the visitor's name.", "error");
+          return;
+        }
+      }
+
+      const reason = document.getElementById("visitReasonInput").value.trim();
+      if (!reason) {
+        showToast("Please describe the reason for the visit.", "error");
+        return;
+      }
+      if (!visitSignHasInk) {
+        showToast("Please have the visitor sign first.", "error");
+        return;
+      }
+
+      const dateVal = document.getElementById("visitDateInput").value;
+      const timeVal = document.getElementById("visitTimeInput").value;
+      const visitTime = dateVal && timeVal ? new Date(`${dateVal}T${timeVal}`).toISOString() : null;
+
+      const btn = document.getElementById("visitSaveBtn");
+      btn.disabled = true;
+      btn.textContent = "Saving…";
+
+      const { error } = await supabaseClient.from("visit_logs").insert({
+        counselor_id: currentCounselor.counselor_id,
+        visitor_type: type,
+        visitor_name: visitorName,
+        student_id: studentId,
+        related_case_id: relatedCaseId,
+        reason_for_visit: reason,
+        signature: document.getElementById("visitSignCanvas").toDataURL("image/png"),
+        visit_time: visitTime,
+      });
+
+      btn.disabled = false;
+      btn.textContent = "Save Visit";
+
+      if (error) {
+        showToast("Couldn't save the visit: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      closeVisitModal();
+      await loadVisitLogs(true);
+      showToast("Visit recorded.", "success");
+    }
+
+    // ---------- Signature viewer ----------
+
+    function openSignatureView(thumb) {
+      const id = thumb?.dataset?.signature;
+      const log = allVisitLogs.find((l) => String(l.log_id) === String(id));
+      if (!log?.signature) return;
+      document.getElementById("signatureViewImage").src = log.signature;
+      document.getElementById("signatureViewOverlay").classList.add("show");
+    }
+
+    function closeSignatureView() {
+      document.getElementById("signatureViewOverlay").classList.remove("show");
+    }
+
+    // ---------- Delete ----------
+
+    async function deleteVisit(logId) {
+      const ok = await confirmDialog("Delete this visit entry? This can't be undone.", { confirmLabel: "Delete", danger: true });
+      if (!ok) return;
+      const { error } = await supabaseClient.from("visit_logs").delete().eq("log_id", logId);
+      if (error) {
+        showToast("Couldn't delete the entry: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+      await loadVisitLogs(true);
+      showToast("Visit entry deleted.", "success");
+    }
+
+    // ---------- Print (school letterhead on every page) ----------
+
+    function printVisitLogs() {
+      const rows = document.getElementById("visitsTableBody").querySelectorAll("tr[data-id]");
+      const selected = allVisitLogs.filter((l) => [...rows].some((r) => String(r.dataset.id) === String(l.log_id)));
+      if (!selected.length) {
+        showToast("Nothing to print for the current filters.", "info");
+        return;
+      }
+
+      const win = window.open("", "_blank");
+      if (!win) {
+        showToast("Please allow pop-ups to print this log.", "error");
+        return;
+      }
+
+      const printRows = selected
+        .map(
+          (l, i) => `
+            <tr>
+              <td style="text-align:center;">${i + 1}</td>
+              <td>${escapeHtml(fmtVisitDateTime(l.visit_time))}</td>
+              <td>${escapeHtml(visitorName(l))}${visitorSub(l) ? ` (${escapeHtml(visitorSub(l))})` : ""}</td>
+              <td>${escapeHtml(l.reason_for_visit || "—")}</td>
+              <td>${escapeHtml(relatedCaseLabel(l))}</td>
+              <td>${l.signature ? `<img class="print-sig" src="${l.signature}" alt="Signature">` : "—"}</td>
+            </tr>`
+        )
+        .join("");
+
+      win.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Guidance Office Visit Logs</title>
+          <style>
+            html { background:#eef1f5; margin:0; padding:0; }
+            body { font-family: Arial, sans-serif; color:#111827; width:8.5in; min-height:11in; margin:24px auto; box-sizing:border-box; position:relative; background:#fff; box-shadow:0 2px 18px rgba(0,0,0,.28); padding:192px 40px 130px; }
+            .print-school-header, .print-school-footer { background:#fff; }
+            .print-school-header img, .print-school-footer img { width:100%; height:auto; display:block; }
+            .print-school-header { position:absolute; top:0; left:0; right:0; }
+            .print-school-footer { position:absolute; bottom:0; left:0; right:0; }
+            h1 { font-size:20px; margin:0 0 4px; }
+            .meta { color:#6b7280; font-size:12px; margin-bottom:20px; }
+            table { width:100%; border-collapse:collapse; }
+            th, td { text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; font-size:12.5px; }
+            th { background:#f9fafb; text-transform:uppercase; font-size:10.5px; letter-spacing:.03em; color:#6b7280; }
+            .print-sig { height:26px; width:auto; max-width:110px; object-fit:contain; }
+            .print-btn { position:fixed; top:12px; right:12px; z-index:20; padding:8px 16px; border-radius:8px; border:none; background:#2563eb; color:#fff; font-weight:600; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.25); }
+            .print-letterhead { display:contents; border-collapse:collapse; }
+            .print-letterhead > thead, .print-letterhead > tfoot { display:none; }
+            .print-letterhead > tbody { display:contents; }
+            .print-letterhead > tbody > tr { display:contents; }
+            .print-letterhead > tbody > tr > td { display:contents; }
+            @media screen and (max-width: 900px) { body { width:100%; min-height:auto; margin:0; box-shadow:none; } }
+            @page { size:8.5in 11in; margin:0; }
+            @media print {
+              .print-btn { display:none; }
+              html { background:#fff; }
+              body { width:auto; min-height:auto; margin:0; padding:0; box-shadow:none; position:static; }
+              .print-school-header { position:fixed; top:0; left:0; right:0; z-index:10; height:187px; overflow:hidden; }
+              .print-school-footer { position:fixed; bottom:0; left:0; right:0; z-index:10; height:100px; overflow:hidden; }
+              .print-letterhead { display:table; width:8.5in; border-collapse:collapse; }
+              .print-letterhead > thead { display:table-header-group; }
+              .print-letterhead > thead > tr { display:table-row; }
+              .print-letterhead > thead > tr > td { display:table-cell; height:187px; padding:0; border:none; }
+              .print-letterhead > tfoot { display:table-footer-group; }
+              .print-letterhead > tfoot > tr { display:table-row; }
+              .print-letterhead > tfoot > tr > td { display:table-cell; height:100px; padding:0; border:none; }
+              .print-letterhead > tbody { display:table-row-group; }
+              .print-letterhead > tbody > tr { display:table-row; }
+              .print-letterhead > tbody > tr > td { display:table-cell; vertical-align:top; padding:4px 40px 10px; border:none; font-size:13px; }
+            }
+          </style>
+        </head>
+        <body>
+          ${schoolPrintHeaderFooterHtml()}
+          <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+          <table class="print-letterhead">
+            ${schoolPrintLetterhead()}
+            <tbody>
+              <tr>
+                <td>
+                  <h1>Guidance Office Visit Logs</h1>
+                  <div class="meta">Generated ${new Date().toLocaleString("en-US")} · ${selected.length} entr${selected.length === 1 ? "y" : "ies"}</div>
+                  <table>
+                    <thead><tr><th style="width:40px;">No.</th><th>Date &amp; Time</th><th>Visitor</th><th>Reason for Visit</th><th>Related Case</th><th style="width:120px;">Signature</th></tr></thead>
+                    <tbody>${printRows}</tbody>
+                  </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+      `);
+      win.document.close();
+    }
+
+    // ---------- Wiring ----------
+
+    function init() {
+      document.getElementById("logVisitBtn").addEventListener("click", openVisitModal);
+      document.getElementById("visitModalCloseBtn").addEventListener("click", closeVisitModal);
+      document.getElementById("visitCancelBtn").addEventListener("click", closeVisitModal);
+      document.getElementById("visitModalOverlay").addEventListener("click", (e) => {
+        if (e.target.id === "visitModalOverlay") closeVisitModal();
+      });
+      document.getElementById("visitForm").addEventListener("submit", saveVisit);
+
+      document.getElementById("signatureViewCloseBtn").addEventListener("click", closeSignatureView);
+      document.getElementById("signatureViewOverlay").addEventListener("click", (e) => {
+        if (e.target.id === "signatureViewOverlay") closeSignatureView();
+      });
+
+      document.querySelectorAll(".visit-type-options .visit-type-btn").forEach((btn) =>
+        btn.addEventListener("click", () => setVisitType(btn.dataset.type))
+      );
+
+      const searchInput = document.getElementById("visitStudentSearch");
+      const resultsEl = document.getElementById("visitStudentResults");
+      searchInput.addEventListener("input", () => renderVisitStudentResults(searchInput.value));
+      searchInput.addEventListener("blur", () => {
+        setTimeout(() => {
+          if (document.activeElement !== searchInput) closeVisitStudentResults();
+        }, 150);
+      });
+      searchInput.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeVisitStudentResults();
+      });
+      resultsEl.addEventListener("mousedown", (e) => e.preventDefault());
+      resultsEl.addEventListener("click", (e) => {
+        const item = e.target.closest(".result-item");
+        if (item) pickVisitStudent(Number(item.dataset.id));
+      });
+
+      document.getElementById("visitsTypeFilter").addEventListener("change", renderVisitLogs);
+      document.getElementById("visitsFromFilter").addEventListener("change", renderVisitLogs);
+      document.getElementById("visitsToFilter").addEventListener("change", renderVisitLogs);
+      document.getElementById("visitsSearch").addEventListener("input", renderVisitLogs);
+      document.getElementById("printVisitLogsBtn").addEventListener("click", printVisitLogs);
+
+      document.getElementById("visitsTableBody").addEventListener("click", (e) => {
+        const del = e.target.closest('[data-action="delete"]');
+        if (del) {
+          const row = del.closest("tr[data-id]");
+          deleteVisit(Number(row.dataset.id));
+          return;
+        }
+        if (e.target.closest(".visit-sig-thumb")) openSignatureView(e.target.closest(".visit-sig-thumb"));
+      });
+
+      supabaseClient
+        .from("students")
+        .select("student_id, first_name, last_name, year_level, section")
+        .eq("is_archived", false)
+        .order("first_name", { ascending: true })
+        .then(({ data, error }) => {
+          if (error) console.error(error);
+          else visitStudents = data || [];
+        });
+
+      loadVisitLogs();
+    }
+
+    (async () => {
+      const result = await requireCounselorAuth();
+      if (!result) return;
+
+      currentCounselor = result.counselor;
+      init();
+      hidePageLoadOverlay();
+    })();
+  </script>
+</body>
+</html>

@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile</title>
+    
+        <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
       <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../css/style.css">
@@ -14,7 +15,7 @@
 
         <header class="profile">
 
-            <img src="../images/COLM LOGO.png" alt="Student Profile">
+            <div class="avatar-initials" id="userAvatar"></div>
 
             <div class="info">
                 <h4 id="sidebarName"></h4>
@@ -55,7 +56,7 @@
                 <li class="desktop-only">
                     <a href="student-forms.html">
                         <i class="fa-solid fa-book"></i>
-                        <span>Forms &amp; Interventions</span>
+                        <span>Forms</span>
                     </a>
                 </li>
 
@@ -94,7 +95,7 @@
 
      <nav class="mobile-menu" id="mobileMenu" aria-label="More Navigation">
 
-        <a href="student-forms.html"><i class="fa-solid fa-book"></i> Forms &amp; Interventions</a>
+        <a href="student-forms.html"><i class="fa-solid fa-book"></i> Forms</a>
 
         <a href="student-history.html"><i class="fa-solid fa-clock-rotate-left"></i> History</a>
 
@@ -116,7 +117,7 @@
 
         <div class="profile-summary-card">
             <div class="profile-avatar-wrap">
-                <img src="../images/COLM LOGO.png" alt="Student Avatar" class="profile-avatar">
+                <div class="avatar-initials lg" id="profileAvatar"></div>
             </div>
             <h2 id="profileFullName">—</h2>
             <p class="profile-meta" id="profileMeta">—</p>
@@ -227,6 +228,20 @@
       return { college: "College", junior_high: "Junior High School", senior_high: "Senior High School" }[value] || "—";
     }
 
+    function formatPhone(value) {
+      const raw = (value ?? "").trim();
+      if (!raw) return "";
+      const digits = raw.replace(/\D/g, "");
+      if (digits.startsWith("09") && digits.length === 11) {
+        return `${digits.slice(0, 4)}-${digits.slice(4, 7)}-${digits.slice(7)}`;
+      }
+      if (digits.startsWith("63") && digits.length === 12) {
+        const d = digits.slice(2);
+        return `+63 ${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+      }
+      return raw;
+    }
+
     async function loadProfile() {
       const { data, error } = await supabaseClient
         .from("students")
@@ -251,14 +266,14 @@
       document.getElementById("profileSchoolYearBadge").textContent = `S.Y. ${defaultSchoolYear()}`;
 
       document.getElementById("profileEmail").textContent = data.student_email || "—";
-      document.getElementById("profilePhone").textContent = data.contact_number || "—";
+      document.getElementById("profilePhone").textContent = formatPhone(data.contact_number) || "—";
       document.getElementById("profileGuardian").textContent = `Parent/Guardian: ${data.parent_guardian || "—"}`;
 
       document.getElementById("editFullName").value = fullName;
       document.getElementById("editEducationLevel").value = educationLevelLabel(data.education_level);
       document.getElementById("editYearLevel").value = data.year_level || "";
       document.getElementById("editEmail").value = data.student_email || "";
-      document.getElementById("editPhone").value = data.contact_number || "";
+      document.getElementById("editPhone").value = formatPhone(data.contact_number);
       document.getElementById("editGuardian").value = data.parent_guardian || "";
     }
 

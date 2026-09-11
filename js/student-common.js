@@ -436,10 +436,39 @@ function checkInactivity() {
 recordActivity();
 setInterval(checkInactivity, 30 * 1000);
 
+// Fills every .avatar-initials element (the sidebar header + profile page)
+// with the user's initials derived from the NAME fields. "Juan" + "Dela Cruz"
+// -> "JD" (first letter of first name + first letter of the surname). A
+// single-word name falls back to its first two letters.
+function setUserAvatar(firstName, lastName) {
+  const els = document.querySelectorAll(".avatar-initials");
+  if (!els.length) return;
+  const first = String(firstName || "").trim();
+  const last = String(lastName || "").trim();
+  let initials;
+  if (first) {
+    initials = first[0] + (last ? last[0] : (first[1] || ""));
+  } else if (last) {
+    initials = last.slice(0, 2);
+  } else {
+    return;
+  }
+  els.forEach((el) => {
+    el.textContent = initials.toUpperCase();
+  });
+}
+
 async function requireStudentAuth() {
   const cachedName = sessionStorage.getItem("studentName");
   if (cachedName) {
     document.getElementById("sidebarName").textContent = cachedName;
+    const cachedInitials = sessionStorage.getItem("studentInitials");
+    if (cachedInitials) {
+      document.querySelectorAll(".avatar-initials").forEach((el) => { el.textContent = cachedInitials; });
+    } else {
+      const parts = cachedName.trim().split(/\s+/).filter(Boolean);
+      setUserAvatar(parts[0] || "", parts.slice(1).join(" "));
+    }
   }
 
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -491,6 +520,9 @@ async function requireStudentAuth() {
 
   const fullName = `${student.first_name} ${student.last_name}`;
   document.getElementById("sidebarName").textContent = fullName;
+  setUserAvatar(student.first_name, student.last_name);
+  const initialsEl = document.querySelector(".avatar-initials");
+  if (initialsEl) sessionStorage.setItem("studentInitials", initialsEl.textContent);
   sessionStorage.setItem("studentName", fullName);
 
   initNotifications(session.user.id);

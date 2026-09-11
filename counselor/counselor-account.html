@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Account</title>
+    
+        <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
       <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../css/style.css">
@@ -14,7 +15,7 @@
 
         <header class="profile">
 
-            <img src="../images/COLM LOGO.png" alt="Counselor Profile">
+            <div class="avatar-initials" id="userAvatar"></div>
 
             <div class="info">
                 <h4 id="sidebarName"></h4>
@@ -67,9 +68,16 @@
                 </li>
 
                 <li class="desktop-only">
+                    <a href="counselor-visit-logs.html">
+                        <i class="fa-solid fa-clipboard-list"></i>
+                        <span>Visit Logs</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
                     <a href="counselor-forms.html">
                         <i class="fa-solid fa-book"></i>
-                        <span>Forms &amp; Interventions</span>
+                        <span>Forms</span>
                     </a>
                 </li>
 
@@ -112,7 +120,9 @@
 
         <a href="counselor-cases.html"><i class="fa-solid fa-folder-open"></i> Cases</a>
 
-        <a href="counselor-forms.html"><i class="fa-solid fa-book"></i> Forms &amp; Interventions</a>
+        <a href="counselor-visit-logs.html"><i class="fa-solid fa-clipboard-list"></i> Visit Logs</a>
+
+        <a href="counselor-forms.html"><i class="fa-solid fa-book"></i> Forms</a>
 
         <a href="counselor-reports.html"><i class="fa-solid fa-chart-line"></i> Reports</a>
 
@@ -135,8 +145,7 @@
         <div class="upload-dropzone" id="uploadDropzone">
             <div class="upload-dropzone-icon"><i class="fa-solid fa-file-excel"></i></div>
             <h3>Drop Excel File Here</h3>
-            <p>Columns: First Name (required), Middle Name, Last Name, Level, Contact Number (all optional).</p>
-            <p class="hint">Level should match exactly: "Grade 7"–"Grade 12" for high school, or "1st Year"–"4th Year" for college </p>
+            <p>Columns: First Name (required), Middle Name, Last Name, Level, Section, Contact Number (all optional).</p>
             <input type="file" id="xlsxFileInput" accept=".xlsx,.xls" hidden>
             <button type="button" class="btn btn-outline" id="xlsxUploadBtn"><i class="fa-solid fa-upload"></i> Upload .xlsx</button>
             <div class="form-note-banner" id="xlsxFileName" style="display:none; margin-top:14px;"></div>
@@ -156,14 +165,14 @@
                     </select>
                 </div>
                 <div class="form-field">
-                    <label for="importSection">Section (optional, applies to this whole batch)</label>
+                    <label for="importSection">Section (optional — used when a row has no Section cell)</label>
                     <input type="text" id="importSection" placeholder="e.g. Rizal, STEM-A">
                 </div>
             </div>
             <div class="simple-table-wrap">
                 <table class="simple-table">
                     <thead>
-                        <tr><th>First Name</th><th>Middle Name</th><th>Last Name</th><th>Level</th><th>Contact Number</th><th></th></tr>
+                        <tr><th>First Name</th><th>Middle Name</th><th>Last Name</th><th>Level</th><th>Section</th><th>Contact Number</th><th></th></tr>
                     </thead>
                     <tbody id="importPreviewBody"></tbody>
                 </table>
@@ -331,6 +340,7 @@
       middleName: ["mname", "middlename"],
       lastName: ["lname", "lastname"],
       level: ["level", "yearlevel", "gradelevel"],
+      section: ["section"],
       contactNumber: ["contactnumber", "contact", "phone", "phonenumber"],
     };
 
@@ -369,7 +379,7 @@
       document.getElementById("importPreviewCount").textContent = parsedStudents.length;
 
       if (!parsedStudents.length) {
-        body.innerHTML = `<tr class="table-empty"><td colspan="6">No valid rows found — make sure the sheet has a First Name column.</td></tr>`;
+        body.innerHTML = `<tr class="table-empty"><td colspan="7">No valid rows found — make sure the sheet has a First Name column.</td></tr>`;
         pager.innerHTML = "";
       } else {
         importPreviewPage = renderPaginationControls(pager, {
@@ -390,6 +400,7 @@
 
         const start = (importPreviewPage - 1) * IMPORT_TABLE_PAGE_SIZE;
         const pageRows = parsedStudents.slice(start, start + IMPORT_TABLE_PAGE_SIZE);
+        const batchSection = document.getElementById("importSection").value.trim();
 
         body.innerHTML = pageRows
           .map((r, i) => {
@@ -404,6 +415,7 @@
             <td>${escapeHtml(r.middleName) || "—"}</td>
             <td>${escapeHtml(r.lastName) || "—"}</td>
             <td>${escapeHtml(r.level) || "—"}</td>
+            <td>${escapeHtml(r.section || batchSection) || "—"}</td>
             <td>${escapeHtml(r.contactNumber) || "—"}</td>
             <td><button type="button" class="icon-btn sm danger" data-action="remove" title="Remove row"><i class="fa-solid fa-trash"></i></button></td>
           </tr>
@@ -520,7 +532,8 @@
         <html>
         <head>
           <meta charset="UTF-8">
-          <title>Student Login Credentials</title>
+          
+        <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
           <style>
             body { font-family: Arial, sans-serif; color:#111827; padding:32px; }
             h1 { font-size:20px; margin:0 0 4px; }
@@ -599,16 +612,24 @@
       const educationLevel = document.getElementById("importEducationLevel").value;
       const section = document.getElementById("importSection").value.trim();
 
+      if (!(await attachSession())) return;
+
       const { data, error } = await supabaseClient.functions.invoke("create-student-accounts", {
-        body: { students: parsedStudents, educationLevel, section },
+        body: {
+          students: parsedStudents.map((r) => ({ ...r, section: r.section || section })),
+          educationLevel,
+          section,
+        },
       });
 
       btn.disabled = false;
       btn.innerHTML = `<i class="fa-solid fa-check"></i> Import Students`;
 
       if (error || data?.error) {
-        showToast("Import failed: " + (data?.error || error.message), "error");
-        console.error(error || data?.error);
+        const status = error?.context?.status ? ` (HTTP ${error.context.status})` : "";
+        const detail = data?.error || error?.context?.data?.error || "";
+        showToast(`Import failed${status}: ${detail || error.message}`, "error");
+        console.error(error || data?.error, error?.context?.data);
         return;
       }
 
@@ -636,14 +657,18 @@
       saveBtn.disabled = true;
       saveBtn.textContent = "Creating…";
 
+      if (!(await attachSession())) return;
+
       const { data, error } = await supabaseClient.functions.invoke("create-staff-account", { body: payload });
 
       saveBtn.disabled = false;
       saveBtn.textContent = "Create Account";
 
       if (error || data?.error) {
-        showToast("Couldn't create account: " + (data?.error || error.message), "error");
-        console.error(error || data?.error);
+        const status = error?.context?.status ? ` (HTTP ${error.context.status})` : "";
+        const detail = data?.error || error?.context?.data?.error || "";
+        showToast(`Couldn't create account${status}: ${detail || error.message}`, "error");
+        console.error(error || data?.error, error?.context?.data);
         return;
       }
 

@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Students</title>
+    
+        <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
       <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../css/style.css">
@@ -14,7 +15,7 @@
 
         <header class="profile">
 
-            <img src="../images/COLM LOGO.png" alt="Counselor Profile">
+            <div class="avatar-initials" id="userAvatar"></div>
 
             <div class="info">
                 <h4 id="sidebarName"></h4>
@@ -67,9 +68,16 @@
                 </li>
 
                 <li class="desktop-only">
+                    <a href="counselor-visit-logs.html">
+                        <i class="fa-solid fa-clipboard-list"></i>
+                        <span>Visit Logs</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
                     <a href="counselor-forms.html">
                         <i class="fa-solid fa-book"></i>
-                        <span>Forms &amp; Interventions</span>
+                        <span>Forms</span>
                     </a>
                 </li>
 
@@ -112,7 +120,9 @@
 
         <a href="counselor-cases.html"><i class="fa-solid fa-folder-open"></i> Cases</a>
 
-        <a href="counselor-forms.html"><i class="fa-solid fa-book"></i> Forms &amp; Interventions</a>
+        <a href="counselor-visit-logs.html"><i class="fa-solid fa-clipboard-list"></i> Visit Logs</a>
+
+        <a href="counselor-forms.html"><i class="fa-solid fa-book"></i> Forms</a>
 
         <a href="counselor-reports.html"><i class="fa-solid fa-chart-line"></i> Reports</a>
 
@@ -134,11 +144,15 @@
             <div class="filter-toolbar" style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
                 <div class="filter-tabs" id="studentsFilterTabs">
                     <button type="button" class="active" data-filter="active">Active</button>
-                    <button type="button" data-filter="review">Due for Review</button>
                     <button type="button" data-filter="archived">Archived</button>
                 </div>
                 <select id="sectionFilterSelect" class="table-search" style="width:auto;">
                     <option value="">All Sections</option>
+                </select>
+                <select id="sisFilterSelect" class="table-search" style="width:auto;">
+                    <option value="">Info Sheet: All</option>
+                    <option value="submitted">Info Sheet: Submitted</option>
+                    <option value="missing">Info Sheet: Not Submitted</option>
                 </select>
                 <input type="text" id="studentSearchInput" class="table-search" placeholder="Search by name or student number...">
             </div>
@@ -148,7 +162,6 @@
             <span id="bulkSelectedCount">0 selected</span>
             <div style="display:flex; gap:8px;">
                 <button type="button" class="btn btn-outline btn-sm" id="bulkEditBtn"><i class="fa-solid fa-pen"></i> Edit Section/Year</button>
-                <button type="button" class="btn btn-outline btn-sm" id="bulkPromoteBtn"><i class="fa-solid fa-arrow-up"></i> Promote</button>
                 <button type="button" class="btn btn-danger btn-sm" id="bulkArchiveBtn"><i class="fa-solid fa-box-archive"></i> Archive</button>
             </div>
         </div>
@@ -163,7 +176,7 @@
                         <th>Education Level</th>
                         <th>Year Level</th>
                         <th>Section</th>
-                        <th>Status</th>
+                        <th>Info Sheet</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -184,16 +197,6 @@
                 </button>
             </div>
             <div class="modal-body">
-                <div id="studentDueBanner" class="banner" style="display:none;">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                    <div class="banner-content">
-                        <strong>Due for review</strong> — <span id="studentDueBannerReason"></span>
-                    </div>
-                    <div class="banner-actions">
-                        <button type="button" class="btn btn-primary" id="promoteStudentBtn" style="display:none;">Promote</button>
-                    </div>
-                </div>
-
                 <div class="section-title" style="margin-top:0;">
                     <h2 style="font-size:15px;">Account Info</h2>
                     <span class="badge" id="studentStatusBadge">—</span>
@@ -292,6 +295,25 @@
                     </select>
                 </div>
                 <div class="case-timeline" id="studentDetailCases"></div>
+
+                <!-- Student Information Sheet — every school year's
+                     submission is kept forever; pick a year to read it.
+                     Section VII notes are editable for the current
+                     school year only (past years stay frozen). -->
+                <div class="builder-section-label" style="margin-top:20px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                    <span>Student Information Sheet</span>
+                    <select id="detailSisYearSelect" class="table-search" style="width:auto; padding:4px 10px; font-size:12px;"></select>
+                </div>
+                <div id="studentDetailSis"><div class="notif-empty" style="padding:16px;">No info sheet on record.</div></div>
+
+                <div class="builder-section-label" style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                    <span>VII. Significant Notes (For Guidance Counselors only)</span>
+                </div>
+                <div id="studentDetailNotes"></div>
+                <div class="form-actions" id="sisNotesActions" style="justify-content:flex-start; gap:8px; margin-top:10px;">
+                    <button type="button" class="btn btn-outline btn-sm" id="sisAddNoteRowBtn"><i class="fa-solid fa-plus"></i> Add Row</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="sisSaveNotesBtn">Save Notes</button>
+                </div>
             </div>
         </div>
     </div>
@@ -352,6 +374,7 @@
   <script src="../js/supabaseClient.js"></script>
   <script src="../js/counselor-common.js"></script>
   <script src="../js/pagination.js"></script>
+  <script src="../js/student-info-schema.js"></script>
   <script>
     let currentCounselor = null;
     let allStudents = [];
@@ -360,6 +383,11 @@
     const STUDENTS_PAGE_SIZE = 20;
     let currentDetailStudent = null;
     let selectedStudentIds = new Set();
+    // student_id -> this school year's sheet status ("submitted" or absent)
+    let sisStatusByStudent = new Map();
+    let detailSheets = [];
+    let detailNotesBySheet = new Map();
+    let notesDraft = [];
 
     // Countdown is derived from year_level + education_level (data the
     // counselor already keeps current every year) instead of a stored
@@ -375,6 +403,14 @@
       const div = document.createElement("div");
       div.textContent = str ?? "";
       return div.innerHTML;
+    }
+
+    function escAttr(str) {
+      return String(str ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
     }
 
     function formatDate(dateStr) {
@@ -394,69 +430,13 @@
       return { college: "College", junior_high: "Junior High School", senior_high: "Senior High School" }[value] || "—";
     }
 
-    function yearsRemaining(s) {
-      const steps = LEVEL_STEPS[s.education_level];
-      if (!steps) return null;
-      const idx = steps.indexOf(s.year_level);
-      if (idx === -1) return null;
-      return steps.length - 1 - idx;
-    }
-
-    function reviewStatusLabel(s) {
-      if (s.is_archived) return "—";
-      const remaining = yearsRemaining(s);
-      if (remaining === null) return "—";
-      if (remaining === 0) return "Due for Review";
-      return `${remaining} yr${remaining === 1 ? "" : "s"} more`;
-    }
-
-    function isDueForReview(s) {
-      if (s.is_archived || s.review_dismissed_at) return false;
-      return yearsRemaining(s) === 0;
-    }
-
-    // What promoting this student actually does. Returns null when
-    // there's nothing to promote into (e.g. College 4th Year, or a
-    // year_level that doesn't match a known step) — archive-only then.
-    function nextStep(s) {
-      const steps = LEVEL_STEPS[s.education_level];
-      if (!steps) return null;
-      const idx = steps.indexOf(s.year_level);
-      if (idx === -1) return null;
-
-      if (idx < steps.length - 1) {
-        return { education_level: s.education_level, year_level: steps[idx + 1] };
-      }
-      if (s.education_level === "junior_high") return { education_level: "senior_high", year_level: "Grade 11" };
-      if (s.education_level === "senior_high") return { education_level: "college", year_level: "1st Year" };
-      return null;
-    }
-
-    async function promoteStudent(student, next, opts = {}) {
-      const { error } = await supabaseClient
-        .from("students")
-        .update({ education_level: next.education_level, year_level: next.year_level, review_dismissed_at: null })
-        .eq("student_id", student.student_id);
-
-      if (error) {
-        if (!opts.silent) showToast("Couldn't promote: " + error.message, "error");
-        console.error(error);
-        return false;
-      }
-
-      student.education_level = next.education_level;
-      student.year_level = next.year_level;
-      student.review_dismissed_at = null;
-      return true;
-    }
-
     function studentRowHtml(s) {
       const name = `${s.first_name} ${s.last_name}`;
-      const status = reviewStatusLabel(s);
-      const statusHtml =
-        status === "Due for Review"
-          ? `<span class="review-badge" title="Ready for promotion or archiving"><i class="fa-solid fa-triangle-exclamation"></i> Due for Review</span>`
-          : `<span class="hint">${status}</span>`;
+      const sisCell = s.is_archived
+        ? `<span class="hint">—</span>`
+        : sisStatusByStudent.get(s.student_id) === "submitted"
+          ? `<span class="badge badge-approved">Submitted</span>`
+          : `<span class="badge badge-pending">Not Submitted</span>`;
       return `
         <tr data-id="${s.student_id}">
           <td><input type="checkbox" class="row-select" data-id="${s.student_id}"></td>
@@ -465,7 +445,7 @@
           <td>${educationLevelLabel(s.education_level)}</td>
           <td>${escapeHtml(s.year_level) || "—"}</td>
           <td>${escapeHtml(s.section) || "—"}</td>
-          <td>${statusHtml}</td>
+          <td>${sisCell}</td>
           <td><button type="button" class="icon-btn sm" data-action="view" title="View student"><i class="fa-solid fa-eye"></i></button></td>
         </tr>
       `;
@@ -537,15 +517,21 @@
 
       const query = document.getElementById("studentSearchInput").value.trim().toLowerCase();
       const section = document.getElementById("sectionFilterSelect").value;
+      const sisFilter = document.getElementById("sisFilterSelect").value;
 
       let filtered = allStudents.filter((s) => {
         if (activeStudentsTab === "archived") return s.is_archived;
-        if (activeStudentsTab === "review") return isDueForReview(s);
         return !s.is_archived;
       });
 
       if (section) {
         filtered = filtered.filter((s) => (s.section || "") === section);
+      }
+
+      if (sisFilter === "submitted") {
+        filtered = filtered.filter((s) => sisStatusByStudent.get(s.student_id) === "submitted");
+      } else if (sisFilter === "missing") {
+        filtered = filtered.filter((s) => sisStatusByStudent.get(s.student_id) !== "submitted");
       }
 
       if (query) {
@@ -564,19 +550,30 @@
       const list = document.getElementById("studentsList");
       list.innerHTML = `<tr class="table-empty"><td colspan="8">Loading…</td></tr>`;
 
-      const { data, error } = await supabaseClient
-        .from("students")
-        .select(
-          "student_id, user_id, student_number, first_name, last_name, year_level, section, contact_number, parent_guardian, student_email, education_level, is_archived, archived_at, review_dismissed_at"
-        )
-        .order("last_name", { ascending: true });
+      const [{ data, error }, { data: sheets, error: sheetsError }] = await Promise.all([
+        supabaseClient
+          .from("students")
+          .select(
+            "student_id, user_id, student_number, first_name, last_name, year_level, section, contact_number, parent_guardian, student_email, education_level, is_archived, archived_at, review_dismissed_at"
+          )
+          .order("last_name", { ascending: true }),
+        // One row per student who submitted this year's info sheet —
+        // anyone absent from the map is "Not Submitted".
+        supabaseClient
+          .from("student_info_sheets")
+          .select("student_id, status")
+          .eq("school_year", defaultSchoolYear())
+          .eq("status", "submitted"),
+      ]);
 
       if (error) {
         list.innerHTML = `<tr class="table-empty"><td colspan="8">Couldn't load students.</td></tr>`;
         console.error(error);
         return;
       }
+      if (sheetsError) console.error(sheetsError);
 
+      sisStatusByStudent = new Map((sheets || []).map((r) => [r.student_id, r.status]));
       allStudents = data || [];
       updateSectionSuggestions();
       applyStudentFilters();
@@ -593,6 +590,7 @@
 
     document.getElementById("studentSearchInput").addEventListener("input", applyStudentFilters);
     document.getElementById("sectionFilterSelect").addEventListener("change", applyStudentFilters);
+    document.getElementById("sisFilterSelect").addEventListener("change", applyStudentFilters);
 
     document.getElementById("selectAllCheckbox").addEventListener("change", (e) => {
       document.querySelectorAll("#studentsList .row-select").forEach((cb) => {
@@ -620,36 +618,6 @@
       }
 
       showToast(`Archived ${ids.length} student${ids.length === 1 ? "" : "s"}.`, "success");
-      selectedStudentIds.clear();
-      applyStudentFilters();
-    });
-
-    document.getElementById("bulkPromoteBtn").addEventListener("click", async () => {
-      const ids = Array.from(selectedStudentIds);
-      if (!ids.length) return;
-
-      const students = ids.map((id) => allStudents.find((s) => s.student_id === id)).filter(Boolean);
-      const promotable = students.filter((s) => nextStep(s));
-      const crossing = promotable.filter((s) => nextStep(s).education_level !== s.education_level);
-
-      if (!promotable.length) {
-        showToast("None of the selected students have a next level to move into.", "error");
-        return;
-      }
-
-      let message = `Promote ${promotable.length} student${promotable.length === 1 ? "" : "s"} to their next year level?`;
-      if (crossing.length) {
-        message += ` ${crossing.length} of them will move into a new education level (e.g. Junior High → Senior High).`;
-      }
-
-      const ok = await confirmDialog(message, { confirmLabel: "Promote" });
-      if (!ok) return;
-
-      for (const s of promotable) {
-        await promoteStudent(s, nextStep(s), { silent: true });
-      }
-
-      showToast(`Promoted ${promotable.length} student${promotable.length === 1 ? "" : "s"}.`, "success");
       selectedStudentIds.clear();
       applyStudentFilters();
     });
@@ -854,6 +822,204 @@
     document.getElementById("detailCasesFilter").addEventListener("change", renderDetailCases);
     document.getElementById("detailSchoolYearFilter").addEventListener("change", renderDetailTimelines);
 
+    // ---------- Student Information Sheet (detail view) ----------
+
+    async function loadDetailSheets(studentId) {
+      const { data: sheets, error } = await supabaseClient
+        .from("student_info_sheets")
+        .select("sheet_id, school_year, answers, signature, status, submitted_at")
+        .eq("student_id", studentId)
+        .order("school_year", { ascending: false });
+
+      if (error) {
+        console.error(error);
+        detailSheets = [];
+      } else {
+        detailSheets = sheets || [];
+      }
+
+      const ids = detailSheets.map((s) => s.sheet_id);
+      if (ids.length) {
+        const { data: notes } = await supabaseClient
+          .from("student_info_guidance_notes")
+          .select("sheet_id, entries")
+          .in("sheet_id", ids);
+        detailNotesBySheet = new Map((notes || []).map((n) => [n.sheet_id, n.entries || []]));
+      } else {
+        detailNotesBySheet = new Map();
+      }
+
+      populateDetailSisYearSelect();
+      renderDetailSis();
+    }
+
+    function populateDetailSisYearSelect() {
+      const select = document.getElementById("detailSisYearSelect");
+      const years = detailSheets.map((s) => s.school_year);
+      // Always offer the current school year so the counselor sees
+      // "no sheet yet" for it explicitly.
+      if (!years.includes(defaultSchoolYear())) years.unshift(defaultSchoolYear());
+      years.sort((a, b) => b.localeCompare(a));
+
+      const previous = select.value;
+      select.innerHTML = years.map((y) => `<option value="${escapeHtml(y)}">S.Y. ${escapeHtml(y)}</option>`).join("");
+      select.value = years.includes(previous) ? previous : years[0];
+    }
+
+    function notesTableHtml(entries, disabled) {
+      const cols = STUDENT_INFO_SCHEMA.notesSection.columns;
+      const rows = entries.length ? entries : [{}];
+      const body = rows
+        .map(
+          (row) => `
+        <tr>
+          ${cols
+            .map(
+              (c) =>
+                `<td><input type="${c.type === "date" ? "date" : "text"}" data-col="${escAttr(c.key)}" value="${escAttr(row[c.key] ?? "")}" ${c.type !== "date" ? 'style="min-width:120px;"' : ""} ${disabled ? "disabled" : ""}></td>`
+            )
+            .join("")}
+          ${disabled ? "" : `<td style="width:36px;"><button type="button" class="icon-btn sm sis-remove-note-row" title="Remove row"><i class="fa-solid fa-xmark"></i></button></td>`}
+        </tr>
+      `
+        )
+        .join("");
+
+      return `
+        <div class="sis-table-wrap">
+          <table class="simple-table sis-table">
+            <thead><tr>${cols.map((c) => `<th>${escAttr(c.label)}</th>`).join("")}${disabled ? "" : `<th style="width:36px;"></th>`}</tr></thead>
+            <tbody>${body}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function collectNotesFromDom() {
+      return Array.from(document.querySelectorAll("#studentDetailNotes tbody tr")).map((tr) => {
+        const row = {};
+        STUDENT_INFO_SCHEMA.notesSection.columns.forEach((c) => {
+          row[c.key] = tr.querySelector(`[data-col="${c.key}"]`)?.value ?? "";
+        });
+        return row;
+      });
+    }
+
+    function renderDetailSis() {
+      const wrap = document.getElementById("studentDetailSis");
+      const year = document.getElementById("detailSisYearSelect").value;
+      const sheet = detailSheets.find((s) => s.school_year === year);
+
+      if (!sheet) {
+        wrap.innerHTML = `<div class="notif-empty" style="padding:16px;">No info sheet submitted for S.Y. ${escapeHtml(year)} yet.</div>`;
+        document.getElementById("studentDetailNotes").innerHTML =
+          `<div class="notif-empty" style="padding:16px;">Section VII becomes available once this student submits their sheet.</div>`;
+        document.getElementById("sisNotesActions").style.display = "none";
+        return;
+      }
+
+      const answers = sheet.answers || {};
+      let html = `<div class="hint" style="margin-bottom:12px;">${
+        sheet.status === "submitted"
+          ? `Submitted ${formatDate(sheet.submitted_at)}`
+          : "Draft — not submitted yet"
+      }</div>`;
+
+      STUDENT_INFO_SCHEMA.sections.forEach((sec) => {
+        html += `<div class="builder-section-label">${escAttr(sec.numeral)}. ${escAttr(sec.title)}</div>`;
+        html += `<div class="sis-grid" style="margin-bottom:16px;">${sec.fields
+          .map((f) => STUDENT_INFO_SCHEMA.fieldHtml(f, answers[f.key], true))
+          .join("")}</div>`;
+      });
+
+      html += `
+        <div class="builder-section-label">Signature</div>
+        <div class="sis-sign-preview" style="margin:10px 0 4px;">
+          ${sheet.signature ? `<img src="${sheet.signature}" alt="Student signature">` : `<p class="submission-answer-empty">No signature captured.</p>`}
+        </div>
+      `;
+
+      wrap.innerHTML = html;
+      renderDetailNotes(sheet);
+    }
+
+    function renderDetailNotes(sheet) {
+      const wrap = document.getElementById("studentDetailNotes");
+      const actions = document.getElementById("sisNotesActions");
+      // Notes are the counselor's own working area for the CURRENT
+      // school year; past years' sheets stay frozen as historical
+      // records.
+      const editable = sheet.school_year === defaultSchoolYear();
+
+      notesDraft = detailNotesBySheet.get(sheet.sheet_id) || [];
+      wrap.innerHTML = notesTableHtml(notesDraft, !editable);
+      actions.style.display = editable ? "flex" : "none";
+
+      if (!editable) {
+        const hasAny = notesDraft.some((r) => Object.values(r).some((v) => String(v || "").trim()));
+        if (!hasAny) {
+          wrap.insertAdjacentHTML(
+            "beforeend",
+            `<p class="hint" style="margin-top:6px;">No counselor notes were recorded for S.Y. ${escAttr(sheet.school_year)}.</p>`
+          );
+        }
+      }
+    }
+
+    document.getElementById("detailSisYearSelect").addEventListener("change", renderDetailSis);
+
+    document.getElementById("sisAddNoteRowBtn").addEventListener("click", () => {
+      const tbody = document.querySelector("#studentDetailNotes tbody");
+      if (!tbody) return;
+      const clone = tbody.querySelector("tr").cloneNode(true);
+      clone.querySelectorAll("input").forEach((i) => (i.value = ""));
+      tbody.appendChild(clone);
+    });
+
+    document.getElementById("studentDetailNotes").addEventListener("click", (e) => {
+      const rm = e.target.closest(".sis-remove-note-row");
+      if (!rm) return;
+      const tbody = document.querySelector("#studentDetailNotes tbody");
+      if (tbody.querySelectorAll("tr").length <= 1) return;
+      rm.closest("tr").remove();
+    });
+
+    document.getElementById("sisSaveNotesBtn").addEventListener("click", async () => {
+      const year = document.getElementById("detailSisYearSelect").value;
+      const sheet = detailSheets.find((s) => s.school_year === year);
+      if (!sheet) return;
+
+      const entries = collectNotesFromDom().filter((r) =>
+        Object.values(r).some((v) => String(v || "").trim())
+      );
+
+      const btn = document.getElementById("sisSaveNotesBtn");
+      btn.disabled = true;
+      btn.textContent = "Saving…";
+
+      const { error } = await supabaseClient.from("student_info_guidance_notes").upsert(
+        {
+          sheet_id: sheet.sheet_id,
+          entries,
+          updated_by: currentCounselor.counselor_id,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "sheet_id" }
+      );
+
+      btn.disabled = false;
+      btn.textContent = "Save Notes";
+
+      if (error) {
+        showToast("Couldn't save notes: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      detailNotesBySheet.set(sheet.sheet_id, entries);
+      showToast("Significant notes saved.", "success");
+    });
+
     function renderStudentDetailBanner(s) {
       const statusBadge = document.getElementById("studentStatusBadge");
       statusBadge.textContent = s.is_archived ? "Archived" : "Active";
@@ -867,16 +1033,6 @@
       // weight instead of looking identical to Reset Password. Unarchiving
       // is a restorative action, so it stays in the calmer outline style.
       archiveBtn.className = `btn btn-sm ${s.is_archived ? "btn-outline" : "btn-danger"}`;
-
-      const due = isDueForReview(s);
-      document.getElementById("studentDueBanner").style.display = due ? "flex" : "none";
-      if (!due) return;
-
-      const next = nextStep(s);
-      document.getElementById("studentDueBannerReason").textContent = next
-        ? `this student has finished ${s.year_level} and is ready to move up.`
-        : `this student has finished ${s.year_level} — there's no further level to promote into.`;
-      document.getElementById("promoteStudentBtn").style.display = next ? "" : "none";
     }
 
     function populateYearLevelOptions(educationLevel, selectedValue) {
@@ -924,6 +1080,9 @@
       document.getElementById("detailAppointmentsFilter").value = "all";
       document.getElementById("detailCasesFilter").value = "all";
       document.getElementById("detailSchoolYearFilter").innerHTML = `<option value="all">All school years</option>`;
+      document.getElementById("studentDetailSis").innerHTML = `<div class="notif-empty" style="padding:16px;">Loading…</div>`;
+      document.getElementById("studentDetailNotes").innerHTML = "";
+      document.getElementById("sisNotesActions").style.display = "none";
 
       document.getElementById("studentDetailModalOverlay").classList.add("show");
 
@@ -956,6 +1115,7 @@
 
       populateDetailSchoolYearFilter();
       renderDetailTimelines();
+      await loadDetailSheets(studentId);
     }
 
     document.getElementById("studentDetailCloseBtn").addEventListener("click", () => {
@@ -1024,12 +1184,15 @@
       }
 
       if (student.user_id) {
+        if (!(await attachSession())) return;
         const { error: fnError } = await supabaseClient.functions.invoke("disable-student-account", {
           body: { userId: student.user_id, archive },
         });
         if (fnError) {
-          if (!opts.silent) showToast("Record updated, but login toggle failed: " + fnError.message, "error");
-          console.error(fnError);
+          const status = fnError?.context?.status ? ` (HTTP ${fnError.context.status})` : "";
+          const detail = fnError?.context?.data?.error || "";
+          if (!opts.silent) showToast(`Record updated, but login toggle failed${status}: ${detail || fnError.message}`, "error");
+          console.error(fnError, fnError?.context?.data);
         }
       }
 
@@ -1057,13 +1220,17 @@
       );
       if (!ok) return;
 
+      if (!(await attachSession())) return;
+
       const { data, error } = await supabaseClient.functions.invoke("reset-student-password", {
         body: { userId: currentDetailStudent.user_id },
       });
 
       if (error || data?.error) {
-        showToast("Couldn't reset password: " + (data?.error || error.message), "error");
-        console.error(error || data?.error);
+        const status = error?.context?.status ? ` (HTTP ${error.context.status})` : "";
+        const detail = data?.error || error?.context?.data?.error || "";
+        showToast(`Couldn't reset password${status}: ${detail || error.message}`, "error");
+        console.error(error || data?.error, error?.context?.data);
         return;
       }
 
@@ -1097,29 +1264,6 @@
       );
       if (!ok) return;
       await setStudentArchived(currentDetailStudent, true);
-    });
-
-    document.getElementById("promoteStudentBtn").addEventListener("click", async () => {
-      if (!currentDetailStudent) return;
-      const next = nextStep(currentDetailStudent);
-      if (!next) return;
-
-      const crossing = next.education_level !== currentDetailStudent.education_level;
-      const message = crossing
-        ? `Promote ${currentDetailStudent.first_name} to ${educationLevelLabel(next.education_level)} (${next.year_level})?`
-        : `Promote ${currentDetailStudent.first_name} to ${next.year_level}?`;
-
-      const ok = await confirmDialog(message, { confirmLabel: "Promote" });
-      if (!ok) return;
-
-      const success = await promoteStudent(currentDetailStudent, next);
-      if (!success) return;
-
-      showToast("Student promoted.", "success");
-      document.getElementById("editEducationLevel").value = currentDetailStudent.education_level;
-      populateYearLevelOptions(currentDetailStudent.education_level, currentDetailStudent.year_level);
-      renderStudentDetailBanner(currentDetailStudent);
-      applyStudentFilters();
     });
 
     (async () => {

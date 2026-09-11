@@ -8,65 +8,175 @@ function ccEscapeHtml(str) {
   return div.innerHTML;
 }
 
-// Printable invitation / notice letter — student data, the scheduled
-// date/time, and a signature line, same "open a new tab, print / save
-// as PDF" pattern as the Reports page's openPrintableReport(). Doubles
-// as the missed-session notice (set missed: true) so a parent has a
-// paper record that a session was missed and when the new one is.
-function openInvitationLetter(opts) {
-  const { studentName, section = "", counselorName = "", date, time, concern = "", missed = false } = opts;
+// Official school letterhead bands for the print pop-ups.
+//  - On screen: absolutely-pinned to the top/bottom of the 8.5x11 paper
+//    sheet preview.
+//  - In print: position:fixed so each printed page gets the header band at
+//    the top and the footer band at the bottom. The fixed bands overlay the
+//    in-flow spacer rows from schoolPrintLetterhead(), so long content
+//    never runs underneath them (that was the bug where multi-page text got
+//    hidden on later pages). Drop the actual images at images/school-header.png
+//    and images/school-footer.png; until they exist, the onerror hides the
+//    band so reports still print clean.
+function schoolPrintHeaderFooterHtml() {
+  return `
+    <div class="print-school-header"><img src="../images/school-header.png" alt="" onerror="this.parentElement.style.display='none'"></div>
+    <div class="print-school-footer"><img src="../images/school-footer.png" alt="" onerror="this.parentElement.style.display='none'"></div>`;
+}
+
+// In-flow spacer rows for the print sheet. In Chromium (Edge/Chrome) an
+// empty <thead>/<tfoot> repeats on every fragmented page and — being
+// in-flow — reserves vertical space, which keeps the report text clear of
+// the fixed header/footer bands below. The visible bands are the
+// .print-school-header/.print-school-footer divs (position:fixed in print,
+// so they appear on EVERY page INCLUDING a short last page, which repeating
+// <tfoot> alone does not). Each report template wraps its content in a
+// <table class="print-letterhead"> containing these spacer rows and a
+// <tbody> with the report body. On screen the table is display:contents
+// (see each template's CSS) so the preview layout stays exactly as before.
+function schoolPrintLetterhead() {
+  return `
+    <thead><tr><td></td></tr></thead>
+    <tfoot><tr><td></td></tr></tfoot>`;
+}
+
+// Printable Parent/Guardian's Visitation Slip — prefills whatever the
+// school already has on record (student, grade-section, schedule,
+// parent/guardian contact) and leaves the rest as blank writing lines
+// for handwriting. Same "open a new tab, print / save as PDF" pattern
+// as the Reports page's openPrintableReport().
+function openVisitationSlip(opts) {
+  const { studentName, gradeSection = "", parentGuardian = "", contactNumber = "", date, time, concern = "" } = opts;
 
   const win = window.open("", "_blank");
   if (!win) {
-    showToast("Please allow pop-ups to generate this letter.", "error");
+    showToast("Please allow pop-ups to generate this slip.", "error");
     return;
   }
-
-  const heading = missed ? "Missed Session — New Schedule Notice" : "Guidance Counseling Invitation";
-  const intro = missed
-    ? `This is to inform the parent/guardian of <strong>${ccEscapeHtml(studentName)}</strong> that the student did not attend their scheduled guidance counseling session. A new session has been set as follows:`
-    : `<strong>${ccEscapeHtml(studentName)}</strong> is invited to attend a guidance counseling session as follows:`;
 
   win.document.write(`
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>${ccEscapeHtml(heading)}</title>
+      <title>Parent/Guardian&rsquo;s Visitation Slip</title>
       <style>
-        body { font-family: Arial, sans-serif; color:#111827; padding:40px; max-width:680px; margin:0 auto; }
-        h1 { font-size:19px; margin:0 0 4px; text-align:center; }
-        .office { text-align:center; color:#6b7280; font-size:12px; margin-bottom:28px; }
-        .intro { font-size:14px; line-height:1.6; margin-bottom:18px; }
-        table.details { width:100%; border-collapse:collapse; margin-bottom:22px; }
-        table.details td { padding:7px 0; font-size:13.5px; border-bottom:1px solid #e5e7eb; }
-        table.details td:first-child { color:#6b7280; width:150px; }
-        .missed-note { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:20px; }
-        .sign-row { display:flex; justify-content:space-between; margin-top:64px; gap:40px; }
-        .sign-block { flex:1; text-align:center; }
-        .sign-line { border-top:1px solid #111827; margin-bottom:6px; padding-top:6px; font-size:12px; color:#374151; }
-        .print-btn { margin-bottom:24px; padding:8px 16px; border-radius:8px; border:none; background:#2563eb; color:#fff; font-weight:600; cursor:pointer; }
-        @media print { .print-btn { display:none; } }
+        html { background:#eef1f5; margin:0; padding:0; }
+        body { font-family: Arial, sans-serif; color:#111827; width:8.5in; min-height:11in; margin:24px auto; box-sizing:border-box; position:relative; background:#fff; box-shadow:0 2px 18px rgba(0,0,0,.28); padding:192px 40px 130px; }
+        .print-school-header, .print-school-footer { background:#fff; }
+        .print-school-header img, .print-school-footer img { width:100%; height:auto; display:block; }
+        .print-school-header { position:absolute; top:0; left:0; right:0; }
+        .print-school-footer { position:absolute; bottom:0; left:0; right:0; }
+        h1 { font-size:18px; margin:0 0 26px; text-align:center; }
+        .row { display:flex; align-items:flex-end; gap:10px; font-size:13.5px; margin-bottom:15px; }
+        .row label { white-space:nowrap; }
+        .fill { flex:1; min-height:17px; border-bottom:1px solid #111827; padding:0 4px; font-size:13px; overflow:hidden; }
+        .fill.grow2 { flex:2.2; }
+        .fill.fixed { flex:none; width:120px; }
+        .reason { font-size:13.5px; margin-bottom:16px; }
+        .reason .lines { margin-top:4px; }
+        .reason .line { border-bottom:1px solid #111827; min-height:21px; padding:0 4px; font-size:13px; overflow:visible; white-space:pre-wrap; overflow-wrap:break-word; word-break:break-word; }
+        .actions-title { font-size:13.5px; margin-bottom:8px; }
+        .actions { display:grid; grid-template-columns:1fr 1fr; gap:9px 28px; font-size:13px; margin-bottom:18px; }
+        .cb { display:inline-block; width:11px; height:11px; border:1px solid #111827; margin-right:7px; vertical-align:-1px; }
+        .privacy { font-size:12px; line-height:1.55; color:#374151; margin-top:4px; }
+        .privacy strong { color:#111827; }
+        .print-letterhead { display:contents; border-collapse:collapse; }
+        .print-letterhead > thead, .print-letterhead > tfoot { display:none; }
+        .print-letterhead > tbody { display:contents; }
+        .print-letterhead > tbody > tr { display:contents; }
+        .print-letterhead > tbody > tr > td { display:contents; }
+        .print-btn { position:fixed; top:12px; right:12px; z-index:20; padding:8px 16px; border-radius:8px; border:none; background:#2563eb; color:#fff; font-weight:600; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.25); }
+        @media screen and (max-width: 900px) { body { width:100%; min-height:auto; margin:0; box-shadow:none; } }
+        @page { size:8.5in 11in; margin:0; }
+        @media print {
+          .print-btn { display:none; }
+          html { background:#fff; }
+          body { width:auto; min-height:auto; margin:0; padding:0; box-shadow:none; position:static; }
+          .print-school-header { position:fixed; top:0; left:0; right:0; z-index:10; height:187px; overflow:hidden; }
+          .print-school-footer { position:fixed; bottom:0; left:0; right:0; z-index:10; height:100px; overflow:hidden; }
+          .print-letterhead { display:table; width:8.5in; border-collapse:collapse; }
+          .print-letterhead > thead { display:table-header-group; }
+          .print-letterhead > thead > tr { display:table-row; }
+          .print-letterhead > thead > tr > td { display:table-cell; height:187px; padding:0; border:none; }
+          .print-letterhead > tfoot { display:table-footer-group; }
+          .print-letterhead > tfoot > tr { display:table-row; }
+          .print-letterhead > tfoot > tr > td { display:table-cell; height:100px; padding:0; border:none; }
+          .print-letterhead > tbody { display:table-row-group; }
+          .print-letterhead > tbody > tr { display:table-row; }
+          .print-letterhead > tbody > tr > td { display:table-cell; vertical-align:top; padding:4px 40px 10px; border:none; }
+        }
       </style>
     </head>
     <body>
+      ${schoolPrintHeaderFooterHtml()}
       <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
-      <h1>${ccEscapeHtml(heading)}</h1>
-      <div class="office">Guidance Office</div>
-      <p class="intro">${intro}</p>
-      <table class="details">
-        <tr><td>Student</td><td>${ccEscapeHtml(studentName)}</td></tr>
-        <tr><td>Section</td><td>${ccEscapeHtml(section || "—")}</td></tr>
-        <tr><td>Date</td><td>${ccEscapeHtml(date)}</td></tr>
-        <tr><td>Time</td><td>${ccEscapeHtml(time)}</td></tr>
-        ${concern ? `<tr><td>Concern</td><td>${ccEscapeHtml(concern)}</td></tr>` : ""}
-        <tr><td>Counselor</td><td>${ccEscapeHtml(counselorName || "—")}</td></tr>
+      <table class="print-letterhead">
+        ${schoolPrintLetterhead()}
+        <tbody>
+          <tr>
+            <td>
+              <h1>Parent/Guardian&rsquo;s Visitation Slip</h1>
+
+              <div class="row">
+                <label>Name of Mother/Father/Guardian:</label>
+                <div class="fill grow2">${ccEscapeHtml(parentGuardian)}</div>
+                <label>Age:</label>
+                <div class="fill fixed"></div>
+              </div>
+              <div class="row">
+                <label>Date:</label>
+                <div class="fill">${ccEscapeHtml(date)}</div>
+                <label>Time:</label>
+                <div class="fill">${ccEscapeHtml(time)}</div>
+                <label>Contact No.:</label>
+                <div class="fill">${ccEscapeHtml(contactNumber)}</div>
+              </div>
+              <div class="row">
+                <label>Home Address:</label>
+                <div class="fill"></div>
+              </div>
+              <div class="row">
+                <label>Name of son/daughter:</label>
+                <div class="fill grow2">${ccEscapeHtml(studentName)}</div>
+                <label>Grade-Section:</label>
+                <div class="fill">${ccEscapeHtml(gradeSection)}</div>
+              </div>
+              <div class="row">
+                <label>Child&rsquo;s Class Adviser:</label>
+                <div class="fill"></div>
+              </div>
+              <div class="row">
+                <label>Number of Conference with the Class Adviser:</label>
+                <div class="fill"></div>
+                <label>Date of Last Conference:</label>
+                <div class="fill"></div>
+              </div>
+
+              <div class="reason">
+                Reason for Visit:
+                <div class="lines">
+                  <div class="line">${ccEscapeHtml(concern)}</div>
+                  <div class="line"></div>
+                  <div class="line"></div>
+                </div>
+              </div>
+
+              <div class="actions-title">Action Taken:</div>
+              <div class="actions">
+                <div><span class="cb"></span>referral to the class adviser</div>
+                <div><span class="cb"></span>referral to the concerned teacher</div>
+                <div><span class="cb"></span>referral to the JHS Coordinator</div>
+                <div><span class="cb"></span>referral to the SHS Coordinator</div>
+                <div><span class="cb"></span>referral to the Discipline Officer</div>
+                <div><span class="cb"></span>referral to Registered Guidance Counselor</div>
+              </div>
+
+              <p class="privacy"><strong>Data Privacy Act:</strong> All data gathered will be kept confidential in compliance with Republic Act 10173 otherwise known as the Data Privacy Act of 2012 and shall only be used for school record purposes and shall be accessed only by authorized school personnel.</p>
+            </td>
+          </tr>
+        </tbody>
       </table>
-      ${missed ? `<div class="missed-note">Please make sure the student attends the new schedule above.</div>` : ""}
-      <div class="sign-row">
-        <div class="sign-block"><div class="sign-line">Counselor's Signature over Printed Name</div></div>
-        <div class="sign-block"><div class="sign-line">Parent/Guardian Signature over Printed Name</div></div>
-      </div>
     </body>
     </html>
   `);
@@ -508,11 +618,68 @@ function checkInactivity() {
 recordActivity();
 setInterval(checkInactivity, 30 * 1000);
 
+// Fills every .avatar-initials element (the sidebar header + profile page)
+// with the user's initials, e.g. "Aaron Punsalan" -> "AP". Named avatars use
+// first-letter-of-first + first-letter-of-last; single-word names use the
+// Fills every .avatar-initials element (the sidebar header + profile page)
+// with the user's initials derived from the NAME fields, e.g. "Juan" +
+// "Dela Cruz" -> "JD". A single-word name falls back to its first two letters.
+function setUserAvatar(firstName, lastName) {
+  const els = document.querySelectorAll(".avatar-initials");
+  if (!els.length) return;
+  const first = String(firstName || "").trim();
+  const last = String(lastName || "").trim();
+  let initials;
+  if (first) {
+    initials = first[0] + (last ? last[0] : (first[1] || ""));
+  } else if (last) {
+    initials = last.slice(0, 2);
+  } else {
+    return;
+  }
+  els.forEach((el) => {
+    el.textContent = initials.toUpperCase();
+  });
+}
+
+// Force the current user's access token onto the Edge Function client
+// before any function call. supabase-js can otherwise fall back to the
+// anon key as the Authorization header, which edge functions reject
+// (auth.getUser() returns 401 "Not authenticated"). Returns true when a
+// fresh token is attached, false when the user should be sent to login.
+async function attachSession() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) {
+    window.location.href = "../index.html?reason=required";
+    return false;
+  }
+
+  let accessToken = session.access_token;
+  if (session.expires_at && session.expires_at * 1000 < Date.now() + 60_000) {
+    const { data: refreshed, error } = await supabaseClient.auth.refreshSession();
+    if (error || !refreshed?.session) {
+      window.location.href = "../index.html?reason=timeout";
+      return false;
+    }
+    accessToken = refreshed.session.access_token;
+  }
+
+  supabaseClient.functions.setAuth(accessToken);
+  return true;
+}
+
 async function requireCounselorAuth() {
   const cachedName = sessionStorage.getItem("counselorName");
   if (cachedName) {
     const nameEl = document.getElementById("sidebarName");
     if (nameEl) nameEl.textContent = cachedName;
+    const cachedInitials = sessionStorage.getItem("counselorInitials");
+    if (cachedInitials) {
+      document.querySelectorAll(".avatar-initials").forEach((el) => { el.textContent = cachedInitials; });
+    } else {
+      const parts = cachedName.trim().split(/\s+/).filter(Boolean);
+      setUserAvatar(parts[0] || "", parts.slice(1).join(" "));
+    }
   }
 
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -548,6 +715,9 @@ async function requireCounselorAuth() {
   const fullName = `${counselor.first_name} ${counselor.last_name}`;
   const nameEl = document.getElementById("sidebarName");
   if (nameEl) nameEl.textContent = fullName;
+  setUserAvatar(counselor.first_name, counselor.last_name);
+  const initialsEl = document.querySelector(".avatar-initials");
+  if (initialsEl) sessionStorage.setItem("counselorInitials", initialsEl.textContent);
   sessionStorage.setItem("counselorName", fullName);
 
   initNotifications(session.user.id);

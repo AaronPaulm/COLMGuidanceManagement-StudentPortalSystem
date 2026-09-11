@@ -3,10 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cases</title>
+    
+        <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
       <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .capture-card { border:1px dashed #cbd5e1; border-radius:12px; padding:14px; margin-top:14px; background:#fafbfc; }
+    .capture-card-head { display:flex; align-items:center; gap:10px; margin-bottom:4px; }
+    .capture-card-head i { color:#2456b3; font-size:16px; width:20px; text-align:center; }
+    .capture-card-head .cct { font-weight:600; color:#1f2937; font-size:14px; }
+    .capture-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:8px; }
+    .capture-files { font-size:12px; color:#6b7280; width:100%; }
+    .capture-card .hint { font-size:12px; color:#6b7280; margin-top:2px; }
+    .case-signed-upload { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:8px; }
+    .case-signed-upload .hint { width:100%; margin-bottom:2px; }
+    .camera-preview-wrap { background:#000; border-radius:12px; overflow:hidden; }
+    .camera-preview-wrap video { width:100%; max-height:420px; display:block; }
+    .capture-card-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 14px; align-items:start; }
+    @media (max-width:640px){ .capture-card-grid { grid-template-columns:1fr; } }
+  </style>
 </head>
 <body>
       <!-- Sidebar -->
@@ -14,7 +30,7 @@
 
         <header class="profile">
 
-            <img src="../images/COLM LOGO.png" alt="Counselor Profile">
+            <div class="avatar-initials" id="userAvatar"></div>
 
             <div class="info">
                 <h4 id="sidebarName"></h4>
@@ -67,9 +83,16 @@
                 </li>
 
                 <li class="desktop-only">
+                    <a href="counselor-visit-logs.html">
+                        <i class="fa-solid fa-clipboard-list"></i>
+                        <span>Visit Logs</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
                     <a href="counselor-forms.html">
                         <i class="fa-solid fa-book"></i>
-                        <span>Forms &amp; Interventions</span>
+                        <span>Forms</span>
                     </a>
                 </li>
 
@@ -112,7 +135,9 @@
 
         <a href="counselor-cases.html"><i class="fa-solid fa-folder-open"></i> Cases</a>
 
-        <a href="counselor-forms.html"><i class="fa-solid fa-book"></i> Forms &amp; Interventions</a>
+        <a href="counselor-visit-logs.html"><i class="fa-solid fa-clipboard-list"></i> Visit Logs</a>
+
+        <a href="counselor-forms.html"><i class="fa-solid fa-book"></i> Forms</a>
 
         <a href="counselor-reports.html"><i class="fa-solid fa-chart-line"></i> Reports</a>
 
@@ -202,6 +227,37 @@
                     <div class="form-field" style="margin-top:14px;">
                         <label for="caseRecommendationInput">Recommendation</label>
                         <textarea id="caseRecommendationInput" rows="2"></textarea>
+                    </div>
+
+                    <div class="capture-card-grid">
+                    <div class="capture-card" style="margin-top:14px;">
+                        <div class="capture-card-head">
+                            <i class="fa-solid fa-paperclip"></i>
+                            <span class="cct">Proof / Evidence <span style="font-weight:400;color:#6b7280;">(optional)</span></span>
+                        </div>
+                        <div class="capture-row">
+                            <input type="file" id="caseProofInput" style="display:none" multiple accept="image/*,.pdf,.doc,.docx">
+                            <input type="file" id="caseProofCameraInput" style="display:none" accept="image/*" capture="environment">
+                            <button type="button" class="btn btn-outline btn-sm" data-open="caseProofInput"><i class="fa-solid fa-folder-open"></i> Upload File</button>
+                            <button type="button" class="btn btn-outline btn-sm" data-camera="caseProof"><i class="fa-solid fa-camera"></i> Take Photo</button>
+                            <span class="capture-files" id="caseProofFiles"></span>
+                        </div>
+                        <div class="hint">Photos or documents — captured or scanned, up to 10MB each.</div>
+                    </div>
+                    <div class="capture-card" style="margin-top:14px;">
+                        <div class="capture-card-head">
+                            <i class="fa-solid fa-file-signature"></i>
+                            <span class="cct">Signed Document <span style="font-weight:400;color:#6b7280;">(optional)</span></span>
+                        </div>
+                        <div class="capture-row">
+                            <input type="file" id="caseSignedInput" style="display:none" multiple accept="image/*,.pdf,.doc,.docx">
+                            <input type="file" id="caseSignedCameraInput" style="display:none" accept="image/*" capture="environment">
+                            <button type="button" class="btn btn-outline btn-sm" data-open="caseSignedInput"><i class="fa-solid fa-folder-open"></i> Upload File</button>
+                            <button type="button" class="btn btn-outline btn-sm" data-camera="caseSigned"><i class="fa-solid fa-camera"></i> Take Photo</button>
+                            <span class="capture-files" id="caseSignedFiles"></span>
+                        </div>
+                        <div class="hint">Scanned or photographed copy of the signed slip — up to 10MB each.</div>
+                    </div>
                     </div>
 
                     <div class="form-actions">
@@ -301,15 +357,62 @@
                             <label for="sessionRecommendationInput">Recommendation</label>
                             <textarea id="sessionRecommendationInput" rows="2"></textarea>
                         </div>
-                        <div class="form-field" style="margin-top:14px;">
-                            <label for="sessionProofInput">Proof / Evidence (optional)</label>
-                            <input type="file" id="sessionProofInput" multiple accept="image/*,.pdf,.doc,.docx">
-                            <span class="hint">Photos or documents — up to 10MB each.</span>
+                        <div class="capture-card-grid">
+                        <div class="capture-card" style="margin-top:14px;">
+                            <div class="capture-card-head">
+                                <i class="fa-solid fa-paperclip"></i>
+                                <span class="cct">Proof / Evidence <span style="font-weight:400;color:#6b7280;">(optional)</span></span>
+                            </div>
+                            <div class="capture-row">
+                                <input type="file" id="sessionProofInput" style="display:none" multiple accept="image/*,.pdf,.doc,.docx">
+                                <input type="file" id="sessionProofCameraInput" style="display:none" accept="image/*" capture="environment">
+                                <button type="button" class="btn btn-outline btn-sm" data-open="sessionProofInput"><i class="fa-solid fa-folder-open"></i> Upload File</button>
+                                <button type="button" class="btn btn-outline btn-sm" data-camera="proof"><i class="fa-solid fa-camera"></i> Take Photo</button>
+                                <span class="capture-files" id="sessionProofFiles"></span>
+                            </div>
+                            <div class="hint">Photos or documents — captured or scanned, up to 10MB each.</div>
+                        </div>
+                        <div class="capture-card" style="margin-top:14px;">
+                            <div class="capture-card-head">
+                                <i class="fa-solid fa-file-signature"></i>
+                                <span class="cct">Signed Document <span style="font-weight:400;color:#6b7280;">(optional)</span></span>
+                            </div>
+                            <div class="capture-row">
+                                <input type="file" id="sessionSignedInput" style="display:none" multiple accept="image/*,.pdf,.doc,.docx">
+                                <input type="file" id="sessionSignedCameraInput" style="display:none" accept="image/*" capture="environment">
+                                <button type="button" class="btn btn-outline btn-sm" data-open="sessionSignedInput"><i class="fa-solid fa-folder-open"></i> Upload File</button>
+                                <button type="button" class="btn btn-outline btn-sm" data-camera="signed"><i class="fa-solid fa-camera"></i> Take Photo</button>
+                                <span class="capture-files" id="sessionSignedFiles"></span>
+                            </div>
+                            <div class="hint">Scanned or photographed copy of the signed slip — up to 10MB each.</div>
+                        </div>
                         </div>
                         <div class="form-actions">
                             <button type="submit" class="btn btn-primary" id="addSessionBtn">Add Session</button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Device Camera modal (capture a photo on desktop + mobile) -->
+    <div class="modal-overlay" id="cameraModalOverlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Take Photo</h3>
+                <button type="button" class="modal-close" id="cameraCloseBtn" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="camera-preview-wrap">
+                    <video id="cameraPreview" autoplay playsinline muted></video>
+                    <p class="hint" id="cameraError" style="display:none; text-align:center;"></p>
+                </div>
+                <div class="form-actions" style="justify-content:center; gap:10px; margin-top:14px;">
+                    <button type="button" class="btn btn-outline" id="cameraCancelBtn">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="cameraCaptureBtn" disabled>Capture</button>
                 </div>
             </div>
         </div>
@@ -513,7 +616,7 @@
       const { data, error } = await supabaseClient
         .from("cases")
         .select(
-          "case_id, nature_of_incident, status, school_year, file_number, created_at, students(first_name, last_name, section, user_id), case_sessions(session_id, session_date, action_taken, session_note, recommendation, created_at, appointment_id, case_session_attachments(attachment_id, file_path, file_name)), interventions(intervention_id, title, file_path, file_name, is_visible_to_student, created_at)"
+          "case_id, nature_of_incident, status, school_year, file_number, created_at, students(first_name, last_name, section, user_id), case_sessions(session_id, session_date, action_taken, session_note, recommendation, created_at, appointment_id, case_session_attachments(attachment_id, file_path, file_name), case_signed_documents(document_id, file_path, file_name)), interventions(intervention_id, title, file_path, file_name, is_visible_to_student, created_at)"
         )
         .eq("counselor_id", currentCounselor.counselor_id)
         .order("created_at", { ascending: false });
@@ -558,6 +661,19 @@
       const note = document.getElementById("caseNoteInput").value.trim();
       const recommendation = document.getElementById("caseRecommendationInput").value.trim();
 
+      const caseProofInput = document.getElementById("caseProofInput");
+      const caseProofCameraInput = document.getElementById("caseProofCameraInput");
+      const caseSignedInput = document.getElementById("caseSignedInput");
+      const caseSignedCameraInput = document.getElementById("caseSignedCameraInput");
+      const caseFiles = [...Array.from(caseProofInput.files || []), ...Array.from(caseProofCameraInput.files || []), ...cameraQueue.caseProof];
+      const caseSignedFiles = [...Array.from(caseSignedInput.files || []), ...Array.from(caseSignedCameraInput.files || []), ...cameraQueue.caseSigned];
+      const caseAllFiles = [...caseFiles, ...caseSignedFiles];
+      const oversized = caseAllFiles.find((f) => f.size > 10 * 1024 * 1024);
+      if (oversized) {
+        showToast(`"${oversized.name}" is over 10MB — please use a smaller file.`, "error");
+        return;
+      }
+
       const saveBtn = document.getElementById("newCaseSaveBtn");
       saveBtn.disabled = true;
       saveBtn.textContent = "Creating…";
@@ -581,18 +697,68 @@
         return;
       }
 
-      if (action || note || recommendation) {
-        const { error: sessionError } = await supabaseClient.from("case_sessions").insert({
-          case_id: newCase.case_id,
-          action_taken: action || null,
-          session_note: note || null,
-          recommendation: recommendation || null,
-        });
-        if (sessionError) console.error(sessionError);
+      let session = null;
+      if (action || note || recommendation || caseAllFiles.length) {
+        const { data: sess, error: sessionError } = await supabaseClient
+          .from("case_sessions")
+          .insert({
+            case_id: newCase.case_id,
+            action_taken: action || null,
+            session_note: note || null,
+            recommendation: recommendation || null,
+          })
+          .select()
+          .single();
+        if (sessionError) {
+          console.error(sessionError);
+        } else {
+          session = sess;
+        }
+      }
+
+      if (session && caseFiles.length) {
+        saveBtn.textContent = "Uploading files…";
+        for (const file of caseFiles) {
+          const path = `${newCase.case_id}/${session.session_id}/${Date.now()}-${file.name}`;
+          const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file);
+          if (uploadError) {
+            showToast(`Case saved, but "${file.name}" failed to upload: ` + uploadError.message, "error");
+            console.error(uploadError);
+            continue;
+          }
+          const { error: attachError } = await supabaseClient.from("case_session_attachments").insert({
+            session_id: session.session_id,
+            file_path: path,
+            file_name: file.name,
+          });
+          if (attachError) console.error(attachError);
+        }
+      }
+
+      if (session && caseSignedFiles.length) {
+        saveBtn.textContent = "Uploading signed documents…";
+        for (const file of caseSignedFiles) {
+          const path = `${newCase.case_id}/${session.session_id}/signed/${Date.now()}-${file.name}`;
+          const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file);
+          if (uploadError) {
+            showToast(`Case saved, but "${file.name}" failed to upload: ` + uploadError.message, "error");
+            console.error(uploadError);
+            continue;
+          }
+          const { error: attachError } = await supabaseClient.from("case_signed_documents").insert({
+            session_id: session.session_id,
+            file_path: path,
+            file_name: file.name,
+          });
+          if (attachError) console.error(attachError);
+        }
       }
 
       saveBtn.disabled = false;
       saveBtn.textContent = "Create Case";
+      resetCaptureGroup("caseProof");
+      resetCaptureGroup("caseSigned");
+      document.getElementById("newCaseForm").reset();
       closeNewCaseModal();
       await loadCases();
     });
@@ -615,6 +781,30 @@
           </div>`
         : "";
 
+      const signedDocs = s.case_signed_documents || [];
+      const signedHtml = `
+        <div class="case-timeline-row case-attachments-row">
+          <strong>Signed Documents:</strong>
+          <div class="attachment-chip-list">
+            ${
+              signedDocs.length
+                ? signedDocs
+                    .map(
+                      (d) =>
+                        `<button type="button" class="attachment-chip" data-path="${escapeHtml(d.file_path)}"><i class="fa-solid fa-file-signature"></i> ${escapeHtml(d.file_name)}</button>`
+                    )
+                    .join("")
+                : `<span class="hint">None yet.</span>`
+            }
+          </div>
+        </div>
+        <div class="case-signed-upload">
+          <span class="hint">Attach a signed copy for this session:</span>
+          <input type="file" class="signed-add" data-session="${s.session_id}" style="display:none" accept="image/*,.pdf,.doc,.docx">
+          <button type="button" class="btn btn-outline btn-sm" data-open-signed="${s.session_id}" data-mode="file"><i class="fa-solid fa-folder-open"></i> Upload File</button>
+          <button type="button" class="btn btn-outline btn-sm" data-signed-cam="${s.session_id}"><i class="fa-solid fa-camera"></i> Take Photo</button>
+        </div>`;
+
       return `
         <div class="case-timeline-item">
           <div class="case-timeline-date">${formatDate(s.session_date || s.created_at)}</div>
@@ -622,7 +812,8 @@
           ${s.session_note ? `<div class="case-timeline-row"><strong>Note:</strong> ${escapeHtml(s.session_note)}</div>` : ""}
           ${s.recommendation ? `<div class="case-timeline-row"><strong>Recommendation:</strong> ${escapeHtml(s.recommendation)}</div>` : ""}
           ${attachmentsHtml}
-          ${!s.action_taken && !s.session_note && !s.recommendation ? `<div class="case-timeline-row">Case opened.</div>` : ""}
+          ${signedHtml}
+          ${!s.action_taken && !s.session_note && !s.recommendation && !attachments.length && !signedDocs.length ? `<div class="case-timeline-row">Case opened.</div>` : ""}
         </div>
       `;
     }
@@ -724,6 +915,59 @@
       timeline.querySelectorAll(".attachment-chip").forEach((chip) => {
         chip.addEventListener("click", () => openAttachment(chip.dataset.path));
       });
+
+      // Retroactive signed-document attach: the per-session "Upload File"
+      // button opens the hidden input (any file type), and "Take Photo"
+      // opens the device camera — either way the file/blob is uploaded and
+      // recorded against that session on the spot.
+      const signedUpload = async (file, sessionId) => {
+        if (!file) return;
+        if (file.size > 10 * 1024 * 1024) {
+          showToast(`"${file.name}" is over 10MB — please use a smaller file.`, "error");
+          return;
+        }
+        showToast("Uploading signed document…", "info");
+        const path = `${currentCaseId}/${sessionId}/signed/${Date.now()}-${file.name}`;
+        const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file);
+        if (uploadError) {
+          showToast(`Upload failed: ` + uploadError.message, "error");
+          console.error(uploadError);
+          return;
+        }
+        const { error: attachError } = await supabaseClient.from("case_signed_documents").insert({
+          session_id: sessionId,
+          file_path: path,
+          file_name: file.name,
+        });
+        if (attachError) {
+          showToast("Uploaded, but couldn't save the record: " + attachError.message, "error");
+          console.error(attachError);
+          return;
+        }
+        await loadCases();
+        const reloaded = allCasesById[currentCaseId];
+        if (reloaded) renderCaseDetail(reloaded);
+        showToast("Signed document attached.", "success");
+      };
+
+      timeline.querySelectorAll("[data-open-signed]").forEach((btn) => {
+        const sessionId = Number(btn.dataset.openSigned);
+        const input = timeline.querySelector(`.signed-add[data-session="${sessionId}"]`);
+        if (!input) return;
+        btn.addEventListener("click", () => input.click());
+        input.addEventListener("change", () => {
+          const file = input.files && input.files[0];
+          input.value = "";
+          signedUpload(file, sessionId);
+        });
+      });
+
+      timeline.querySelectorAll("[data-signed-cam]").forEach((btn) => {
+        const sessionId = Number(btn.dataset.signedCam);
+        btn.addEventListener("click", () => {
+          openCameraModal((blob) => signedUpload(blob, sessionId));
+        });
+      });
     }
 
     function openCaseDetail(caseId) {
@@ -765,6 +1009,145 @@
       await loadCases();
     });
 
+    // Capture rows: "Upload File" opens the hidden browse input; "Take Photo"
+    // opens the device camera via getUserMedia. Captured photos are queued in
+    // cameraQueue[key] so each form's submit handler uploads them like files.
+    const cameraQueue = { proof: [], signed: [], caseProof: [], caseSigned: [] };
+    let cameraStream = null;
+    let cameraOnCapture = null;
+
+    // Map a capture key to its three element ids. Keys are "proof"/"signed"
+    // (Add Session form) and "caseProof"/"caseSigned" (Create Case form).
+    function captureIds(key) {
+      const prefix = key.startsWith("case") ? "case" : "session";
+      const cap = key.replace(/^case/, "").replace(/^\w/, (c) => c.toUpperCase());
+      return {
+        browse: `${prefix}${cap}Input`,
+        camera: `${prefix}${cap}CameraInput`,
+        label: `${prefix}${cap}Files`,
+      };
+    }
+
+    function resetCaptureGroup(key) {
+      const ids = captureIds(key);
+      document.getElementById(ids.camera).value = "";
+      document.getElementById(ids.browse).value = "";
+      cameraQueue[key] = [];
+      if (document.getElementById(ids.label)) document.getElementById(ids.label).textContent = "";
+    }
+
+    document.querySelectorAll("[data-open]").forEach((btn) => {
+      const input = document.getElementById(btn.dataset.open);
+      if (input) btn.addEventListener("click", () => input.click());
+    });
+
+    function updateCaptureSummary(key) {
+      const ids = captureIds(key);
+      const count =
+        (document.getElementById(ids.browse).files?.length || 0) +
+        (document.getElementById(ids.camera).files?.length || 0) +
+        (cameraQueue[key].length || 0);
+      const label = document.getElementById(ids.label);
+      if (label) label.textContent = count
+        ? `${count} file${count === 1 ? "" : "s"} selected`
+        : "";
+    }
+
+    Object.keys(cameraQueue).forEach((key) => {
+      const ids = captureIds(key);
+      const browse = document.getElementById(ids.browse);
+      const camera = document.getElementById(ids.camera);
+      if (browse) browse.addEventListener("change", () => updateCaptureSummary(key));
+      if (camera) camera.addEventListener("change", () => updateCaptureSummary(key));
+    });
+
+    // ---- Device camera (getUserMedia) ----
+
+    async function openCameraModal(onCapture) {
+      const video = document.getElementById("cameraPreview");
+      const errEl = document.getElementById("cameraError");
+      const overlay = document.getElementById("cameraModalOverlay");
+      cameraOnCapture = onCapture;
+
+      // Show the modal first so users always see feedback, even on failure.
+      overlay.classList.add("show");
+
+      if (!window.isSecureContext) {
+        errEl.textContent =
+          "Camera access is blocked by the browser: this page isn't served over a secure connection (HTTPS). Secure connections (HTTPS or localhost) are required for the camera.";
+        errEl.style.display = "block";
+        return;
+      }
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        errEl.textContent = "Camera is not supported in this browser.";
+        errEl.style.display = "block";
+        return;
+      }
+
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+          audio: false,
+        });
+        video.srcObject = cameraStream;
+        document.getElementById("cameraCaptureBtn").disabled = false;
+        errEl.style.display = "none";
+      } catch (err) {
+        errEl.textContent =
+          "Couldn't access the camera. Check that it's not in use by another app, and allow camera permission. (" +
+          (err.message || err.name) +
+          ")";
+        errEl.style.display = "block";
+      }
+    }
+
+    function closeCameraModal() {
+      document.getElementById("cameraModalOverlay").classList.remove("show");
+      const video = document.getElementById("cameraPreview");
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((t) => t.stop());
+        cameraStream = null;
+      }
+      video.srcObject = null;
+      document.getElementById("cameraCaptureBtn").disabled = true;
+      cameraOnCapture = null;
+    }
+
+    function capturePhoto() {
+      const video = document.getElementById("cameraPreview");
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth || 1280;
+      canvas.height = video.videoHeight || 960;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        if (!blob || !cameraOnCapture) return;
+        const file = new File([blob], `photo-${Date.now()}.jpg`, { type: blob.type || "image/jpeg" });
+        cameraOnCapture(file);
+        cameraOnCapture = null;
+        closeCameraModal();
+      }, "image/jpeg", 0.9);
+    }
+
+    document.getElementById("cameraCloseBtn").addEventListener("click", closeCameraModal);
+    document.getElementById("cameraCancelBtn").addEventListener("click", closeCameraModal);
+    document.getElementById("cameraModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "cameraModalOverlay") closeCameraModal();
+    });
+    document.getElementById("cameraCaptureBtn").addEventListener("click", capturePhoto);
+
+    // Take Photo buttons on the Add Session form queue the captured photo.
+    document.querySelectorAll("[data-camera]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const key = btn.dataset.camera;
+        openCameraModal((file) => {
+          cameraQueue[key].push(file);
+          updateCaptureSummary(key);
+        });
+      });
+    });
+
     document.getElementById("addSessionForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       if (!currentCaseId) return;
@@ -773,8 +1156,14 @@
       const note = document.getElementById("sessionNoteInput").value.trim();
       const recommendation = document.getElementById("sessionRecommendationInput").value.trim();
 
-      const files = Array.from(document.getElementById("sessionProofInput").files || []);
-      const oversized = files.find((f) => f.size > 10 * 1024 * 1024);
+      const proofInput = document.getElementById("sessionProofInput");
+      const proofCameraInput = document.getElementById("sessionProofCameraInput");
+      const signedInput = document.getElementById("sessionSignedInput");
+      const signedCameraInput = document.getElementById("sessionSignedCameraInput");
+      const files = [...Array.from(proofInput.files || []), ...Array.from(proofCameraInput.files || []), ...cameraQueue.proof];
+      const signedFiles = [...Array.from(signedInput.files || []), ...Array.from(signedCameraInput.files || []), ...cameraQueue.signed];
+      const allFiles = [...files, ...signedFiles];
+      const oversized = allFiles.find((f) => f.size > 10 * 1024 * 1024);
       if (oversized) {
         showToast(`"${oversized.name}" is over 10MB — please use a smaller file.`, "error");
         return;
@@ -824,10 +1213,33 @@
         }
       }
 
+      if (signedFiles.length) {
+        btn.textContent = "Uploading signed documents…";
+        for (const file of signedFiles) {
+          const path = `${currentCaseId}/${session.session_id}/signed/${Date.now()}-${file.name}`;
+          const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file);
+
+          if (uploadError) {
+            showToast(`Session saved, but "${file.name}" failed to upload: ` + uploadError.message, "error");
+            console.error(uploadError);
+            continue;
+          }
+
+          const { error: attachError } = await supabaseClient.from("case_signed_documents").insert({
+            session_id: session.session_id,
+            file_path: path,
+            file_name: file.name,
+          });
+          if (attachError) console.error(attachError);
+        }
+      }
+
       btn.disabled = false;
       btn.textContent = "Add Session";
 
       document.getElementById("addSessionForm").reset();
+      resetCaptureGroup("proof");
+      resetCaptureGroup("signed");
       await loadCases();
       renderCaseDetail(allCasesById[currentCaseId]);
     });
