@@ -56,6 +56,22 @@
     document.addEventListener("DOMContentLoaded", async () => {
       const params = new URLSearchParams(location.search);
       const reason = params.get("reason");
+      const fragParams = new URLSearchParams(location.hash.slice(1));
+
+      // Password-reset recovery links must land on reset-password.html, never
+      // on this sign-in page. Supabase's emailed link either arrives as a
+      // new-style ?token_hash&type=recovery URL or as a classic fragment
+      // session (type=recovery), and an expired/used link arrives with #error=
+      // instead. Detect any of those and hand the URL straight to the reset
+      // page so it can show the password form or the expired-link panel.
+      const isRecoveryLanding =
+        (params.get("token_hash") && params.get("type") === "recovery") ||
+        fragParams.get("type") === "recovery";
+
+      if (isRecoveryLanding || location.hash.startsWith("#error=")) {
+        window.location.replace("reset-password.html" + location.search + location.hash);
+        return;
+      }
 
       // Already logged in (e.g. opened a new tab while signed in
       // elsewhere)? Skip straight to the right dashboard instead of
