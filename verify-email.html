@@ -27,7 +27,7 @@
 
       <div id="verifyNotice" class="banner" style="display:none;"></div>
 
-      <form id="verifyEmailForm" class="auth-card">
+      <form id="verifyEmailForm" class="auth-card" data-submit-cooldown="8000">
         <p class="verify-intro">
           Enter a personal email address (e.g. Gmail, Yahoo). We'll use it to send you
           password-reset links and important notifications.
@@ -180,11 +180,14 @@
         "Connect a personal email to your account so we can reach you.";
 
       async function requestVerificationCode(email, { fromResend = false } = {}) {
+        const sendBtn = document.getElementById("verifySendBtn");
+        const resendBtn = document.getElementById("resendOtpBtn");
+
+        if (sendBtn.disabled) return false; // already sending — ignore resubmits
+
         verifyError.style.display = "none";
         otpError.style.display = "none";
 
-        const sendBtn = document.getElementById("verifySendBtn");
-        const resendBtn = document.getElementById("resendOtpBtn");
         sendBtn.disabled = true;
         sendBtn.textContent = "Sending code…";
         resendBtn.disabled = true;

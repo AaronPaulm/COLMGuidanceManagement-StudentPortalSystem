@@ -1205,10 +1205,16 @@
       }
     }
 
+    let resetPasswordBusy = false;
+
     document.getElementById("resetPasswordBtn").addEventListener("click", async () => {
       if (!currentDetailStudent) return;
 
+      if (resetPasswordBusy) return; // already working — ignore double clicks
+      resetPasswordBusy = true;
+
       if (!currentDetailStudent.user_id) {
+        resetPasswordBusy = false;
         showToast("This student has no linked login account.", "error");
         return;
       }
@@ -1217,9 +1223,15 @@
         `Reset the password for ${currentDetailStudent.first_name} ${currentDetailStudent.last_name}? Their current password will stop working immediately.`,
         { confirmLabel: "Reset Password", danger: true }
       );
-      if (!ok) return;
+      if (!ok) {
+        resetPasswordBusy = false;
+        return;
+      }
 
-      if (!(await attachSession())) return;
+      if (!(await attachSession())) {
+        resetPasswordBusy = false;
+        return;
+      }
 
       const { data, error } = await supabaseClient.functions.invoke("reset-student-password", {
         body: { userId: currentDetailStudent.user_id },
@@ -1230,9 +1242,11 @@
         const detail = data?.error || error?.context?.data?.error || "";
         showToast(`Couldn't reset password${status}: ${detail || error.message}`, "error");
         console.error(error || data?.error, error?.context?.data);
+        resetPasswordBusy = false;
         return;
       }
 
+      resetPasswordBusy = false;
       document.getElementById("passwordResetValue").textContent = data.tempPassword;
       document.getElementById("passwordResetModalOverlay").classList.add("show");
     });
