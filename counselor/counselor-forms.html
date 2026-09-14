@@ -355,6 +355,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/supabaseClient.js"></script>
+  <script src="../js/table-column-resize.js"></script>
   <script src="../js/counselor-common.js"></script>
   <script src="../js/pagination.js"></script>
   <script>
@@ -396,6 +397,72 @@
     function currentQuestions() {
       return sections[currentSectionIndex].questions;
     }
+
+    // ---- Form-builder draft (localStorage autosave) ---------------
+    // Automatically backs up an in-progress NEW form so a stray reload or
+    // an accidental modal close never loses a counselor's work. Drafts
+    // only ever exist for brand-new forms (editingFormId stays null) —
+    // existing forms already persist in the database, so nothing here can
+    // shadow real saved data. A draft is wiped the moment the form is
+    // actually saved.
+    function builderDraftKey() {
+      return currentCounselor ? `portal.builderDraft.${currentCounselor.counselor_id}` : "";
+    }
+
+    function saveBuilderDraftNow() {
+      if (editingFormId) return; // existing form = DB is source of truth
+      const formName = document.getElementById("formNameInput").value.trim();
+      const formDesc = document.getElementById("formDescInput").value.trim();
+      const isBlank =
+        !formName && sections.length === 1 && sections[0].questions.length === 0 && !sections[0].section_title.trim();
+      if (isBlank) {
+        clearBuilderDraft();
+        return;
+      }
+      try {
+        localStorage.setItem(
+          builderDraftKey(),
+          JSON.stringify({ formName, formDesc, sections, currentSectionIndex })
+        );
+      } catch (e) {
+        /* storage unavailable — drafts are optional */
+      }
+    }
+
+    function loadBuilderDraft() {
+      const key = builderDraftKey();
+      if (!key) return null;
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function clearBuilderDraft() {
+      const key = builderDraftKey();
+      if (!key) return;
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        /* ignore */
+      }
+    }
+
+    let builderSaveTimer = null;
+    function scheduleBuilderSave() {
+      clearTimeout(builderSaveTimer);
+      builderSaveTimer = setTimeout(saveBuilderDraftNow, 800);
+    }
+
+    // One delegated listener over the whole builder modal covers every
+    // editing surface (name, description, section titles, questions,
+    // and the add/remove/move buttons) — no need to touch each handler.
+    const builderOverlay = document.getElementById("formModalOverlay");
+    ["input", "change", "click"].forEach((evt) =>
+      builderOverlay.addEventListener(evt, scheduleBuilderSave)
+    );
 
     const FIELD_TYPES = [
       { value: "text", label: "Short answer" },
@@ -722,6 +789,28 @@
         }
       } else {
         sections = [blankSection()];
+      }
+
+      // Brand-new forms get an automatic restore: if the counselor left a
+      // builder draft behind (autosaved every ~800ms while typing), offer
+      // it back instead of silently starting from a bare blank.
+      if (!form && !editingFormId) {
+        const saved = loadBuilderDraft();
+        if (saved && Array.isArray(saved.sections) && saved.sections.length) {
+          const ok = await confirmDialog("You have an unsaved draft for a new form. Resume it?", {
+            confirmLabel: "Resume",
+            cancelLabel: "Discard",
+          });
+          if (ok) {
+            document.getElementById("formNameInput").value = saved.formName || "";
+            document.getElementById("formDescInput").value = saved.formDesc || "";
+            sections = saved.sections;
+            currentSectionIndex = Math.min(saved.currentSectionIndex || 0, sections.length - 1);
+            showToast("Resumed your draft.", "info");
+          } else {
+            clearBuilderDraft();
+          }
+        }
       }
 
       currentSectionIndex = 0;

@@ -239,6 +239,7 @@
 
       <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/supabaseClient.js"></script>
+  <script src="../js/table-column-resize.js"></script>
   <script src="../js/student-common.js"></script>
   <script src="../js/student-info-schema.js"></script>
   <script>
@@ -262,6 +263,50 @@
         .replace(/"/g, "&quot;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
+    }
+
+    // ---- Draft helpers (localStorage autosave) ----------------------
+    // Drafts live in the student's own browser, keyed per form and per
+    // school year. They auto-save a few hundred ms after each keystroke
+    // and are cleared the moment a real submission lands, so a draft can
+    // never overwrite a submitted answer.
+    function draftKey(prefix) {
+      return ["portal", prefix, ...Array.from(arguments).slice(1)].join(".");
+    }
+
+    function saveDraft(key, data) {
+      try {
+        localStorage.setItem(key, JSON.stringify(data));
+      } catch (e) {
+        /* storage unavailable (private mode / quota) — drafts are optional */
+      }
+    }
+
+    function loadDraft(key) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function clearDraft(key) {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        /* ignore */
+      }
+    }
+
+    function debounce(fn, ms) {
+      let t;
+      return function () {
+        clearTimeout(t);
+        const args = arguments;
+        t = setTimeout(() => fn.apply(null, args), ms);
+      };
     }
 
     function formatDate(isoStr) {
@@ -562,10 +607,33 @@
       document.getElementById("answerSubmitBtn").style.display = isLast && !readOnlyMode ? "" : "none";
     }
 
+    // Persist a working draft ~600ms after the last keystroke on the
+    // current question section. Only ever writes while the student is
+    // actively answering (never in view-only mode) and only when there is
+    // actually something to save.
+    const saveAnswerDraft = debounce(() => {
+      if (!activeAssignment || readOnlyMode) return;
+      if (Object.keys(answers).length === 0) return;
+      saveDraft(
+        draftKey("answerDraft", activeAssignment.assignment_id),
+        { answers, sectionIndex: currentAnswerSectionIndex }
+      );
+    }, 600);
+
+    const saveAnswerDraftNow = () => {
+      if (!activeAssignment || readOnlyMode) return;
+      if (Object.keys(answers).length === 0) return;
+      saveDraft(
+        draftKey("answerDraft", activeAssignment.assignment_id),
+        { answers, sectionIndex: currentAnswerSectionIndex }
+      );
+    };
+
     document.getElementById("answerQuestionsContainer").addEventListener("input", (e) => {
       const qid = e.target.dataset.qid;
       if (!qid || e.target.type === "checkbox" || e.target.type === "radio") return;
       answers[qid] = e.target.value;
+      saveAnswerDraft();
     });
 
     document.getElementById("answerQuestionsContainer").addEventListener("change", (e) => {
@@ -579,6 +647,7 @@
       } else if (e.target.type === "radio" || e.target.tagName === "SELECT") {
         answers[qid] = e.target.value;
       }
+      saveAnswerDraft();
     });
 
     function firstUnansweredRequired(section) {
@@ -593,6 +662,7 @@
       if (currentAnswerSectionIndex > 0) {
         currentAnswerSectionIndex--;
         renderAnswerSection();
+        saveAnswerDraftNow();
       }
     });
     document.getElementById("answerNextBtn").addEventListener("click", () => {
@@ -606,6 +676,7 @@
       if (currentAnswerSectionIndex < activeSections.length - 1) {
         currentAnswerSectionIndex++;
         renderAnswerSection();
+        saveAnswerDraftNow();
       }
     });
 
@@ -655,6 +726,21 @@
           (submission.form_answers || []).forEach((ans) => {
             answers[ans.question_id] = ans.answer_value;
           });
+        }
+      } else {
+        // Pick up where the student left off if a draft exists for this
+        // assignment (autosaved a few hundred ms after each keystroke).
+        const saved = loadDraft(draftKey("answerDraft", assignment.assignment_id));
+        if (saved && saved.answers && typeof saved.answers === "object") {
+          Object.assign(answers, saved.answers);
+          if (
+            typeof saved.sectionIndex === "number" &&
+            saved.sectionIndex >= 0 &&
+            saved.sectionIndex < activeSections.length
+          ) {
+            currentAnswerSectionIndex = saved.sectionIndex;
+          }
+          showToast("Resumed your draft — nothing saved yet, keep going!", "info");
         }
       }
 
@@ -724,6 +810,11 @@
           .update({ status: "submitted", submitted_at: new Date().toISOString() })
           .eq("assignment_id", activeAssignment.assignment_id);
         if (updErr) throw updErr;
+
+        // A submitted form no longer needs its draft — a draft must never
+        // be allowed to masquerade as (or re-create) an answer document
+        // for an assignment that was already turned in.
+        clearDraft(draftKey("answerDraft", activeAssignment.assignment_id));
 
         closeAnswerModal();
         await loadAssignments();
@@ -865,8 +956,19 @@
           `School Year ${defaultSchoolYear()} · updating your submitted sheet`;
       } else {
         sisAnswers = buildPrefilledAnswers();
+        // An in-progress draft (autosaved between keystrokes) takes
+        // precedence over the profile prefill — it holds real, newer
+        // input than anything we can rebuild from past submissions.
+        const saved = loadDraft(draftKey("sisDraft", currentStudent.student_id, defaultSchoolYear()));
+        if (saved && saved.answers && typeof saved.answers === "object") {
+          sisAnswers = Object.assign(sisAnswers, saved.answers);
+          if (typeof saved.step === "number" && saved.step >= 0 && saved.step < sisSteps().length) {
+            sisStep = saved.step;
+          }
+        }
         document.getElementById("sisModalDesc").textContent =
           `School Year ${defaultSchoolYear()} · complete every part, then sign on the last step.`;
+        if (saved) showToast("Resumed your draft Information Sheet.", "info");
       }
 
       renderSisStep();
@@ -1019,6 +1121,7 @@
         tbody.appendChild(clone);
         renumberRows(wrap);
         sisDirty = true;
+        saveSisDraft();
         return;
       }
 
@@ -1030,12 +1133,41 @@
         rm.closest("tr").remove();
         renumberRows(wrap);
         sisDirty = true;
+        saveSisDraft();
       }
     });
 
+    // Persist the in-progress Information Sheet ~600ms after the last
+    // keystroke. Answers are re-collected from the current step's DOM so a
+    // draft always reflects what the student actually sees, and the step
+    // number is remembered so re-opening lands on the same part.
+    const saveSisDraft = debounce(() => {
+      if (sisReadOnly) return;
+      if (sisStep >= sisSteps().length) return;
+      collectCurrentSection();
+      if (Object.keys(sisAnswers).length === 0) return;
+      saveDraft(
+        draftKey("sisDraft", currentStudent.student_id, defaultSchoolYear()),
+        { answers: sisAnswers, step: sisStep }
+      );
+    }, 600);
+
+    const saveSisDraftNow = () => {
+      if (sisReadOnly) return;
+      collectCurrentSection();
+      if (Object.keys(sisAnswers).length === 0) return;
+      saveDraft(
+        draftKey("sisDraft", currentStudent.student_id, defaultSchoolYear()),
+        { answers: sisAnswers, step: sisStep }
+      );
+    };
+
     ["input", "change"].forEach((evt) =>
       document.getElementById("sisFieldsContainer").addEventListener(evt, () => {
-        if (!sisReadOnly) sisDirty = true;
+        if (!sisReadOnly) {
+          sisDirty = true;
+          saveSisDraft();
+        }
       })
     );
 
@@ -1222,6 +1354,7 @@
       if (sisStep > 0) {
         sisStep--;
         renderSisStep();
+        saveSisDraftNow();
       }
     });
 
@@ -1249,6 +1382,7 @@
       if (sisStep < sisSteps().length - 1) {
         sisStep++;
         renderSisStep();
+        saveSisDraftNow();
       }
     });
 
@@ -1316,6 +1450,10 @@
             { onConflict: "student_id,school_year" }
           );
         if (error) throw error;
+
+        // Submitted — the draft's job is done; leaving it around could
+        // make an old, incomplete copy look like this year's sheet.
+        clearDraft(draftKey("sisDraft", currentStudent.student_id, defaultSchoolYear()));
 
         // One-way sync of approved fields into the official student
         // record — the record stays the single authority for current

@@ -2102,6 +2102,67 @@ button:disabled {
     margin-top: 4px;
 }
 
+.hint.warn {
+    color: #b45309;
+}
+
+/* Password visibility toggle (js/password-toggle.js). The wrapper keeps the
+   field at full width with room on the right for the eye button. */
+.password-field-wrap {
+    position: relative;
+}
+
+.password-field-wrap input.has-toggle {
+    padding-right: 44px;
+    width: 100%;
+}
+
+.password-field-wrap .password-toggle-btn {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 8px;
+    font-size: 16px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.password-field-wrap .password-toggle-btn:hover {
+    color: #111827;
+}
+
+/* ── Table column resize handles (js/table-column-resize.js) ─────── */
+
+.table-resize-grip {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: 7px;
+    cursor: col-resize;
+    z-index: 3;
+    background: transparent;
+    transition: background 0.15s;
+}
+
+.table-resize-grip:hover,
+.simple-table thead th.resizing .table-resize-grip {
+    background: rgba(37, 99, 235, 0.25);
+}
+
+body.table-resizing,
+body.table-resizing * {
+    cursor: col-resize !important;
+    user-select: none;
+}
+
 .field-row-bottom {
     display: flex;
     align-items: center;
@@ -4100,9 +4161,13 @@ img.img-lazy.is-loaded {
     color: #374151;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    margin-top: 10px;
+    margin-top: 24px;
     padding-bottom: 6px;
     border-bottom: 1px solid #e5e7eb;
+}
+
+.sis-subblock:first-child {
+    margin-top: 10px;
 }
 
 .sis-table-wrap {

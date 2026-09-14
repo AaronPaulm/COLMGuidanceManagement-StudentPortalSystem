@@ -11,10 +11,11 @@
 // (answers live in a JSONB column keyed by field key).
 //
 // Field types: text | number | date | email | tel | textarea |
-//              radio | checks | table | select
+//              radio | checks | table | select | datalist
 //   radio  — single choice, stored as a string
 //   checks — multi-choice, stored as an array of strings
 //   select — single choice dropdown, stored as a string
+//   datalist — free-text input with a dropdown of suggested options
 //   table  — stored as an array of row objects; fixed tables declare
 //            rowLabels (one row each), dynamic tables get add/remove
 //            buttons (extra-curricular orgs, consultations, tests)
@@ -27,6 +28,26 @@
 // ============================================================
 
 window.STUDENT_INFO_SCHEMA = (function () {
+  // Shared course list for the Course combobox. Students can type any
+  // course; this list just offers quick picks.
+  const COURSE_OPTIONS = [
+    "Bachelor of Science in Accountancy",
+    "Bachelor of Science in Business Administration",
+    "Bachelor of Science in Computer Science",
+    "Bachelor of Science in Information Technology",
+    "Bachelor of Science in Nursing",
+    "Bachelor of Science in Education",
+    "Bachelor of Science in Psychology",
+    "Bachelor of Science in Social Work",
+    "Bachelor of Science in Criminology",
+    "Bachelor of Science in Hospitality Management",
+    "Bachelor of Arts in Communication",
+    "Bachelor of Arts in English Language",
+    "Bachelor of Elementary Education",
+    "Associate in Computer Technology",
+    "Others (please specify)",
+  ];
+
   // ---------- Sections I–VI (student-facing) ----------
 
   const SECTIONS = [
@@ -42,13 +63,19 @@ window.STUDENT_INFO_SCHEMA = (function () {
         { key: "middle_name", label: "Middle Name", type: "text", auto: true, half: true, optional: true },
         { key: "gender", label: "Gender", type: "select", options: ["Male", "Female"], half: true },
         { key: "age", label: "Age", type: "number", min: 0, half: true },
-        { key: "civil_status", label: "Civil Status", type: "text", noDigits: true, half: true },
+        {
+          key: "civil_status",
+          label: "Civil Status",
+          type: "select",
+          options: ["Single", "Married", "Separated", "Widowed", "Divorced", "Others"],
+          half: true,
+        },
         { key: "dob", label: "Date of Birth", type: "date", half: true },
         { key: "pob", label: "Place of Birth", type: "text", noDigits: true, half: true },
         { key: "religion", label: "Religion", type: "text", noDigits: true, half: true },
         { key: "year_level", label: "Year Level", type: "text", auto: true, half: true },
         { key: "section", label: "Section", type: "text", auto: true, half: true },
-        { key: "course", label: "Course", type: "text", half: true, optional: true },
+        { key: "course", label: "Course", type: "datalist", options: COURSE_OPTIONS, half: true, optional: true },
         { key: "complexion", label: "Complexion", type: "text", noDigits: true, half: true },
         { key: "height_m", label: "Height (m)", type: "number", step: "0.01", min: 0, half: true },
         { key: "weight_kg", label: "Weight (kg)", type: "number", min: 0, half: true },
@@ -101,6 +128,7 @@ window.STUDENT_INFO_SCHEMA = (function () {
       description: "Information about your parents/guardian and household.",
       req: { mode: "all" },
       fields: [
+        { type: "subblock", label: "Father's Information" },
         { key: "father_name", label: "Name of Father", type: "text", half: true },
         { key: "father_age", label: "Father's Age", type: "number", min: 0, half: true },
         {
@@ -115,6 +143,7 @@ window.STUDENT_INFO_SCHEMA = (function () {
         { key: "father_employer", label: "Father's Name of Employer", type: "text", noDigits: true, half: true },
         { key: "father_employer_address", label: "Father's Address of Employer", type: "text", half: true },
 
+        { type: "subblock", label: "Mother's Information" },
         { key: "mother_name", label: "Name of Mother", type: "text", half: true },
         { key: "mother_age", label: "Mother's Age", type: "number", min: 0, half: true },
         {
@@ -130,6 +159,7 @@ window.STUDENT_INFO_SCHEMA = (function () {
         { key: "mother_employer_address", label: "Mother's Address of Employer", type: "text", half: true },
 
         // Guardian block is optional — not every student has one.
+        { type: "subblock", label: "Guardian's Information" },
         { key: "guardian_name", label: "Name of Guardian", type: "text", half: true, optional: true },
         { key: "guardian_age", label: "Guardian's Age", type: "number", min: 0, half: true, optional: true },
         { key: "guardian_contact", label: "Guardian's Contact Number", type: "tel", phone: true, half: true, optional: true },
@@ -438,6 +468,13 @@ window.STUDENT_INFO_SCHEMA = (function () {
               )
               .join("")}
           </select></div>`;
+      case "datalist":
+        return `<input type="text" data-field="${escAttr(field.key)}" list="${escAttr(field.key + "-list")}" value="${escAttr(value ?? "")}" ${disabledAttr(disabled)}>
+          <datalist id="${escAttr(field.key + "-list")}">
+            ${(field.options || [])
+              .map((o) => `<option value="${escAttr(o)}"></option>`)
+              .join("")}
+          </datalist>`;
       case "radio":
         return `<div class="sis-choices">${(field.options || [])
           .map(

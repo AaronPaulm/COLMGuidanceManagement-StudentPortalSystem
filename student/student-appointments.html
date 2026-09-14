@@ -139,6 +139,8 @@
                 <div class="form-field">
                     <label for="apptConcernInput">Concern Details</label>
                     <textarea id="apptConcernInput" rows="4" required placeholder="Briefly describe what you'd like to talk about"></textarea>
+                    <span class="hint">Be specific — describe your concern in 1–2 clear sentences so your counselor can prepare (e.g. "I've been feeling anxious about my grades lately").</span>
+                    <span class="hint warn">Please use respectful, appropriate language when describing your concern.</span>
                 </div>
                 <div class="appt-form-row">
                     <div class="form-field field-counselor">
@@ -238,6 +240,7 @@
 
       <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/supabaseClient.js"></script>
+  <script src="../js/table-column-resize.js"></script>
   <script src="../js/student-common.js"></script>
   <script>
     let currentStudent = null;
@@ -508,12 +511,22 @@
         return;
       }
 
+      const concern = document.getElementById("apptConcernInput").value.trim();
+      if (concern.length < 20) {
+        showToast(
+          "Please describe your concern in 1–2 clear sentences so your counselor can prepare for your appointment.",
+          "error"
+        );
+        document.getElementById("apptConcernInput").focus();
+        return;
+      }
+
       const payload = {
         student_id: currentStudent.student_id,
         counselor_id: Number(document.getElementById("counselorSelect").value),
         appointment_date: appointmentDate,
         appointment_time: appointmentTime,
-        concern: document.getElementById("apptConcernInput").value.trim(),
+        concern,
         concern_category: document.getElementById("apptConcernTypeInput").value,
         school_year: defaultSchoolYear(),
       };
