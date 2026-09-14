@@ -344,7 +344,7 @@
                         </div>
                         <div class="form-field">
                             <label for="visitTimeInput">Visit Time</label>
-                            <input type="time" id="visitTimeInput">
+                            <input type="time" id="visitTimeInput" min="08:00" max="17:00">
                         </div>
                     </div>
 
@@ -705,8 +705,11 @@
 
       const now = new Date();
       document.getElementById("visitDateInput").value = now.toISOString().slice(0, 10);
-      document.getElementById("visitTimeInput").value =
-        String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+      document.getElementById("visitTimeInput").value = (() => {
+        const mins = now.getHours() * 60 + now.getMinutes();
+        const clamped = Math.min(17 * 60, Math.max(8 * 60, mins));
+        return String(Math.floor(clamped / 60)).padStart(2, "0") + ":" + String(clamped % 60).padStart(2, "0");
+      })();
 
       document.getElementById("visitModalOverlay").classList.add("show");
       initVisitSignCanvas();
@@ -753,6 +756,13 @@
 
       const dateVal = document.getElementById("visitDateInput").value;
       const timeVal = document.getElementById("visitTimeInput").value;
+      if (timeVal && (timeVal < "08:00" || timeVal > "17:00")) {
+        showToast(
+          "Visit logging is only available between 8:00 AM and 5:00 PM.",
+          "error"
+        );
+        return;
+      }
       const visitTime = dateVal && timeVal ? new Date(`${dateVal}T${timeVal}`).toISOString() : null;
 
       const btn = document.getElementById("visitSaveBtn");

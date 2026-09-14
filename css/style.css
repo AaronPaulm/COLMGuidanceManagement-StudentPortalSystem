@@ -2110,11 +2110,25 @@ button:disabled {
    field at full width with room on the right for the eye button. */
 .password-field-wrap {
     position: relative;
+    display: block;
+    width: 100%;
 }
 
 .password-field-wrap input.has-toggle {
     padding-right: 44px;
     width: 100%;
+}
+
+/* Hide the browser's OWN password-reveal + autofill affordances. Chromium
+   (Edge/Chrome) draws a native eye inside every type=password input; without
+   hiding it, the page shows BOTH the native eye and our own toggle (two eyes
+   in one box, which reads as one sitting “in the middle”). These rules pin
+   it back to exactly one toggle at the right edge. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear,
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input::-webkit-credentials-auto-fill-button {
+    display: none;
 }
 
 .password-field-wrap .password-toggle-btn {
@@ -2136,6 +2150,18 @@ button:disabled {
 
 .password-field-wrap .password-toggle-btn:hover {
     color: #111827;
+}
+
+/* Hide the browser's OWN password-reveal + autofill affordances. Chromium
+   (Chrome/Edge) renders a native eye inside every `type=password` input; on a
+   page that ALSO applies our own toggle this produces a second eye icon inside
+   the textbox. These rules remove the native eye so only our single, right-edge
+   toggle remains. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear,
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input::-webkit-credentials-auto-fill-button {
+    display: none;
 }
 
 /* ── Table column resize handles (js/table-column-resize.js) ─────── */
@@ -4161,13 +4187,13 @@ img.img-lazy.is-loaded {
     color: #374151;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    margin-top: 24px;
+    margin-top: 40px;
     padding-bottom: 6px;
     border-bottom: 1px solid #e5e7eb;
 }
 
 .sis-subblock:first-child {
-    margin-top: 10px;
+    margin-top: 18px;
 }
 
 .sis-table-wrap {
