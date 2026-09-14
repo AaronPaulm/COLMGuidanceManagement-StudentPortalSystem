@@ -209,6 +209,14 @@
 
                 <div class="account-form-grid">
                     <div class="form-field">
+                        <label for="editFirstName">First Name</label>
+                        <input type="text" id="editFirstName" maxlength="50">
+                    </div>
+                    <div class="form-field">
+                        <label for="editLastName">Last Name</label>
+                        <input type="text" id="editLastName" maxlength="50">
+                    </div>
+                    <div class="form-field">
                         <label for="editStudentNumber">Student #</label>
                         <input type="text" id="editStudentNumber">
                     </div>
@@ -1061,6 +1069,8 @@
       currentDetailStudent = s;
 
       document.getElementById("studentDetailTitle").textContent = `${s.first_name} ${s.last_name}`;
+      document.getElementById("editFirstName").value = s.first_name || "";
+      document.getElementById("editLastName").value = s.last_name || "";
       document.getElementById("editStudentNumber").value = s.student_number || "";
       document.getElementById("editEducationLevel").value = s.education_level || "";
       populateYearLevelOptions(s.education_level, s.year_level);
@@ -1133,12 +1143,23 @@
       btn.disabled = true;
       btn.textContent = "Saving…";
 
+      const firstName = document.getElementById("editFirstName").value.trim();
+      const lastName = document.getElementById("editLastName").value.trim();
+      if (!firstName || !lastName) {
+        btn.disabled = false;
+        btn.textContent = "Save Changes";
+        showToast("First Name and Last Name are required.", "error");
+        return;
+      }
+
       const newEducationLevel = document.getElementById("editEducationLevel").value || null;
       const newYearLevel = document.getElementById("editYearLevel").value || null;
       const levelChanged =
         newEducationLevel !== currentDetailStudent.education_level || newYearLevel !== currentDetailStudent.year_level;
 
       const payload = {
+        first_name: firstName,
+        last_name: lastName,
         student_number: document.getElementById("editStudentNumber").value.trim() || null,
         education_level: newEducationLevel,
         year_level: newYearLevel,
@@ -1164,6 +1185,7 @@
       }
 
       Object.assign(currentDetailStudent, payload);
+      document.getElementById("studentDetailTitle").textContent = `${firstName} ${lastName}`;
       showToast("Student updated.", "success");
       renderStudentDetailBanner(currentDetailStudent);
       updateSectionSuggestions();

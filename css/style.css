@@ -1370,12 +1370,20 @@ padding-right: 4.5rem;
     justify-content: space-between;
     gap: 10px;
     margin-bottom: 15px;
-    flex-wrap: wrap;
 }
 
 .CalendarFilterBar .filter-label {
     font-weight: 700;
     color: #111827;
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.CalendarFilterBar .icon-btn {
+    flex-shrink: 0;
 }
 
 .staff-list-item {
