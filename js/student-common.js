@@ -527,7 +527,55 @@ async function requireStudentAuth() {
 
   initNotifications(session.user.id);
 
+  maybeShowEmailVerifyBanner(session.user.id);
+
   return { session, student };
+}
+
+// Freshly bulk-imported students don't have a personal email on file yet —
+// password-reset links can't be delivered until they set one up on the
+// verify-email page. Shows a persistent banner below the page header on
+// every student page until they do; "Later" dismisses it for the session.
+function maybeShowEmailVerifyBanner(userId) {
+  if (!userId || sessionStorage.getItem("verifyEmailDismissed")) return;
+
+  supabaseClient
+    .from("students")
+    .select("email_verified")
+    .eq("user_id", userId)
+    .maybeSingle()
+    .then(({ data }) => {
+      if (data?.email_verified !== false || document.getElementById("emailVerifyBanner")) return;
+
+      const banner = document.createElement("div");
+      banner.id = "emailVerifyBanner";
+      banner.className = "verify-notice-banner";
+      banner.innerHTML = `
+        <i class="fa-solid fa-envelope-circle-check"></i>
+        <div class="verify-notice-body">
+          <p><strong>Verify your email</strong> — add a personal email so password-reset links can reach you.</p>
+        </div>
+        <div class="verify-notice-actions">
+          <button type="button" class="btn btn-primary" onclick="location.href='../verify-email.html'">Verify now</button>
+          <button type="button" class="btn btn-outline email-verify-dismiss">Later</button>
+        </div>
+      `;
+      banner.querySelector(".email-verify-dismiss").addEventListener("click", () => {
+        sessionStorage.setItem("verifyEmailDismissed", "1");
+        banner.remove();
+      });
+
+      // Sit right after the page's header (GreetingsCard), like the SIS
+      // nudge — not above it. Pages without that header fall back to the
+      // top of the content area.
+      const header = document.querySelector("main.content > header.GreetingsCard");
+      const target = document.querySelector("main.content") || document.body;
+      if (header) {
+        header.after(banner);
+      } else {
+        target.prepend(banner);
+      }
+    });
 }
 
 document.getElementById("logoutBtn").addEventListener("click", async () => {
@@ -538,3 +586,18 @@ document.getElementById("mobileLogoutBtn").addEventListener("click", async (e) =
   e.preventDefault();
   await logoutStudent();
 });
+
+function makeImgLazy(img) {
+  if (!img) return;
+  img.classList.add("img-lazy");
+  img.addEventListener(
+    "load",
+    () => img.classList.add("is-loaded"),
+    { once: true }
+  );
+  img.addEventListener(
+    "error",
+    () => img.classList.remove("img-lazy"),
+    { once: true }
+  );
+}

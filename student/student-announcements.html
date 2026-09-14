@@ -429,7 +429,31 @@
       viewMonth = now.getMonth();
       selectedDateStr = todayStr();
 
+      // Deep link from a notification: ?date=YYYY-MM-DD (and optionally
+      // &id=...) so the student lands on the exact announcement rather
+      // than just the announcements page.
+      const params = new URLSearchParams(window.location.search);
+      const targetDate = params.get("date");
+      const targetId = params.get("id");
+
+      if (targetDate) {
+        const [y, m, d] = targetDate.split("-").map(Number);
+        if (!isNaN(y) && !isNaN(m) && !isNaN(d) && d >= 1 && d <= 31) {
+          viewYear = y;
+          viewMonth = m - 1;
+          selectedDateStr = targetDate;
+        }
+      }
+
       await loadAnnouncements();
+
+      if (targetDate && announcementsByDate[targetDate] && announcementsByDate[targetDate].length > 0) {
+        const items = announcementsByDate[targetDate];
+        const target = targetId ? items.find((a) => String(a.announcement_id) === String(targetId)) : null;
+        if (target) openAnnouncementModal(target);
+        else openDayModal(targetDate);
+      }
+
       hidePageLoadOverlay();
     })();
   </script>

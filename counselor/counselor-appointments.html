@@ -160,7 +160,6 @@
                 <option value="pending" selected>Pending</option>
                 <option value="approved">Approved</option>
                 <option value="conducted">Conducted</option>
-                <option value="cancelled">Cancelled</option>
                 <option value="declined">Declined</option>
                 <option value="rescheduled">Rescheduled</option>
             </select>
@@ -177,7 +176,8 @@
                         <th>Student</th>
                         <th>Date</th>
                         <th>Time</th>
-                        <th>Concern</th>
+                        <th>Concern Type</th>
+                        <th>Concern Details</th>
                         <th>Status</th>
                         <th>Action</th>
                     </tr>
@@ -216,7 +216,7 @@
                         <textarea id="actionReasonInput" rows="4"></textarea>
                     </div>
                     <div class="form-note-banner" id="actionEmailNote" style="display:none; margin-top:14px;">
-                        <i class="fa-regular fa-envelope"></i> The student will be emailed automatically.
+                        <i class="fa-regular fa-envelope"></i> The student is notified in the portal — and emailed if they've linked a personal email.
                     </div>
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary" id="actionModalConfirmBtn">Confirm</button>
@@ -303,6 +303,24 @@
         message,
         link: "student-appointments.html",
       });
+
+      // Best-effort email to students who have a verified personal email on
+      // file — the notify-student-email Edge Function looks up the student
+      // itself and silently skips anyone still unverified, so this never
+      // mails the placeholder @colm.edu.ph addresses. Fire-and-forget: the
+      // in-app notification above is the source of truth, this just adds
+      // delivery outside the portal when it can.
+      supabaseClient
+        .functions.invoke("notify-student-email", {
+          body: {
+            recipient_user_id: a.students.user_id,
+            subject: title,
+            message,
+            details: `${formatDate(a.appointment_date)} at ${formatTime(a.appointment_time)}`,
+            portal_url: location.origin + "/student/student-appointments.html",
+          },
+        })
+        .catch(() => {});
     }
 
     // ---------- Visitation slip (printable, C3) ----------
@@ -557,7 +575,8 @@
           <td>${escapeHtml(studentName(a))}</td>
           <td>${formatDate(a.appointment_date)}</td>
           <td>${formatTime(a.appointment_time)}</td>
-          <td class="col-concern">${a.concern_category ? `<span class="chip">${escapeHtml(a.concern_category)}</span>` : ""}${escapeHtml(a.concern || "—")} ${noteIndicator}</td>
+          <td class="col-concern col-concern-type">${a.concern_category ? `<span class="chip">${escapeHtml(a.concern_category)}</span>` : "—"}</td>
+          <td class="col-concern col-concern-details">${escapeHtml(a.concern || "—")} ${noteIndicator}</td>
           <td><span class="badge badge-${badgeClass(a.status)}">${capitalize(a.status)}</span> ${rescheduledBadge}</td>
           <td><div class="table-actions">${actions.join("")}</div></td>
         </tr>
@@ -642,7 +661,7 @@
     async function loadAppointments() {
       const list = document.getElementById("appointmentsList");
       const pager = document.getElementById("appointmentsPagination");
-      list.innerHTML = `<tr class="table-empty"><td colspan="6">Loading…</td></tr>`;
+      list.innerHTML = `<tr class="table-empty"><td colspan="7">Loading…</td></tr>`;
       pager.innerHTML = "";
       allAppointmentsById = {};
 
@@ -655,13 +674,13 @@
         .range(from, to);
 
       if (error) {
-        list.innerHTML = `<tr class="table-empty"><td colspan="6">Couldn't load appointments.</td></tr>`;
+        list.innerHTML = `<tr class="table-empty"><td colspan="7">Couldn't load appointments.</td></tr>`;
         console.error(error);
         return;
       }
 
       if (!data || data.length === 0) {
-        list.innerHTML = `<tr class="table-empty"><td colspan="6">No appointments found.</td></tr>`;
+        list.innerHTML = `<tr class="table-empty"><td colspan="7">No appointments found.</td></tr>`;
         return;
       }
 

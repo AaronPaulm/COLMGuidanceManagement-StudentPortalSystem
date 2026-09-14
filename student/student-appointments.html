@@ -168,7 +168,6 @@
                 <option value="pending" selected>Pending</option>
                 <option value="approved">Approved</option>
                 <option value="conducted">Conducted</option>
-                <option value="cancelled">Cancelled</option>
                 <option value="declined">Declined</option>
                 <option value="rescheduled">Rescheduled</option>
             </select>
@@ -181,7 +180,8 @@
                         <th>Counselor</th>
                         <th>Date</th>
                         <th>Time</th>
-                        <th>Concern</th>
+                        <th>Concern Type</th>
+                        <th>Concern Details</th>
                         <th>Note</th>
                         <th>Status</th>
                         <th>Action</th>
@@ -220,16 +220,17 @@
                         <div id="apptDetailTime">—</div>
                     </div>
                     <div class="case-meta-item" style="grid-column: 1 / -1;">
-                        <label>Concern</label>
+                        <label>Concern Type</label>
+                        <div id="apptDetailConcernType">—</div>
+                    </div>
+                    <div class="case-meta-item" style="grid-column: 1 / -1;">
+                        <label>Concern Details</label>
                         <div id="apptDetailConcern">—</div>
                     </div>
                     <div class="case-meta-item" style="grid-column: 1 / -1;" id="apptDetailNoteWrap">
                         <label>Note from your counselor</label>
                         <div id="apptDetailNote">—</div>
                     </div>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-danger" id="apptDetailCancelBtn">Cancel Appointment</button>
                 </div>
             </div>
         </div>
@@ -386,7 +387,8 @@
           <td>${escapeHtml(counselorName)}</td>
           <td>${formatDate(a.appointment_date)}</td>
           <td>${formatTime(a.appointment_time)}</td>
-          <td class="col-concern">${escapeHtml(a.concern || "—")}</td>
+          <td class="col-concern col-concern-type">${a.concern_category ? `<span class="chip">${escapeHtml(a.concern_category)}</span>` : "—"}</td>
+          <td class="col-concern col-concern-details">${escapeHtml(a.concern || "—")}</td>
           <td class="col-concern">${a.counselor_note ? escapeHtml(a.counselor_note) : "—"}</td>
           <td><span class="badge badge-${badgeClass(a.status)}">${capitalize(a.status)}</span></td>
           <td><button type="button" class="icon-btn sm" data-action="view" title="View details"><i class="fa-solid fa-eye"></i></button></td>
@@ -400,8 +402,8 @@
       if (!appointments.length) {
         list.innerHTML =
           activeAppointmentsFilter === "all"
-            ? `<tr class="table-empty"><td colspan="7">No appointments yet. Use the form above to request one.</td></tr>`
-            : `<tr class="table-empty"><td colspan="7">No ${activeAppointmentsFilter} appointments.</td></tr>`;
+            ? `<tr class="table-empty"><td colspan="8">No appointments yet. Use the form above to request one.</td></tr>`
+            : `<tr class="table-empty"><td colspan="8">No ${activeAppointmentsFilter} appointments.</td></tr>`;
         return;
       }
 
@@ -413,29 +415,19 @@
       });
     }
 
-    let currentDetailAppointment = null;
-
     function openAppointmentDetail(a) {
-      currentDetailAppointment = a;
       const counselorName = a.counselors ? `${a.counselors.first_name} ${a.counselors.last_name}` : "Unassigned";
 
       document.getElementById("apptDetailCounselor").textContent = counselorName;
       document.getElementById("apptDetailStatus").innerHTML = `<span class="badge badge-${badgeClass(a.status)}">${capitalize(a.status)}</span>`;
       document.getElementById("apptDetailDate").textContent = formatDate(a.appointment_date);
       document.getElementById("apptDetailTime").textContent = formatTime(a.appointment_time);
+      document.getElementById("apptDetailConcernType").textContent = a.concern_category || "—";
       document.getElementById("apptDetailConcern").textContent = a.concern || "—";
 
       const noteWrap = document.getElementById("apptDetailNoteWrap");
       noteWrap.style.display = a.counselor_note ? "" : "none";
       document.getElementById("apptDetailNote").textContent = a.counselor_note || "—";
-
-      // Withdrawing an unconfirmed request is fine, but once a session is
-      // approved it's scheduled — the client's rule is that a scheduled
-      // session is never cancelled outright, only rescheduled by the
-      // counselor (see counselor-appointments.html's Reschedule/Missed
-      // actions). A student who needs to change an approved session should
-      // reach out to the counselor rather than self-cancel it.
-      document.getElementById("apptDetailCancelBtn").style.display = a.status === "pending" ? "" : "none";
 
       document.getElementById("apptDetailModalOverlay").classList.add("show");
     }
@@ -447,11 +439,6 @@
       if (e.target.id === "apptDetailModalOverlay") {
         document.getElementById("apptDetailModalOverlay").classList.remove("show");
       }
-    });
-    document.getElementById("apptDetailCancelBtn").addEventListener("click", async () => {
-      if (!currentDetailAppointment) return;
-      await cancelAppointment(currentDetailAppointment);
-      document.getElementById("apptDetailModalOverlay").classList.remove("show");
     });
 
     function applyAppointmentsFilter() {
@@ -474,7 +461,7 @@
       const { data, error } = await supabaseClient
         .from("appointments")
         .select(
-          "appointment_id, concern, appointment_date, appointment_time, status, counselor_note, counselors(first_name, last_name, user_id)"
+          "appointment_id, concern, concern_category, appointment_date, appointment_time, status, counselor_note, counselors(first_name, last_name, user_id)"
         )
         .eq("student_id", currentStudent.student_id)
         .order("appointment_date", { ascending: false })
@@ -488,34 +475,6 @@
 
       allAppointments = data || [];
       applyAppointmentsFilter();
-    }
-
-    async function cancelAppointment(a) {
-      const ok = await confirmDialog("Cancel this appointment request?", { confirmLabel: "Cancel Request", danger: true });
-      if (!ok) return;
-
-      const { error } = await supabaseClient
-        .from("appointments")
-        .update({ status: "cancelled" })
-        .eq("appointment_id", a.appointment_id);
-
-      if (error) {
-        showToast("Couldn't cancel appointment: " + error.message, "error");
-        console.error(error);
-        return;
-      }
-
-      if (a.counselors?.user_id) {
-        await supabaseClient.from("notifications").insert({
-          recipient_user_id: a.counselors.user_id,
-          type: "appointment",
-          title: "Appointment cancelled",
-          message: a.concern || "A student cancelled their appointment request.",
-          link: "counselor-appointments.html",
-        });
-      }
-
-      await loadAppointments();
     }
 
     document.getElementById("apptDateInput").addEventListener("change", (e) => {

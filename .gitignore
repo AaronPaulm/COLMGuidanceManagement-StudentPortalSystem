@@ -6,3 +6,9 @@ apikeyresend.txt
 # OS/editor cruft
 .DS_Store
 Thumbs.db
+
+# Student roster spreadsheet — contains student data; keep out of the repo
+Untitled spreadsheet.xlsx
+
+# Vercel pretty-URL rewrites — excluded by choice (.html links work without it)
+vercel.json

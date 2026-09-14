@@ -260,6 +260,7 @@
                     </div>
                     </div>
 
+                    <div class="upload-progress" id="caseUploadProgress"><div class="upload-progress-fill"></div></div>
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary" id="newCaseSaveBtn">Create Case</button>
                     </div>
@@ -387,6 +388,7 @@
                             <div class="hint">Scanned or photographed copy of the signed slip — up to 10MB each.</div>
                         </div>
                         </div>
+                        <div class="upload-progress" id="sessionUploadProgress"><div class="upload-progress-fill"></div></div>
                         <div class="form-actions">
                             <button type="submit" class="btn btn-primary" id="addSessionBtn">Add Session</button>
                         </div>
@@ -397,6 +399,16 @@
     </div>
 
     <!-- Device Camera modal (capture a photo on desktop + mobile) -->
+    <div class="modal-overlay" id="imageLightboxOverlay">
+        <div class="image-lightbox">
+            <button type="button" class="image-lightbox-close" id="imageLightboxClose" aria-label="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="image-lightbox-spinner"></div>
+            <img id="imageLightboxImg" src="" alt="">
+        </div>
+    </div>
+
     <div class="modal-overlay" id="cameraModalOverlay">
         <div class="modal-box">
             <div class="modal-header">
@@ -432,6 +444,11 @@
     let activeSchoolYearFilter = "";
     let currentCaseId = null;
     let allInterventionTemplates = [];
+
+    // Every field the detail modal renders, plus the list — kept as one
+    // string so a file delete can re-fetch the same shape for one case.
+    const CASE_DETAIL_SELECT =
+      "case_id, nature_of_incident, status, school_year, file_number, created_at, students(first_name, last_name, section, user_id), case_sessions(session_id, session_date, action_taken, session_note, recommendation, created_at, appointment_id, case_session_attachments(attachment_id, file_path, file_name), case_signed_documents(document_id, file_path, file_name)), interventions(intervention_id, title, file_path, file_name, is_visible_to_student, created_at)";
 
     function escapeHtml(str) {
       const div = document.createElement("div");
@@ -615,9 +632,7 @@
 
       const { data, error } = await supabaseClient
         .from("cases")
-        .select(
-          "case_id, nature_of_incident, status, school_year, file_number, created_at, students(first_name, last_name, section, user_id), case_sessions(session_id, session_date, action_taken, session_note, recommendation, created_at, appointment_id, case_session_attachments(attachment_id, file_path, file_name), case_signed_documents(document_id, file_path, file_name)), interventions(intervention_id, title, file_path, file_name, is_visible_to_student, created_at)"
-        )
+        .select(CASE_DETAIL_SELECT)
         .eq("counselor_id", currentCounselor.counselor_id)
         .order("created_at", { ascending: false });
 
@@ -675,8 +690,16 @@
       }
 
       const saveBtn = document.getElementById("newCaseSaveBtn");
-      saveBtn.disabled = true;
-      saveBtn.textContent = "Creating…";
+      const caseUploadProgress = document.getElementById("caseUploadProgress");
+      const allUploadFiles = [...caseFiles, ...caseSignedFiles];
+      const totalBytes = allUploadFiles.reduce((sum, f) => sum + f.size, 0);
+      let doneBytes = 0;
+      const onFileProgress = (e) => {
+        if (!totalBytes) return;
+        setUploadProgress(caseUploadProgress, ((doneBytes + (e.bytesUploaded || 0)) / totalBytes) * 100);
+      };
+      hideUploadProgress(caseUploadProgress);
+      startBtnLoading(saveBtn, "Creating case…");
 
       const { data: newCase, error } = await supabaseClient
         .from("cases")
@@ -690,8 +713,7 @@
         .single();
 
       if (error) {
-        saveBtn.disabled = false;
-        saveBtn.textContent = "Create Case";
+        stopBtnLoading(saveBtn, "Create Case");
         showToast("Couldn't create case: " + error.message, "error");
         console.error(error);
         return;
@@ -717,10 +739,11 @@
       }
 
       if (session && caseFiles.length) {
-        saveBtn.textContent = "Uploading files…";
+        startBtnLoading(saveBtn, "Uploading files…");
         for (const file of caseFiles) {
           const path = `${newCase.case_id}/${session.session_id}/${Date.now()}-${file.name}`;
-          const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file);
+          const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file, { onUploadProgress: onFileProgress });
+          doneBytes += file.size;
           if (uploadError) {
             showToast(`Case saved, but "${file.name}" failed to upload: ` + uploadError.message, "error");
             console.error(uploadError);
@@ -736,10 +759,11 @@
       }
 
       if (session && caseSignedFiles.length) {
-        saveBtn.textContent = "Uploading signed documents…";
+        startBtnLoading(saveBtn, "Uploading signed documents…");
         for (const file of caseSignedFiles) {
           const path = `${newCase.case_id}/${session.session_id}/signed/${Date.now()}-${file.name}`;
-          const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file);
+          const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file, { onUploadProgress: onFileProgress });
+          doneBytes += file.size;
           if (uploadError) {
             showToast(`Case saved, but "${file.name}" failed to upload: ` + uploadError.message, "error");
             console.error(uploadError);
@@ -754,8 +778,8 @@
         }
       }
 
-      saveBtn.disabled = false;
-      saveBtn.textContent = "Create Case";
+      stopBtnLoading(saveBtn, "Create Case");
+      hideUploadProgress(caseUploadProgress);
       resetCaptureGroup("caseProof");
       resetCaptureGroup("caseSigned");
       document.getElementById("newCaseForm").reset();
@@ -765,18 +789,27 @@
 
     // ---------- Case detail modal ----------
 
+    function attachmentFileItemHtml(f, kind) {
+      if (!isImageFileName(f.file_name)) {
+        const icon = kind === "signed" ? "fa-file-signature" : "fa-paperclip";
+        return `<button type="button" class="attachment-chip" data-path="${escapeHtml(f.file_path)}"><i class="fa-solid ${icon}"></i> ${escapeHtml(f.file_name)}</button>`;
+      }
+      const idKey = kind === "signed" ? "document_id" : "attachment_id";
+      return `
+        <div class="attachment-thumb" data-kind="${kind}" data-id="${f[idKey]}" data-path="${escapeHtml(f.file_path)}" title="${escapeHtml(f.file_name)}">
+          <img data-signed-path="${escapeHtml(f.file_path)}" alt="${escapeHtml(f.file_name)}">
+          <span class="attachment-thumb-name">${escapeHtml(f.file_name)}</span>
+          <button type="button" class="thumb-remove" data-remove-file title="Remove from case"><i class="fa-solid fa-xmark"></i></button>
+        </div>`;
+    }
+
     function timelineItemHtml(s) {
       const attachments = s.case_session_attachments || [];
       const attachmentsHtml = attachments.length
         ? `<div class="case-timeline-row case-attachments-row">
             <strong>Proof:</strong>
             <div class="attachment-chip-list">
-              ${attachments
-                .map(
-                  (a) =>
-                    `<button type="button" class="attachment-chip" data-path="${escapeHtml(a.file_path)}"><i class="fa-solid fa-paperclip"></i> ${escapeHtml(a.file_name)}</button>`
-                )
-                .join("")}
+              ${attachments.map((a) => attachmentFileItemHtml(a, "attachment")).join("")}
             </div>
           </div>`
         : "";
@@ -788,12 +821,7 @@
           <div class="attachment-chip-list">
             ${
               signedDocs.length
-                ? signedDocs
-                    .map(
-                      (d) =>
-                        `<button type="button" class="attachment-chip" data-path="${escapeHtml(d.file_path)}"><i class="fa-solid fa-file-signature"></i> ${escapeHtml(d.file_name)}</button>`
-                    )
-                    .join("")
+                ? signedDocs.map((d) => attachmentFileItemHtml(d, "signed")).join("")
                 : `<span class="hint">None yet.</span>`
             }
           </div>
@@ -818,6 +846,108 @@
       `;
     }
 
+    const IMAGE_EXT_RE = /\.(png|jpe?g|gif|webp|svg|heic|heif|bmp)$/i;
+
+    function isImageFileName(name) {
+      return IMAGE_EXT_RE.test(name || "");
+    }
+
+    function openImageLightbox(url) {
+      const img = document.getElementById("imageLightboxImg");
+      const lbox = img.closest(".image-lightbox");
+      lbox.classList.add("loading");
+      img.classList.remove("is-loaded");
+      img.onload = () => {
+        img.classList.add("is-loaded");
+        lbox.classList.remove("loading");
+      };
+      img.src = url;
+      document.getElementById("imageLightboxOverlay").classList.add("show");
+    }
+
+    document.getElementById("imageLightboxClose").addEventListener("click", () => {
+      document.getElementById("imageLightboxOverlay").classList.remove("show");
+    });
+    document.getElementById("imageLightboxOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "imageLightboxOverlay") {
+        document.getElementById("imageLightboxOverlay").classList.remove("show");
+      }
+    });
+
+    // Resolves each queued thumbnail to a fresh signed URL. The thumbnail
+    // markup ships with an empty <img> (signed URLs are async), and this is
+    // what lights them up after the row is in the DOM.
+    function hydrateThumbnails(root) {
+      root.querySelectorAll(".attachment-thumb img[data-signed-path]").forEach((img) => {
+        supabaseClient.storage
+          .from("case-attachments")
+          .createSignedUrl(img.dataset.signedPath, 60)
+          .then(({ data, error }) => {
+            if (error || !data) return;
+            makeImgLazy(img);
+            img.src = data.signedUrl;
+            img.dataset.signed = data.signedUrl;
+          });
+      });
+    }
+
+    function bindThumbs(root) {
+      hydrateThumbnails(root);
+      root.querySelectorAll(".attachment-thumb").forEach((thumb) => {
+        thumb.addEventListener("click", (e) => {
+          if (e.target.closest(".thumb-remove")) return;
+          const img = thumb.querySelector("img");
+          if (img?.dataset.signed) openImageLightbox(img.dataset.signed);
+        });
+      });
+      root.querySelectorAll("[data-remove-file]").forEach((btn) => {
+        btn.addEventListener("click", () => removeCaseFile(btn.closest(".attachment-thumb")));
+      });
+    }
+
+    async function refreshCurrentCase() {
+      if (!currentCaseId) return;
+      const { data, error } = await supabaseClient
+        .from("cases")
+        .select(CASE_DETAIL_SELECT)
+        .eq("case_id", currentCaseId)
+        .single();
+      if (error) {
+        showToast("Couldn't refresh the case: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+      allCasesById[currentCaseId] = data;
+      renderCaseDetail(data);
+    }
+
+    async function removeCaseFile(thumb) {
+      const kind = thumb.dataset.kind;
+      const id = Number(thumb.dataset.id);
+      const path = thumb.dataset.path;
+      const ok = await confirmDialog("Remove this file from the case?", { confirmLabel: "Remove", danger: true });
+      if (!ok) return;
+
+      const { error: storageError } = await supabaseClient.storage.from("case-attachments").remove([path]);
+      if (storageError) {
+        showToast("Couldn't remove file: " + storageError.message, "error");
+        console.error(storageError);
+        return;
+      }
+
+      const table = kind === "signed" ? "case_signed_documents" : "case_session_attachments";
+      const idKey = kind === "signed" ? "document_id" : "attachment_id";
+      const { error: dbError } = await supabaseClient.from(table).delete().eq(idKey, id);
+      if (dbError) {
+        showToast("File removed from storage, but the case record failed to update: " + dbError.message, "error");
+        console.error(dbError);
+        return;
+      }
+
+      showToast("File removed.", "success");
+      await refreshCurrentCase();
+    }
+
     async function openAttachment(path) {
       const { data, error } = await supabaseClient.storage.from("case-attachments").createSignedUrl(path, 60);
       if (error) {
@@ -829,6 +959,12 @@
     }
 
     function interventionItemHtml(iv) {
+      const fileView = isImageFileName(iv.file_name)
+        ? `<div class="attachment-thumb" data-path="${escapeHtml(iv.file_path)}" title="${escapeHtml(iv.file_name)}">
+            <img data-signed-path="${escapeHtml(iv.file_path)}" alt="${escapeHtml(iv.file_name)}">
+            <span class="attachment-thumb-name">${escapeHtml(iv.file_name)}</span>
+          </div>`
+        : `<button type="button" class="attachment-chip" data-action="view-intervention" data-path="${escapeHtml(iv.file_path)}"><i class="fa-solid fa-file-lines"></i> ${escapeHtml(iv.file_name)}</button>`;
       return `
         <div class="case-timeline-item">
           <div class="case-timeline-date">${formatDate(iv.created_at)}</div>
@@ -838,7 +974,7 @@
           </div>
           <div class="case-timeline-row case-attachments-row">
             <div class="attachment-chip-list">
-              <button type="button" class="attachment-chip" data-action="view-intervention" data-path="${escapeHtml(iv.file_path)}"><i class="fa-solid fa-file-lines"></i> ${escapeHtml(iv.file_name)}</button>
+              ${fileView}
             </div>
             <button type="button" class="btn btn-outline btn-sm" data-action="toggle-intervention" data-id="${iv.intervention_id}">
               ${iv.is_visible_to_student ? "Remove Access" : "Restore Access"}
@@ -884,6 +1020,7 @@
       list.querySelectorAll('[data-action="toggle-intervention"]').forEach((btn) => {
         btn.addEventListener("click", () => toggleInterventionAccess(Number(btn.dataset.id)));
       });
+      bindThumbs(list);
     }
 
     function renderCaseDetail(c) {
@@ -915,21 +1052,39 @@
       timeline.querySelectorAll(".attachment-chip").forEach((chip) => {
         chip.addEventListener("click", () => openAttachment(chip.dataset.path));
       });
+      bindThumbs(timeline);
 
       // Retroactive signed-document attach: the per-session "Upload File"
       // button opens the hidden input (any file type), and "Take Photo"
       // opens the device camera — either way the file/blob is uploaded and
       // recorded against that session on the spot.
-      const signedUpload = async (file, sessionId) => {
+      const signedUpload = async (file, sessionId, triggerBtn) => {
         if (!file) return;
         if (file.size > 10 * 1024 * 1024) {
           showToast(`"${file.name}" is over 10MB — please use a smaller file.`, "error");
           return;
         }
-        showToast("Uploading signed document…", "info");
+        if (triggerBtn && !triggerBtn.dataset.idleHtml) triggerBtn.dataset.idleHtml = triggerBtn.innerHTML;
+        const setTriggerProgress = (pct) => {
+          if (!triggerBtn) return;
+          triggerBtn.innerHTML = `<span class="btn-spinner"></span>Uploading ${pct}%`;
+        };
+        const restoreTrigger = () => {
+          if (!triggerBtn) return;
+          triggerBtn.disabled = false;
+          triggerBtn.innerHTML = triggerBtn.dataset.idleHtml || triggerBtn.innerHTML;
+          delete triggerBtn.dataset.idleHtml;
+        };
+        setTriggerProgress(0);
         const path = `${currentCaseId}/${sessionId}/signed/${Date.now()}-${file.name}`;
-        const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file);
+        const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file, {
+          onUploadProgress: (e) => {
+            const pct = e.totalBytes ? Math.round((e.bytesUploaded / e.totalBytes) * 100) : 0;
+            setTriggerProgress(pct);
+          },
+        });
         if (uploadError) {
+          restoreTrigger();
           showToast(`Upload failed: ` + uploadError.message, "error");
           console.error(uploadError);
           return;
@@ -940,10 +1095,12 @@
           file_name: file.name,
         });
         if (attachError) {
+          restoreTrigger();
           showToast("Uploaded, but couldn't save the record: " + attachError.message, "error");
           console.error(attachError);
           return;
         }
+        restoreTrigger();
         await loadCases();
         const reloaded = allCasesById[currentCaseId];
         if (reloaded) renderCaseDetail(reloaded);
@@ -958,14 +1115,14 @@
         input.addEventListener("change", () => {
           const file = input.files && input.files[0];
           input.value = "";
-          signedUpload(file, sessionId);
+          signedUpload(file, sessionId, btn);
         });
       });
 
       timeline.querySelectorAll("[data-signed-cam]").forEach((btn) => {
         const sessionId = Number(btn.dataset.signedCam);
         btn.addEventListener("click", () => {
-          openCameraModal((blob) => signedUpload(blob, sessionId));
+          openCameraModal((blob) => signedUpload(blob, sessionId, btn));
         });
       });
     }
@@ -1034,6 +1191,7 @@
       document.getElementById(ids.browse).value = "";
       cameraQueue[key] = [];
       if (document.getElementById(ids.label)) document.getElementById(ids.label).textContent = "";
+      clearCapturePreview(key);
     }
 
     document.querySelectorAll("[data-open]").forEach((btn) => {
@@ -1042,23 +1200,100 @@
     });
 
     function updateCaptureSummary(key) {
-      const ids = captureIds(key);
-      const count =
-        (document.getElementById(ids.browse).files?.length || 0) +
-        (document.getElementById(ids.camera).files?.length || 0) +
-        (cameraQueue[key].length || 0);
-      const label = document.getElementById(ids.label);
+      const count = cameraQueue[key].length || 0;
+      const label = document.getElementById(captureIds(key).label);
       if (label) label.textContent = count
         ? `${count} file${count === 1 ? "" : "s"} selected`
         : "";
+      renderCapturePreview(key);
+    }
+
+    // Every picked file — from the browse input, the mobile camera input, or
+    // the in-app camera capture — ends up in the same editable queue array.
+    // The FileList of an <input type=file> is read-only and can't be spliced,
+    // so browse/camera inputs hand their files over here and then empty
+    // themselves; removal then just splices the queue.
+    function takeFilesIntoQueue(key, input) {
+      if (input && input.files && input.files.length) {
+        for (const f of Array.from(input.files)) cameraQueue[key].push(f);
+        input.value = "";
+      }
+      updateCaptureSummary(key);
+    }
+
+    // Small before-submit strip so picked/captured pictures are actually
+    // visible (and every item removable) while the form is still open — not
+    // just discoverable after the case is saved.
+    function renderCapturePreview(key) {
+      const label = document.getElementById(captureIds(key).label);
+      if (!label) return;
+
+      let wrap = label.nextElementSibling;
+      if (!wrap || !wrap.classList.contains("capture-preview")) {
+        wrap = document.createElement("div");
+        wrap.className = "capture-preview";
+        label.insertAdjacentElement("afterend", wrap);
+      }
+
+      // Revoke any blob URLs from a previous render before rebuilding the
+      // strip, so rapid add/remove cycles don't leak object URLs.
+      wrap.querySelectorAll('img[src^="blob:"]').forEach((img) => URL.revokeObjectURL(img.src));
+
+      const queue = cameraQueue[key] || [];
+      const images = [];
+      const others = [];
+      queue.forEach((f, index) => {
+        (isImageFileName(f.name) ? images : others).push({ f, index });
+      });
+
+      wrap.innerHTML =
+        images
+          .map(
+            ({ f, index }) => `
+        <figure class="capture-thumb">
+          <img src="${URL.createObjectURL(f)}" alt="${escapeHtml(f.name)}">
+          <button type="button" class="thumb-remove" data-remove-preview="${index}" title="Remove"><i class="fa-solid fa-xmark"></i></button>
+          <figcaption>${escapeHtml(f.name)}</figcaption>
+        </figure>`
+          )
+          .join("") +
+        others
+          .map(
+            ({ f, index }) => `
+        <span class="attachment-chip capture-file-chip">
+          <i class="fa-solid fa-file-lines"></i> ${escapeHtml(f.name)}
+          <button type="button" class="chip-remove" data-remove-preview="${index}" title="Remove"><i class="fa-solid fa-xmark"></i></button>
+        </span>`
+          )
+          .join("");
+
+      wrap.querySelectorAll("[data-remove-preview]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const index = Number(btn.dataset.removePreview);
+          if ((cameraQueue[key] || [])[index]) {
+            cameraQueue[key].splice(index, 1);
+            updateCaptureSummary(key);
+          }
+        });
+      });
+    }
+
+    function clearCapturePreview(key) {
+      const label = document.getElementById(captureIds(key).label);
+      if (!label) return;
+      const next = label.nextElementSibling;
+      if (next && next.classList.contains("capture-preview")) {
+        next.querySelectorAll('img[src^="blob:"]').forEach((img) => URL.revokeObjectURL(img.src));
+        next.remove();
+      }
     }
 
     Object.keys(cameraQueue).forEach((key) => {
       const ids = captureIds(key);
       const browse = document.getElementById(ids.browse);
       const camera = document.getElementById(ids.camera);
-      if (browse) browse.addEventListener("change", () => updateCaptureSummary(key));
-      if (camera) camera.addEventListener("change", () => updateCaptureSummary(key));
+      if (browse) browse.addEventListener("change", () => takeFilesIntoQueue(key, browse));
+      if (camera) camera.addEventListener("change", () => takeFilesIntoQueue(key, camera));
     });
 
     // ---- Device camera (getUserMedia) ----
@@ -1170,8 +1405,16 @@
       }
 
       const btn = document.getElementById("addSessionBtn");
-      btn.disabled = true;
-      btn.textContent = "Adding…";
+      const sessionUploadProgress = document.getElementById("sessionUploadProgress");
+      const allUploadFiles = [...files, ...signedFiles];
+      const totalBytes = allUploadFiles.reduce((sum, f) => sum + f.size, 0);
+      let doneBytes = 0;
+      const onFileProgress = (e) => {
+        if (!totalBytes) return;
+        setUploadProgress(sessionUploadProgress, ((doneBytes + (e.bytesUploaded || 0)) / totalBytes) * 100);
+      };
+      hideUploadProgress(sessionUploadProgress);
+      startBtnLoading(btn, "Adding session…");
 
       const { data: session, error } = await supabaseClient
         .from("case_sessions")
@@ -1185,18 +1428,18 @@
         .single();
 
       if (error) {
-        btn.disabled = false;
-        btn.textContent = "Add Session";
+        stopBtnLoading(btn, "Add Session");
         showToast("Couldn't add session: " + error.message, "error");
         console.error(error);
         return;
       }
 
       if (files.length) {
-        btn.textContent = "Uploading files…";
+        startBtnLoading(btn, "Uploading files…");
         for (const file of files) {
           const path = `${currentCaseId}/${session.session_id}/${Date.now()}-${file.name}`;
-          const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file);
+          const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file, { onUploadProgress: onFileProgress });
+          doneBytes += file.size;
 
           if (uploadError) {
             showToast(`Session saved, but "${file.name}" failed to upload: ` + uploadError.message, "error");
@@ -1214,10 +1457,11 @@
       }
 
       if (signedFiles.length) {
-        btn.textContent = "Uploading signed documents…";
+        startBtnLoading(btn, "Uploading signed documents…");
         for (const file of signedFiles) {
           const path = `${currentCaseId}/${session.session_id}/signed/${Date.now()}-${file.name}`;
-          const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file);
+          const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file, { onUploadProgress: onFileProgress });
+          doneBytes += file.size;
 
           if (uploadError) {
             showToast(`Session saved, but "${file.name}" failed to upload: ` + uploadError.message, "error");
@@ -1234,8 +1478,8 @@
         }
       }
 
-      btn.disabled = false;
-      btn.textContent = "Add Session";
+      stopBtnLoading(btn, "Add Session");
+      hideUploadProgress(sessionUploadProgress);
 
       document.getElementById("addSessionForm").reset();
       resetCaptureGroup("proof");

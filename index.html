@@ -6,6 +6,7 @@
   
   <link rel="icon" type="image/png" href="images/COLM LOGO.png">
   <link rel="stylesheet" href="css/style.css">
+  <title>COLM Guidance Portal</title>
 </head>
 <body>
   <main class="container">
@@ -31,16 +32,17 @@
         <button type="button" id="counselorBtn" data-role="counselor">Guidance Counselor</button>
       </nav>
 
-      <p id="staffNotice">
-        Signing in as a student — you'll be able to view your dashboard and student services.
-      </p>
+      <p id="staffNotice">Sign in as Student</p>
 
       <form id="loginForm">
-        <label for="username">Email / Username</label>
+        <label for="username">Username</label>
         <input type="text" id="username" name="username" required>
 
         <label for="password">Password</label>
         <input type="password" id="password" name="password" required>
+        <div>
+          <a href="forgot-password.html" class="forgot-password-link">Forgot password?</a>
+        </div>
 
         <button type="submit" id="loginBtn">Login as Student</button>
         <div class="error-msg" id="errorMsg"></div>
@@ -79,7 +81,15 @@
             return;
           }
           if (role === "student") {
-            window.location.href = "student/student-dashboard.html";
+            const { data: studentRow } = await supabaseClient
+              .from("students")
+              .select("email_verified")
+              .eq("user_id", session.user.id)
+              .maybeSingle();
+            window.location.href =
+              studentRow?.email_verified === false
+                ? "verify-email.html"
+                : "student/student-dashboard.html";
             return;
           }
         }
@@ -109,10 +119,10 @@
         const role = activeBtn ? activeBtn.getAttribute("data-role") : "student";
 
         if (role === "counselor") {
-          staffNotice.textContent = "Signing in as Guidance Staff — you'll be able to publish and manage announcements.";
+          staffNotice.textContent = "Sign in as Guidance Counselor";
           submitBtn.textContent = "Login as Guidance Counselor";
         } else {
-          staffNotice.textContent = "Signing in as a student — you'll be able to view your dashboard and student services.";
+          staffNotice.textContent = "Sign in as Student";
           submitBtn.textContent = "Login as Student";
         }
       };
@@ -127,18 +137,30 @@
 
       updateRoleUI();
 
+      // Maps a typed username or email to the address Supabase accepts for
+      // sign-in / password reset. Empty result => unknown identifier.
+      async function resolveEmailIdentifier(rawIdentifier) {
+        if (rawIdentifier.includes("@")) return rawIdentifier;
+        const { data } = await supabaseClient.rpc("resolve_username", { p_username: rawIdentifier });
+        return data || null;
+      }
+
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
         errorMsg.style.display = "none";
         submitBtn.disabled = true;
         submitBtn.textContent = "Logging in...";
 
-        const email = document.getElementById("username").value.trim();
+        const rawIdentifier = document.getElementById("username").value.trim();
         const password = document.getElementById("password").value;
         const activeBtn = document.querySelector(".role-switch button.active");
         const selectedRole = activeBtn ? activeBtn.getAttribute("data-role") : "student";
 
         try {
+          // Resolve username -> auth email, or pass email straight through.
+          let email = await resolveEmailIdentifier(rawIdentifier);
+          if (!email) throw new Error("Invalid email or password.");
+
           const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
           if (error) throw error;
 
@@ -151,16 +173,29 @@
 
           const actualRole = userRow?.role?.toLowerCase();
 
-          if (selectedRole === "counselor" && actualRole !== "counselor") {
-            throw new Error("Invalid email or password.");
-          }
-
-          if (selectedRole === "student" && actualRole !== "student") {
+          if (selectedRole !== actualRole) {
+            // Destroy the session before erroring — otherwise the account is
+            // silently logged in and a refresh bounces to its real dashboard,
+            // even though the wrong role was selected. Keep the message
+            // generic so a wrong role isn't confirmed to third parties.
+            await supabaseClient.auth.signOut();
             throw new Error("Invalid email or password.");
           }
 
           if (actualRole === "counselor") {
             window.location.href = "counselor/counselor-dashboard.html";
+            return;
+          }
+
+          // Students whose email isn't verified yet (freshly bulk-imported)
+          // land on the verify-email page on first login.
+          const { data: studentRow } = await supabaseClient
+            .from("students")
+            .select("email_verified")
+            .eq("user_id", data.user.id)
+            .maybeSingle();
+          if (studentRow?.email_verified === false) {
+            window.location.href = "verify-email.html";
           } else {
             window.location.href = "student/student-dashboard.html";
           }

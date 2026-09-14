@@ -23,13 +23,10 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// CORS origin allowlist.
-// 1. Built-in defaults: localhost, 127.0.0.1, and private LAN ranges
-//    (10.x, 172.16-31.x, 192.168.x), plus "null" for file:// origins.
-// 2. Extra origins via ALLOWED_ORIGINS secret (comma-separated, supports
-//    "*" wildcard, e.g. "https://*.vercel.app,https://myschool.com").
-//    Set with: supabase secrets set ALLOWED_ORIGINS="https://*.vercel.app"
-//    Changes apply instantly — no redeploy needed.
+// CORS origin allowlist (same pattern as notify-student-email).
+// 1. Built-in defaults: localhost, 127.0.0.1, private LAN ranges, "null".
+// 2. Extra origins via ALLOWED_ORIGINS secret (comma-separated, supports "*"
+//    wildcard, e.g. "https://*.vercel.app,https://colmguidance.org").
 const DEFAULT_ALLOWED_ORIGIN_PATTERN =
   /^https?:\/\/(?:(?:localhost|127\.0\.0\.1|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})(:\d+)?)$/;
 
@@ -57,7 +54,7 @@ function corsHeadersFor(req: Request): Record<string, string> {
   if (isOriginAllowed(origin)) headers["Access-Control-Allow-Origin"] = origin;
   return headers;
 }
-
+  
 // Every bulk-imported student gets the same standard first-login password
 // rather than a random one per row — the school's preference, so students
 // can be told this password verbally/in a group instead of relying on the
@@ -99,6 +96,7 @@ interface StudentResult {
   firstName: string;
   lastName: string;
   studentNumber: string;
+  username: string;
   email: string;
   tempPassword: string;
   success: boolean;
@@ -174,20 +172,22 @@ Deno.serve(async (req) => {
 
     const results: StudentResult[] = [];
 
-    // firstname.lastname@colm.edu.ph is a lot friendlier than the old
-    // firstname.lastname.stu-yymmdd-001@guidance.local, but it's no longer
-    // unique on its own — two same-named students would collide. This set
-    // skips straight past slugs already used earlier in this same batch;
-    // usedEmailSlugs.add() happens once an email is confirmed to work
-    // below, so it only ever holds real, successfully-created emails.
-    const usedEmailSlugs = new Set<string>();
-    // A same-named student showing up in a *later* import (different
-    // year, re-enrollment, etc.) isn't something usedEmailSlugs alone can
-    // catch — Supabase itself is the only source of truth for emails
-    // outside this batch. So instead of guessing whether an email is
-    // free, just try it and, if Supabase says it's taken, bump the
-    // number and try again. Capped so a pathological run of collisions
-    // can't loop forever.
+    // ── Username generation ──────────────────────────────────────────────
+    // Each student gets a human-readable username (e.g. juan.delacruz) for
+    // login instead of the fake internal email. When a name collides with
+    // an existing student or an earlier entry in this batch, the student
+    // number's last 4 digits are appended (e.g. juan.delacruz0001).
+    const usedUsernames = new Set<string>();
+    const { data: existingUsernameRows } = await adminClient
+      .from("students")
+      .select("username")
+      .not("username", "is", null);
+    for (const row of existingUsernameRows || []) {
+      if (row.username) usedUsernames.add(row.username);
+    }
+
+    // Safety net: if the computed email still clashes in auth (extremely
+    // unlikely given the username-guarantee above), bump a numeric suffix.
     const MAX_EMAIL_ATTEMPTS = 20;
 
     function isEmailTakenError(error: { code?: string; message?: string } | null): boolean {
@@ -204,12 +204,13 @@ Deno.serve(async (req) => {
       nextSeq++;
 
       const baseSlug = `${slugify(firstName)}.${slugify(lastName) || "student"}`;
-      let emailSlug = baseSlug;
-      let suffix = 2;
-      while (usedEmailSlugs.has(emailSlug)) {
-        emailSlug = `${baseSlug}${suffix}`;
-        suffix++;
+      const studentNumSuffix = studentNumber.split("-")[1] || "0001";
+      let username = baseSlug;
+      if (usedUsernames.has(username)) {
+        username = `${baseSlug}${studentNumSuffix}`;
       }
+      let emailSlug = username;
+      let suffix = 2;
 
       const tempPassword = STUDENT_TEMP_PASSWORD;
 
@@ -218,6 +219,7 @@ Deno.serve(async (req) => {
           firstName,
           lastName,
           studentNumber,
+          username,
           email: `${emailSlug}@colm.edu.ph`,
           tempPassword: "",
           success: false,
@@ -241,7 +243,7 @@ Deno.serve(async (req) => {
 
         if (!createError || !isEmailTakenError(createError)) break;
 
-        emailSlug = `${baseSlug}${suffix}`;
+        emailSlug = `${username}${suffix}`;
         suffix++;
         email = `${emailSlug}@colm.edu.ph`;
       }
@@ -251,6 +253,7 @@ Deno.serve(async (req) => {
           firstName,
           lastName,
           studentNumber,
+          username,
           email,
           tempPassword: "",
           success: false,
@@ -259,7 +262,10 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      usedEmailSlugs.add(emailSlug);
+      // The email that actually landed is the authoritative username —
+      // keeps the two in lockstep if the retry loop above had to fire.
+      username = emailSlug;
+      usedUsernames.add(username);
       const newUserId = created.user.id;
 
       const { error: usersError } = await adminClient.from("users").insert({
@@ -273,6 +279,7 @@ Deno.serve(async (req) => {
           firstName,
           lastName,
           studentNumber,
+          username,
           email,
           tempPassword: "",
           success: false,
@@ -284,6 +291,7 @@ Deno.serve(async (req) => {
       const { error: studentError } = await adminClient.from("students").insert({
         user_id: newUserId,
         student_number: studentNumber,
+        username,
         first_name: firstName,
         middle_name: row.middleName?.trim() || null,
         last_name: lastName || null,
@@ -291,6 +299,8 @@ Deno.serve(async (req) => {
         section: row.section?.trim() || section || null,
         contact_number: row.contactNumber?.trim() || null,
         education_level: inferEducationLevel(row.level) || educationLevel || null,
+        email_verified: false,
+        auth_email: email,
       });
 
       if (studentError) {
@@ -299,6 +309,7 @@ Deno.serve(async (req) => {
           firstName,
           lastName,
           studentNumber,
+          username,
           email,
           tempPassword: "",
           success: false,
@@ -307,7 +318,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      results.push({ firstName, lastName, studentNumber, email, tempPassword, success: true, error: null });
+      results.push({ firstName, lastName, studentNumber, username, email, tempPassword, success: true, error: null });
     }
 
     return json({ success: true, results });

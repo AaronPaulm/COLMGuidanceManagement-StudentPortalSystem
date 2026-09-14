@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <link rel="icon" type="image/png" href="images/COLM LOGO.png">
+  <link rel="stylesheet" href="css/style.css">
+  <title>Verify Email · COLM Guidance Portal</title>
+</head>
+<body>
+  <main class="container">
+    <aside class="left-panel">
+      <header>
+         <img src="images/COLM LOGO.png" alt="COLM Logo" class="logo">
+        <h1>College of Our Lady of Mercy of Pulilan Foundation Inc.</h1>
+        <hr>
+        <p>Guidance Management & Student Portal System</p>
+      </header>
+    </aside>
+
+    <section class="right-panel">
+      <header class="login-greeting">
+        <h2>Verify Your Email</h2>
+        <p id="verifyGreeting">Connect a personal email to your account.</p>
+      </header>
+
+      <div id="verifyNotice" class="banner" style="display:none;"></div>
+
+      <form id="verifyEmailForm" class="auth-card">
+        <p class="verify-intro">
+          Enter a personal email address (e.g. Gmail, Yahoo). We'll use it to send you
+          password-reset links and important notifications.
+        </p>
+
+        <label for="verifyEmail">Personal Email Address</label>
+        <input type="email" id="verifyEmail" required placeholder="you@gmail.com">
+
+        <button type="submit" id="verifySendBtn">Send verification code</button>
+        <div class="error-msg" id="verifyError" style="display:none;"></div>
+      </form>
+
+      <form id="verifyOtpForm" class="auth-card" style="display:none;">
+        <p class="verify-intro">
+          We sent a verification code to <strong id="verifyTargetEmail"></strong>.
+          Enter it below to finish linking the email to your account.
+        </p>
+
+        <label for="verifyOtpCode">Verification Code</label>
+        <input type="text" id="verifyOtpCode" required inputmode="numeric" autocomplete="one-time-code" placeholder="Enter the code">
+
+        <button type="submit" id="verifyOtpBtn">Verify email</button>
+        <div class="error-msg" id="otpError" style="display:none;"></div>
+        <button type="button" id="resendOtpBtn" class="link-btn">Didn't get a code? Send a new one</button>
+      </form>
+
+      <button type="button" id="skipVerifyBtn" class="link-btn">I'll do this later</button>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script>
+    const notice = document.getElementById("verifyNotice");
+    const verifyEmailForm = document.getElementById("verifyEmailForm");
+    const verifyOtpForm = document.getElementById("verifyOtpForm");
+    const verifyError = document.getElementById("verifyError");
+    const otpError = document.getElementById("otpError");
+    const skipBtn = document.getElementById("skipVerifyBtn");
+    let pendingEmail = "";
+
+    function showError(el, message) {
+      el.textContent = message;
+      el.style.display = "block";
+    }
+
+    async function redirectLoggedOut() {
+      const {
+        data: { session },
+      } = await supabaseClient.auth.getSession();
+      if (!session) {
+        window.location.href = "index.html";
+        return null;
+      }
+      return session;
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Safety net: a legacy confirmation LINK (token_hash in the URL) from
+      // before the code-only template completes here, mirroring how Supabase's
+      // recovery links work. The normal flow is the 6-digit code below, so this
+      // only ever fires for old-style confirmation emails.
+      const url = new URL(window.location.href);
+      const params = new URLSearchParams(
+        url.search + (url.hash ? "&" + url.hash.slice(1) : "")
+      );
+      const tokenHash = params.get("token_hash");
+      const tokenType = params.get("type");
+
+      if (tokenHash && tokenType === "email_change") {
+        const { data, error } = await supabaseClient.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: "email_change",
+        });
+        if (!error && data?.user?.id && data?.user?.email) {
+          await supabaseClient.rpc("confirm_student_email", {
+            p_user_id: data.user.id,
+            p_auth_email: data.user.email,
+          });
+          notice.textContent = "Email verified. Taking you to your dashboard…";
+          notice.style.display = "flex";
+          const { data: linkSession } = await supabaseClient.auth.getSession();
+          if (!linkSession.session) {
+            window.location.href = "index.html";
+            return;
+          }
+          window.location.href = "student/student-dashboard.html";
+          return;
+        }
+        // Verification via link failed — fall through to the normal flow.
+      }
+
+      const session = await redirectLoggedOut();
+      if (!session) return;
+
+      const { data: userRow } = await supabaseClient
+        .from("users")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .single();
+
+      const role = userRow?.role?.toLowerCase();
+      if (role === "counselor") {
+        // Counselors always have a real email from creation — nothing to verify.
+        window.location.href = "counselor/counselor-dashboard.html";
+        return;
+      }
+      if (role !== "student") {
+        await supabaseClient.auth.signOut();
+        window.location.href = "index.html";
+        return;
+      }
+
+      const { data: studentRow } = await supabaseClient
+        .from("students")
+        .select("first_name, last_name, email_verified")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (studentRow?.email_verified !== false) {
+        window.location.href = "student/student-dashboard.html";
+        return;
+      }
+
+      // Sync sweep: if the change was already confirmed server-side (e.g. an
+      // old link-style email was clicked while logged in), the auth email is
+      // real now but students.email_verified is still false. Copy it from the
+      // live session so the nag banner and profile update immediately.
+      const { data: authUser } = await supabaseClient.auth.getUser();
+      if (!/@colm\.edu\.ph$/.test(authUser?.user?.email || "")) {
+        await supabaseClient.rpc("confirm_student_email", {
+          p_user_id: session.user.id,
+          p_auth_email: authUser.user.email,
+        });
+        studentRow.email_verified = true;
+      }
+
+      // Pressing Back from here must land on the student dashboard, not on
+      // the login page (which would bounce straight back here). Push a state
+      // entry so a Back press fires popstate, then hop forward to the
+      // dashboard via location.replace (adds no new history entry).
+      history.pushState({ verifyEmail: true }, "");
+      window.addEventListener("popstate", () => {
+        window.location.replace("student/student-dashboard.html");
+      });
+
+      const fullName = [studentRow?.first_name, studentRow?.last_name].filter(Boolean).join(" ");
+      document.getElementById("verifyGreeting").textContent =
+        (fullName ? `Hi ${fullName}! ` : "") +
+        "Connect a personal email to your account so we can reach you.";
+
+      async function requestVerificationCode(email, { fromResend = false } = {}) {
+        verifyError.style.display = "none";
+        otpError.style.display = "none";
+
+        const sendBtn = document.getElementById("verifySendBtn");
+        const resendBtn = document.getElementById("resendOtpBtn");
+        sendBtn.disabled = true;
+        sendBtn.textContent = "Sending code…";
+        resendBtn.disabled = true;
+        resendBtn.textContent = "Sending…";
+
+        // updateUser triggers Supabase to email a confirmation code (the
+        // Change Email Address template, delivered by your email provider).
+        // The account's current (fake) email is untouched until the code is
+        // confirmed below.
+        const { error } = await supabaseClient.auth.updateUser({ email });
+
+        sendBtn.disabled = false;
+        sendBtn.textContent = "Send verification code";
+        resendBtn.disabled = false;
+        resendBtn.textContent = "Didn't get a code? Send a new one";
+
+        if (error) {
+          showError(
+            fromResend ? otpError : verifyError,
+            error.message || "Couldn't send the code. Try again."
+          );
+          return false;
+        }
+
+        pendingEmail = email;
+        document.getElementById("verifyTargetEmail").textContent = email;
+        if (!fromResend) {
+          verifyEmailForm.style.display = "none";
+          verifyOtpForm.style.display = "block";
+        }
+        document.getElementById("verifyOtpCode").focus();
+        return true;
+      }
+
+      verifyEmailForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const newEmail = document.getElementById("verifyEmail").value.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+          showError(verifyError, "Enter a valid email address.");
+          return;
+        }
+
+        await requestVerificationCode(newEmail);
+      });
+
+      document.getElementById("resendOtpBtn").addEventListener("click", async () => {
+        if (!pendingEmail) return;
+        await requestVerificationCode(pendingEmail, { fromResend: true });
+      });
+
+      verifyOtpForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        otpError.style.display = "none";
+
+        const code = document.getElementById("verifyOtpCode").value.trim().replace(/[-\s]/g, "");
+        const btn = document.getElementById("verifyOtpBtn");
+        btn.disabled = true;
+        btn.textContent = "Verifying…";
+
+        const { error } = await supabaseClient.auth.verifyOtp({
+          email: pendingEmail,
+          token: code,
+          type: "email_change",
+        });
+
+        btn.disabled = false;
+        btn.textContent = "Verify email";
+
+        if (error) {
+          showError(otpError, error.message || "That code didn't work. It may have expired — press 'Didn't get a code?' to send a new one.");
+          return;
+        }
+
+        // Email confirmed — record it so logins/resets use the real address
+        // and the nag banner stops showing. The RPC only updates the caller's
+        // own row (RLS would block a direct update otherwise).
+        const userId = (await supabaseClient.auth.getUser()).data.user.id;
+        await supabaseClient
+          .rpc("confirm_student_email", { p_user_id: userId, p_auth_email: pendingEmail });
+
+        notice.textContent = "Email verified. Taking you to your dashboard…";
+        notice.style.display = "flex";
+        verifyOtpForm.style.display = "none";
+        skipBtn.style.display = "none";
+        setTimeout(() => {
+          window.location.href = "student/student-dashboard.html";
+        }, 1500);
+      });
+
+      skipBtn.addEventListener("click", () => {
+        window.location.href = "student/student-dashboard.html";
+      });
+    });
+  </script>
+</body>
+</html>

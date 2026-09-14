@@ -519,7 +519,7 @@
         <tr>
           <td>${escapeHtml(r.firstName)} ${escapeHtml(r.lastName)}</td>
           <td>${escapeHtml(r.studentNumber)}</td>
-          <td>${escapeHtml(r.email)}</td>
+          <td>${escapeHtml(r.username || r.email)}</td>
           <td>${r.success ? escapeHtml(r.tempPassword) : "—"}</td>
           <td>${r.success ? "Created" : "Failed: " + escapeHtml(r.error || "")}</td>
         </tr>
@@ -550,7 +550,7 @@
           <h1>Student Login Credentials</h1>
           <div class="meta">Generated ${new Date().toLocaleString("en-US")} · ${results.length} account${results.length === 1 ? "" : "s"} · keep this confidential</div>
           <table>
-            <thead><tr><th>Name</th><th>Student #</th><th>Login Email</th><th>Temp Password</th><th>Status</th></tr></thead>
+            <thead><tr><th>Name</th><th>Student #</th><th>Username</th><th>Temp Password</th><th>Status</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
       `);
@@ -584,7 +584,7 @@
         <tr>
           <td>${escapeHtml(r.firstName)} ${escapeHtml(r.lastName)}</td>
           <td>${escapeHtml(r.studentNumber)}</td>
-          <td>${escapeHtml(r.email)}</td>
+          <td>${escapeHtml(r.username || r.email)}</td>
           <td style="font-family:monospace;">${r.success ? escapeHtml(r.tempPassword) : "—"}</td>
           <td>
             <span class="badge badge-${r.success ? "approved" : "cancelled"}">${r.success ? "Created" : "Failed"}</span>

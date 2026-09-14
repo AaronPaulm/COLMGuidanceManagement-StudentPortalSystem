@@ -315,6 +315,9 @@
           selectedDateStr = dateStr;
           renderCalendar();
           renderDayList(dateStr);
+          if (!announcementsByDate[dateStr] || announcementsByDate[dateStr].length === 0) {
+            openForm(null);
+          }
         });
 
         grid.appendChild(cell);
@@ -433,6 +436,7 @@
       saveBtn.textContent = "Saving…";
 
       let error;
+      let insertedId = null;
       const isNew = !editingId;
       if (editingId) {
         ({ error } = await supabaseClient
@@ -440,9 +444,13 @@
           .update(payload)
           .eq("announcement_id", editingId));
       } else {
-        ({ error } = await supabaseClient
+        const { data: inserted, error: insertError } = await supabaseClient
           .from("announcements")
-          .insert({ ...payload, counselor_id: currentCounselor.counselor_id }));
+          .insert({ ...payload, counselor_id: currentCounselor.counselor_id })
+          .select("announcement_id")
+          .single();
+        error = insertError;
+        insertedId = inserted?.announcement_id ?? null;
       }
 
       saveBtn.disabled = false;
@@ -463,7 +471,7 @@
             type: "announcement",
             title: payload.title,
             message: payload.announcement_content,
-            link: "student-announcements.html",
+            link: `student-announcements.html?date=${payload.announcement_date}${insertedId ? `&id=${insertedId}` : ""}`,
           }));
         if (rows.length) await supabaseClient.from("notifications").insert(rows);
       }

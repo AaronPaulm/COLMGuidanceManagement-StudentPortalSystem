@@ -733,3 +733,44 @@ document.getElementById("mobileLogoutBtn").addEventListener("click", async (e) =
   e.preventDefault();
   await logoutCounselor();
 });
+
+function startBtnLoading(btn, label) {
+  if (!btn.dataset.idleLabel) btn.dataset.idleLabel = btn.textContent.trim() || "Save";
+  btn.disabled = true;
+  btn.innerHTML = `<span class="btn-spinner"></span>${label}`;
+}
+
+function stopBtnLoading(btn, idleLabel) {
+  btn.disabled = false;
+  btn.textContent = idleLabel || btn.dataset.idleLabel || btn.textContent;
+}
+
+function setUploadProgress(el, percent) {
+  if (!el) return;
+  const pct = Math.max(0, Math.min(100, Math.round(percent)));
+  const fill = el.querySelector(".upload-progress-fill");
+  if (fill) fill.style.width = pct + "%";
+  el.classList.add("visible");
+}
+
+function hideUploadProgress(el) {
+  if (!el) return;
+  const fill = el.querySelector(".upload-progress-fill");
+  if (fill) fill.style.width = "0";
+  el.classList.remove("visible");
+}
+
+function makeImgLazy(img) {
+  if (!img) return;
+  img.classList.add("img-lazy");
+  img.addEventListener(
+    "load",
+    () => img.classList.add("is-loaded"),
+    { once: true }
+  );
+  img.addEventListener(
+    "error",
+    () => img.classList.remove("img-lazy"),
+    { once: true }
+  );
+}

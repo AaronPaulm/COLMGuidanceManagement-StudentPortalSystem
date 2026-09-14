@@ -71,11 +71,12 @@ p  { font-size: clamp(14px, 2vw, 16px); margin: 0 0 .5em; }
        absolutely positioned in this corner via .notif-wrap) so the title/
        subtitle text never wraps underneath it and gets hidden — most
        noticeable on narrow screens where the heading wraps to 2 lines. */
-    padding-right: 4.5rem;
+padding-right: 4.5rem;
     background: linear-gradient(135deg, #060015, #0b0f2e);
     color: white;
     border-radius: 16px;
     box-shadow: 0 8px 20px rgba(0,0,0,.12);
+    margin-bottom: 20px;
 }
 
 .GreetingsCard h1,
@@ -743,31 +744,33 @@ p  { font-size: clamp(14px, 2vw, 16px); margin: 0 0 .5em; }
     table-layout: fixed;
 }
 
-.appointments-table th:nth-child(1) { width: 18%; }
-.appointments-table th:nth-child(2) { width: 12%; }
-.appointments-table th:nth-child(3) { width: 10%; }
-.appointments-table th:nth-child(4) { width: 28%; }
-.appointments-table th:nth-child(5) { width: 12%; }
-.appointments-table th:nth-child(6) { width: 20%; }
+.appointments-table th:nth-child(1) { width: 16%; }
+.appointments-table th:nth-child(2) { width: 10%; }
+.appointments-table th:nth-child(3) { width: 8%; }
+.appointments-table th:nth-child(4) { width: 14%; }
+.appointments-table th:nth-child(5) { width: 28%; }
+.appointments-table th:nth-child(6) { width: 10%; }
+.appointments-table th:nth-child(7) { width: 14%; }
 
 .student-appointments-table {
     table-layout: fixed;
 }
 
-.student-appointments-table th:nth-child(1) { width: 16%; }
-.student-appointments-table th:nth-child(2) { width: 11%; }
-.student-appointments-table th:nth-child(3) { width: 9%; }
-.student-appointments-table th:nth-child(4) { width: 22%; }
-.student-appointments-table th:nth-child(5) { width: 20%; }
+.student-appointments-table th:nth-child(1) { width: 15%; }
+.student-appointments-table th:nth-child(2) { width: 10%; }
+.student-appointments-table th:nth-child(3) { width: 8%; }
+.student-appointments-table th:nth-child(4) { width: 14%; }
+.student-appointments-table th:nth-child(5) { width: 24%; }
 .student-appointments-table th:nth-child(6) { width: 12%; }
-.student-appointments-table th:nth-child(7) { width: 10%; }
-.student-appointments-table td:nth-child(7) { text-align: center; }
+.student-appointments-table th:nth-child(7) { width: 9%; }
+.student-appointments-table th:nth-child(8) { width: 8%; }
+.student-appointments-table td:nth-child(8) { text-align: center; }
 
 .submissions-table td:nth-child(5) { text-align: center; }
 
 @media (max-width: 1024px) {
     .student-appointments-table {
-        min-width: 680px;
+        min-width: 720px;
     }
 }
 
@@ -776,12 +779,20 @@ p  { font-size: clamp(14px, 2vw, 16px); margin: 0 0 .5em; }
    rows inside the cell. Give this table more breathing room. */
 @media (max-width: 1024px) {
     .appointments-table {
-        min-width: 640px;
+        min-width: 700px;
     }
 }
 
 .col-concern {
     word-break: break-word;
+}
+
+.col-concern-type {
+    white-space: nowrap;
+}
+
+.col-concern-details {
+    max-width: 320px;
 }
 
 .cases-table {
@@ -1120,6 +1131,58 @@ p  { font-size: clamp(14px, 2vw, 16px); margin: 0 0 .5em; }
     gap: 8px;
     flex-shrink: 0;
     flex-wrap: wrap;
+}
+
+/* First-login email reminder shown across student pages until the student
+   links a personal email (see js/student-common.js). Deliberately NOT the
+   amber .banner look — a clean white card with a blue accent bar reads
+   better alongside the rest of the dashboard's cards. */
+.verify-notice-banner {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-left: 4px solid #2563eb;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 20px 0;
+    font-size: 14px;
+    color: #374151;
+}
+
+.verify-notice-banner > i {
+    font-size: 22px;
+    color: #2563eb;
+    flex-shrink: 0;
+}
+
+.verify-notice-body {
+    flex: 1;
+}
+
+.verify-notice-body p {
+    margin: 0;
+}
+
+.verify-notice-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+    .verify-notice-banner {
+        flex-wrap: wrap;
+    }
+
+    .verify-notice-actions {
+        width: 100%;
+    }
+
+    .verify-notice-actions .btn {
+        flex: 1;
+    }
 }
 
 .review-badge {
@@ -1530,12 +1593,16 @@ p  { font-size: clamp(14px, 2vw, 16px); margin: 0 0 .5em; }
         white-space: nowrap;
     }
 
-    /* ...except columns that are meant to hold long free text — those
+/* ...except columns that are meant to hold long free text — those
        should still wrap within their column rather than force the whole
        table absurdly wide. */
     .simple-table .col-concern,
     .cases-table td:nth-child(3) {
         white-space: normal;
+    }
+
+    .simple-table .col-concern-type {
+        white-space: nowrap;
     }
 }
 
@@ -1864,6 +1931,26 @@ p  { font-size: clamp(14px, 2vw, 16px); margin: 0 0 .5em; }
 
 .link-btn:hover {
   text-decoration: underline;
+}
+
+/* The "I'll do this later" skip button on verify-email.html. The generic
+   `button { width:100% }` rule below would stretch it across the whole
+   panel (and its :hover would flash the full strip dark blue), so this
+   pins it back to a compact, muted outline button. */
+#skipVerifyBtn.link-btn {
+  width: auto;
+  margin-top: 18px;
+  padding: 9px 18px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  color: #4b5563;
+  font-weight: 600;
+}
+
+#skipVerifyBtn.link-btn:hover {
+  background: #f3f4f6;
+  text-decoration: none;
 }
 
 #loginBtn {
@@ -2558,6 +2645,7 @@ button:disabled {
     background: #fff;
     border-radius: 16px;
     padding: 24px;
+    margin: 25px 0;
     box-shadow: 0 4px 10px rgba(0,0,0,.06);
 }
 
@@ -2801,6 +2889,10 @@ button:disabled {
 
 .form-note-banner i {
     color: #2563eb;
+}
+
+.form-note-banner strong {
+    white-space: nowrap;
 }
 
 .appt-form-row select {
@@ -3370,6 +3462,273 @@ button:disabled {
 
 .attachment-chip:hover {
     background: #dbeafe;
+}
+
+/* ---- Image thumbnails & full-size lightbox ---- */
+
+.attachment-thumb {
+    position: relative;
+    flex: 0 0 auto;
+    display: inline-flex;
+    flex-direction: column;
+    gap: 4px;
+    cursor: zoom-in;
+    max-width: 140px;
+}
+
+.attachment-thumb img {
+    display: block;
+    width: 140px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #f3f4f6;
+}
+
+.attachment-thumb-name {
+    display: block;
+    font-size: 12px;
+    color: #4b5563;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.thumb-remove {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 22px;
+    height: 22px;
+    margin: 0;
+    padding: 0;
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.75);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.thumb-remove:hover {
+    background: #dc2626;
+}
+
+.image-lightbox {
+    position: relative;
+    max-width: 92vw;
+    max-height: 88vh;
+    margin: auto;
+}
+
+.image-lightbox-spinner {
+    display: none;
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 44px;
+    height: 44px;
+    border: 4px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: page-load-spin .7s linear infinite;
+    z-index: 2;
+}
+
+.image-lightbox.loading .image-lightbox-spinner {
+    display: block;
+}
+
+.image-lightbox img {
+    display: block;
+    max-width: 92vw;
+    max-height: 88vh;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity .25s ease;
+}
+
+.image-lightbox img.is-loaded {
+    opacity: 1;
+}
+
+.image-lightbox-close {
+    position: absolute;
+    top: -44px;
+    right: -44px;
+    width: 34px;
+    height: 34px;
+    margin: 0;
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.8);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    z-index: 3;
+}
+
+.image-lightbox-close:hover {
+    background: #dc2626;
+}
+
+@media (max-width: 768px) {
+    .image-lightbox-close {
+        top: -40px;
+        right: 0;
+    }
+}
+
+/* Pre-save capture preview strip (camera captures and picked images) */
+.capture-preview {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 8px;
+    width: 100%;
+}
+
+.capture-thumb {
+    position: relative;
+    flex: 0 0 auto;
+    margin: 0;
+    width: 96px;
+}
+
+.capture-thumb .thumb-remove {
+    left: auto;
+}
+
+.capture-thumb img {
+    display: block;
+    width: 96px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    background: #f3f4f6;
+}
+
+.capture-thumb figcaption {
+    font-size: 11px;
+    color: #6b7280;
+    max-width: 96px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 2px;
+}
+
+/* ---- Upload loading state: button spinner + progress bar ---- */
+
+.btn-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    vertical-align: -2px;
+    margin-right: 8px;
+    animation: page-load-spin .7s linear infinite;
+}
+
+.upload-progress {
+    display: none;
+    height: 6px;
+    border-radius: 3px;
+    background: #e5e7eb;
+    overflow: hidden;
+    margin: 0 0 12px;
+}
+
+.upload-progress.visible {
+    display: block;
+}
+
+.upload-progress-fill {
+    height: 100%;
+    width: 0;
+    background: #2563eb;
+    border-radius: 3px;
+    transition: width .15s ease;
+}
+
+/* Async-rendered thumbnails: shimmer placeholder until the image decodes */
+img.img-lazy {
+    opacity: 0;
+    transition: opacity .25s ease;
+    background-image: linear-gradient(100deg, #eef2f7 40%, #dce5ef 50%, #eef2f7 60%);
+    background-size: 200% 100%;
+    animation: img-shimmer 1.2s ease-in-out infinite;
+}
+
+img.img-lazy.is-loaded {
+    opacity: 1;
+    background-image: none;
+    animation: none;
+}
+
+@keyframes img-shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+}
+
+/* Non-image picks in the strip get a removable chip instead of a thumb */
+.capture-file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.chip-remove {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #93c5fd;
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chip-remove:hover {
+    color: #dc2626;
+}
+
+/* Intervention/template icons that show a real picture instead of an icon */
+.form-library-icon.form-library-thumb {
+    width: auto;
+    height: auto;
+    background: transparent;
+}
+
+.form-library-thumb img {
+    width: 100%;
+    max-width: 220px;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+.form-library-thumb .attachment-thumb-name {
+    max-width: 220px;
 }
 
 .case-session-form {

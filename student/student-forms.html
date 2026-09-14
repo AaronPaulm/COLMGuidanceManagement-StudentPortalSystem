@@ -144,6 +144,16 @@
 </main>
 
     <!-- Answer Modal -->
+    <div class="modal-overlay" id="imageLightboxOverlay">
+        <div class="image-lightbox">
+            <button type="button" class="image-lightbox-close" id="imageLightboxClose" aria-label="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="image-lightbox-spinner"></div>
+            <img id="imageLightboxImg" src="" alt="">
+        </div>
+    </div>
+
     <div class="modal-overlay" id="answerModalOverlay">
         <div class="modal-box wide">
             <div class="modal-header">
@@ -335,17 +345,51 @@
     }
 
     function interventionTileHtml(iv) {
+      const fileView = isImageFileName(iv.file_name)
+        ? `<div class="attachment-thumb form-library-thumb" data-path="${escapeHtml(iv.file_path)}" title="${escapeHtml(iv.file_name)}">
+             <img data-signed-path="${escapeHtml(iv.file_path)}" alt="${escapeHtml(iv.file_name)}">
+             <span class="attachment-thumb-name">${escapeHtml(iv.file_name)}</span>
+           </div>`
+        : `<button type="button" class="btn btn-outline" data-action="view" data-path="${escapeHtml(iv.file_path)}"><i class="fa-solid fa-file-lines"></i> View</button>`;
       return `
         <div class="assigned-form-tile">
           <span class="badge badge-info">Intervention</span>
           <h3>${escapeHtml(iv.title)}</h3>
           <p>Added ${formatDate(iv.created_at)}</p>
           <div class="form-actions">
-            <button type="button" class="btn btn-outline" data-action="view" data-path="${escapeHtml(iv.file_path)}"><i class="fa-solid fa-file-lines"></i> View</button>
+            ${fileView}
           </div>
         </div>
       `;
     }
+
+    const IMAGE_EXT_RE = /\.(png|jpe?g|gif|webp|svg|heic|heif|bmp)$/i;
+
+    function isImageFileName(name) {
+      return IMAGE_EXT_RE.test(name || "");
+    }
+
+    function openImageLightbox(url) {
+      const img = document.getElementById("imageLightboxImg");
+      const lbox = img.closest(".image-lightbox");
+      lbox.classList.add("loading");
+      img.classList.remove("is-loaded");
+      img.onload = () => {
+        img.classList.add("is-loaded");
+        lbox.classList.remove("loading");
+      };
+      img.src = url;
+      document.getElementById("imageLightboxOverlay").classList.add("show");
+    }
+
+    document.getElementById("imageLightboxClose").addEventListener("click", () => {
+      document.getElementById("imageLightboxOverlay").classList.remove("show");
+    });
+    document.getElementById("imageLightboxOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "imageLightboxOverlay") {
+        document.getElementById("imageLightboxOverlay").classList.remove("show");
+      }
+    });
 
     async function openIntervention(path) {
       const { data, error } = await supabaseClient.storage.from("case-attachments").createSignedUrl(path, 60);
@@ -385,6 +429,23 @@
       grid.innerHTML = interventions.map(interventionTileHtml).join("");
       grid.querySelectorAll('[data-action="view"]').forEach((btn) => {
         btn.addEventListener("click", () => openIntervention(btn.dataset.path));
+      });
+      grid.querySelectorAll(".attachment-thumb img[data-signed-path]").forEach((img) => {
+        supabaseClient.storage
+          .from("case-attachments")
+          .createSignedUrl(img.dataset.signedPath, 60)
+          .then(({ data, error }) => {
+            if (error || !data) return;
+            makeImgLazy(img);
+            img.src = data.signedUrl;
+            img.dataset.signed = data.signedUrl;
+          });
+      });
+      grid.querySelectorAll(".attachment-thumb").forEach((thumb) => {
+        thumb.addEventListener("click", () => {
+          const img = thumb.querySelector("img");
+          if (img?.dataset.signed) openImageLightbox(img.dataset.signed);
+        });
       });
     }
 

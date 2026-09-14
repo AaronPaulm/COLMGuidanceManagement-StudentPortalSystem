@@ -236,7 +236,7 @@
 
     <!-- Assign to Students Modal -->
     <div class="modal-overlay" id="assignModalOverlay">
-        <div class="modal-box">
+        <div class="modal-box wide">
             <div class="modal-header">
                 <h3>Assign "<span id="assignFormName"></span>"</h3>
                 <button type="button" class="modal-close" id="assignModalCloseBtn" aria-label="Close">
@@ -245,7 +245,7 @@
             </div>
             <div class="modal-body">
                 <div class="form-note-banner">
-                    <i class="fa-regular fa-clock"></i> Assigning for <strong id="assignSchoolYearDisplay">—</strong> (added automatically, based on today's date).
+                    <i class="fa-regular fa-clock"></i> Assigning for <strong id="assignSchoolYearDisplay">—</strong>.
                 </div>
 
                 <div class="form-field" style="margin-top:14px;">
@@ -334,11 +334,22 @@
                         <input type="file" id="templateFileInput" accept="application/pdf,.doc,.docx" required>
                         <span class="hint">Up to 10MB. You'll assign this to specific students' cases afterward.</span>
                     </div>
+                    <div class="upload-progress" id="templateUploadProgress"><div class="upload-progress-fill"></div></div>
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary" id="saveInterventionTemplateBtn">Save to Library</button>
                     </div>
                 </form>
             </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="imageLightboxOverlay">
+        <div class="image-lightbox">
+            <button type="button" class="image-lightbox-close" id="imageLightboxClose" aria-label="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="image-lightbox-spinner"></div>
+            <img id="imageLightboxImg" src="" alt="">
         </div>
     </div>
 
@@ -1278,6 +1289,34 @@
 
     // ---------- Intervention Library ----------
 
+    const IMAGE_EXT_RE = /\.(png|jpe?g|gif|webp|svg|heic|heif|bmp)$/i;
+
+    function isImageFileName(name) {
+      return IMAGE_EXT_RE.test(name || "");
+    }
+
+    function openImageLightbox(url) {
+      const img = document.getElementById("imageLightboxImg");
+      const lbox = img.closest(".image-lightbox");
+      lbox.classList.add("loading");
+      img.classList.remove("is-loaded");
+      img.onload = () => {
+        img.classList.add("is-loaded");
+        lbox.classList.remove("loading");
+      };
+      img.src = url;
+      document.getElementById("imageLightboxOverlay").classList.add("show");
+    }
+
+    document.getElementById("imageLightboxClose").addEventListener("click", () => {
+      document.getElementById("imageLightboxOverlay").classList.remove("show");
+    });
+    document.getElementById("imageLightboxOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "imageLightboxOverlay") {
+        document.getElementById("imageLightboxOverlay").classList.remove("show");
+      }
+    });
+
     async function loadInterventionTemplates() {
       const list = document.getElementById("interventionTemplatesList");
       list.innerHTML = `<div class="empty-state">Loading…</div>`;
@@ -1304,8 +1343,13 @@
       templates.forEach((t) => {
         const card = document.createElement("div");
         card.className = "form-library-card";
+        const iconHtml = isImageFileName(t.file_name)
+          ? `<div class="form-library-icon form-library-thumb">
+               <img data-signed-path="${escapeHtml(t.file_path)}" alt="${escapeHtml(t.file_name)}">
+             </div>`
+          : `<div class="form-library-icon"><i class="fa-solid fa-file-lines"></i></div>`;
         card.innerHTML = `
-          <div class="form-library-icon"><i class="fa-solid fa-file-lines"></i></div>
+          ${iconHtml}
           <h3>${escapeHtml(t.title)}</h3>
           <p>${escapeHtml(t.file_name)}</p>
           <div class="form-library-meta">Uploaded ${formatDate(t.created_at)}</div>
@@ -1314,17 +1358,37 @@
             <button type="button" class="icon-btn danger" data-action="delete" title="Delete"><i class="fa-solid fa-trash"></i></button>
           </div>
         `;
-        card.querySelector('[data-action="view"]').addEventListener("click", () => openInterventionFile(t.file_path));
+        hydrateTemplateThumb(card);
+        card.querySelector(".form-library-thumb img")?.addEventListener("click", () => openInterventionFile(t.file_path, t.file_name));
+        card.querySelector('[data-action="view"]').addEventListener("click", () => openInterventionFile(t.file_path, t.file_name));
         card.querySelector('[data-action="delete"]').addEventListener("click", () => deleteInterventionTemplate(t));
         list.appendChild(card);
       });
     }
 
-    async function openInterventionFile(path) {
+    function hydrateTemplateThumb(card) {
+      const img = card.querySelector(".form-library-thumb img[data-signed-path]");
+      if (!img) return;
+      supabaseClient.storage
+        .from("case-attachments")
+        .createSignedUrl(img.dataset.signedPath, 60)
+        .then(({ data, error }) => {
+          if (error || !data) return;
+          makeImgLazy(img);
+          img.src = data.signedUrl;
+          img.dataset.signed = data.signedUrl;
+        });
+    }
+
+    async function openInterventionFile(path, fileName) {
       const { data, error } = await supabaseClient.storage.from("case-attachments").createSignedUrl(path, 60);
       if (error) {
         showToast("Couldn't open file: " + error.message, "error");
         console.error(error);
+        return;
+      }
+      if (isImageFileName(fileName)) {
+        openImageLightbox(data.signedUrl);
         return;
       }
       window.open(data.signedUrl, "_blank");
@@ -1385,15 +1449,21 @@
       }
 
       const btn = document.getElementById("saveInterventionTemplateBtn");
-      btn.disabled = true;
-      btn.textContent = "Uploading…";
+      const templateUploadProgress = document.getElementById("templateUploadProgress");
+      hideUploadProgress(templateUploadProgress);
+      startBtnLoading(btn, "Uploading…");
 
       const path = `intervention-templates/${currentCounselor.counselor_id}/${Date.now()}-${file.name}`;
-      const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file);
+      const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file, {
+        onUploadProgress: (e) => {
+          const pct = e.totalBytes ? Math.round((e.bytesUploaded / e.totalBytes) * 100) : 0;
+          setUploadProgress(templateUploadProgress, pct);
+        },
+      });
 
       if (uploadError) {
-        btn.disabled = false;
-        btn.textContent = "Save to Library";
+        stopBtnLoading(btn, "Save to Library");
+        hideUploadProgress(templateUploadProgress);
         showToast("Couldn't upload file: " + uploadError.message, "error");
         console.error(uploadError);
         return;
@@ -1406,8 +1476,8 @@
         file_name: file.name,
       });
 
-      btn.disabled = false;
-      btn.textContent = "Save to Library";
+      stopBtnLoading(btn, "Save to Library");
+      hideUploadProgress(templateUploadProgress);
 
       if (error) {
         showToast("Couldn't save template: " + error.message, "error");
