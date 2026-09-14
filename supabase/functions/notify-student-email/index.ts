@@ -69,7 +69,7 @@ function corsHeadersFor(req: Request): Record<string, string> {
 type NotifyRequest = {
   recipient_user_id: string;
   subject: string;
-  message?: string | null;
+  concern?: string | null;
   note?: string | null;
   details?: string | null;
   portal_url?: string | null;
@@ -93,24 +93,30 @@ function escapeHtml(value: string): string {
 function buildEmail(
   firstName: string,
   subject: string,
-  message: string | null | undefined,
+  concern: string | null | undefined,
   note: string | null | undefined,
   details: string | null | undefined,
   portalUrl: string | null | undefined
 ): string {
   const name = escapeHtml(firstName || "there");
-  const msg = message ? `<p>${escapeHtml(message)}</p>` : "";
-  const noteLine = note ? `<p><strong>Note from the guidance office:</strong> ${escapeHtml(note)}</p>` : "";
-  const detailLine = details ? `<p><strong>${escapeHtml(details)}</strong></p>` : "";
+  const concernBlock = concern
+    ? `<p><strong>Concern:</strong><br>${escapeHtml(concern)}</p>`
+    : "";
+  const noteBlock = note
+    ? `<p><strong>Note from the guidance office:</strong><br>${escapeHtml(note)}</p>`
+    : "";
+  const detailBlock = details
+    ? `<p><strong>Date and time:</strong><br>${escapeHtml(details)}</p>`
+    : "";
   const link = portalUrl
     ? `<p><a href="${escapeHtml(portalUrl)}">View it in your student portal</a></p>`
     : "";
   return `
-    <p>Hi ${name},</p>
+    <p>Warm greetings, ${name},</p>
     <p>${escapeHtml(subject)}.</p>
-    ${msg}
-    ${noteLine}
-    ${detailLine}
+    ${concernBlock}
+    ${noteBlock}
+    ${detailBlock}
     ${link}
     <p>— <em>COLM Guidance Office</em></p>
   `.trim();
@@ -160,7 +166,7 @@ Deno.serve(async (req) => {
         from: SENDER,
         to: [student.auth_email],
         subject: body.subject,
-        html: buildEmail(student.first_name, body.subject, body.message, body.note, body.details, body.portal_url),
+        html: buildEmail(student.first_name, body.subject, body.concern, body.note, body.details, body.portal_url),
       }),
     });
 

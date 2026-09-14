@@ -462,18 +462,36 @@
         return;
       }
 
-      if (isNew) {
-        const { data: students } = await supabaseClient.from("students").select("user_id").eq("is_archived", false);
-        const rows = (students || [])
-          .filter((s) => s.user_id)
-          .map((s) => ({
-            recipient_user_id: s.user_id,
-            type: "announcement",
-            title: payload.title,
-            message: payload.announcement_content,
-            link: `student-announcements.html?date=${payload.announcement_date}${insertedId ? `&id=${insertedId}` : ""}`,
-          }));
-        if (rows.length) await supabaseClient.from("notifications").insert(rows);
+      const { data: students } = await supabaseClient.from("students").select("user_id").eq("is_archived", false);
+      const announcementId = editingId || insertedId;
+      const notifTitle = isNew ? payload.title : `Announcement update: ${payload.title}`;
+      const rows = (students || [])
+        .filter((s) => s.user_id)
+        .map((s) => ({
+          recipient_user_id: s.user_id,
+          type: "announcement",
+          title: notifTitle,
+          message: payload.announcement_content,
+          link: `student-announcements.html?date=${payload.announcement_date}${announcementId ? `&id=${announcementId}` : ""}`,
+        }));
+      if (rows.length) await supabaseClient.from("notifications").insert(rows);
+
+      // Best-effort emails to students with verified personal emails on file —
+      // the notify-announcement-email Edge Function looks them up itself and
+      // skips anyone unverified or still on the @colm.edu.ph placeholders.
+      // Fire-and-forget: the in-app notifications above are the source of
+      // truth, emailing just adds delivery outside the portal. Failures are
+      // logged so a silent no-email is never hidden again.
+      if (announcementId) {
+        supabaseClient
+          .functions.invoke("notify-announcement-email", {
+            body: {
+              announcement_id: announcementId,
+              is_update: !isNew,
+              portal_url: `${location.origin}/student/student-announcements.html?date=${payload.announcement_date}${announcementId ? `&id=${announcementId}` : ""}`,
+            },
+          })
+          .catch((err) => console.warn("notify-announcement-email failed:", err?.message ?? err));
       }
 
       const [y, m, d] = payload.announcement_date.split("-").map(Number);
