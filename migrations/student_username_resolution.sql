@@ -52,6 +52,8 @@ grant execute on function public.confirm_student_email(uuid, text) to authentica
 
 -- Students read their own row for the email_verified checks after
 -- login. Own-row only; doesn't expose anyone else's data.
+drop policy if exists "student can read own row" on public.students;
+
 create policy "student can read own row" on public.students
   for select
   using (user_id = auth.uid());
