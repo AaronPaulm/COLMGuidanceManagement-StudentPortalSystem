@@ -2136,11 +2136,20 @@ input::-webkit-credentials-auto-fill-button {
     right: 4px;
     top: 50%;
     transform: translateY(-50%);
+    /* Override the app-wide `button { width:100%; margin-top:22px }` rule
+       (css/style.css:2007-2008). Without explicit width/height/margin, the
+       eye button stretches to the full width of the wrapper and the FA icon
+       inside its flex-centering ends up in the HORIZONTAL MIDDLE of the
+       textbox. These overrides pin the button to a compact 40px strip that
+       hugs the right edge. */
+    width: 40px;
+    height: 100%;
+    margin: 0;
+    padding: 0;
     background: none;
     border: none;
     color: #6b7280;
     cursor: pointer;
-    padding: 8px;
     font-size: 16px;
     line-height: 1;
     display: flex;
