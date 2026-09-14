@@ -294,7 +294,7 @@
       return true;
     }
 
-    async function notifyStudentAboutAppointment(a, title, message = a.concern || null) {
+    async function notifyStudentAboutAppointment(a, title, message = a.concern || null, note = null) {
       if (!a.students?.user_id) return;
       await supabaseClient.from("notifications").insert({
         recipient_user_id: a.students.user_id,
@@ -309,18 +309,20 @@
       // itself and silently skips anyone still unverified, so this never
       // mails the placeholder @colm.edu.ph addresses. Fire-and-forget: the
       // in-app notification above is the source of truth, this just adds
-      // delivery outside the portal when it can.
+      // delivery outside the portal when it can. Failures are logged so a
+      // silent no-email is never hidden again.
       supabaseClient
         .functions.invoke("notify-student-email", {
           body: {
             recipient_user_id: a.students.user_id,
             subject: title,
             message,
+            note,
             details: `${formatDate(a.appointment_date)} at ${formatTime(a.appointment_time)}`,
             portal_url: location.origin + "/student/student-appointments.html",
           },
         })
-        .catch(() => {});
+        .catch((err) => console.warn("notify-student-email failed:", err?.message ?? err));
     }
 
     // ---------- Visitation slip (printable, C3) ----------
@@ -459,15 +461,15 @@
       let ok = false;
       switch (actionModalKey) {
         case "approve":
-          ok = await updateAppointment(a.appointment_id, { status: "approved" });
+          ok = await updateAppointment(a.appointment_id, { status: "approved", counselor_note: reason || a.counselor_note || null });
           if (ok) {
-            await notifyStudentAboutAppointment(a, "Your appointment was approved");
+            await notifyStudentAboutAppointment(a, "Your appointment was approved", a.concern || null, reason || null);
           }
           break;
         case "decline":
           ok = await updateAppointment(a.appointment_id, { status: "declined", counselor_note: reason || null });
           if (ok) {
-            await notifyStudentAboutAppointment(a, "Your appointment was declined");
+            await notifyStudentAboutAppointment(a, "Your appointment was declined", a.concern || null, reason || null);
           }
           break;
         case "complete":
@@ -521,7 +523,7 @@
             counselor_note: reason || a.counselor_note || null,
             was_rescheduled: true,
           });
-          if (ok) await notifyStudentAboutAppointment(a, "Your appointment was rescheduled");
+          if (ok) await notifyStudentAboutAppointment(a, "Your appointment was rescheduled", a.concern || null, reason || a.counselor_note || null);
           break;
         }
         case "note":

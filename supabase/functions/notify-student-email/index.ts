@@ -11,6 +11,9 @@
 // Unverified students still get the in-app notification — they just don't get
 // the email, since it couldn't be delivered to a nonexistent address anyway.
 //
+// Optional `note` is rendered as a "Note from the guidance office" line in the
+// email body (used for approve/decline/reschedule notes to the student).
+//
 // Uses the service-role key only to READ the student's own row (their email),
 // plus the Resend API for delivery. Deliberately does not accept a target
 // email from the caller — the address always comes from the database, so the
@@ -67,6 +70,7 @@ type NotifyRequest = {
   recipient_user_id: string;
   subject: string;
   message?: string | null;
+  note?: string | null;
   details?: string | null;
   portal_url?: string | null;
 };
@@ -90,11 +94,13 @@ function buildEmail(
   firstName: string,
   subject: string,
   message: string | null | undefined,
+  note: string | null | undefined,
   details: string | null | undefined,
   portalUrl: string | null | undefined
 ): string {
   const name = escapeHtml(firstName || "there");
   const msg = message ? `<p>${escapeHtml(message)}</p>` : "";
+  const noteLine = note ? `<p><strong>Note from the guidance office:</strong> ${escapeHtml(note)}</p>` : "";
   const detailLine = details ? `<p><strong>${escapeHtml(details)}</strong></p>` : "";
   const link = portalUrl
     ? `<p><a href="${escapeHtml(portalUrl)}">View it in your student portal</a></p>`
@@ -103,6 +109,7 @@ function buildEmail(
     <p>Hi ${name},</p>
     <p>${escapeHtml(subject)}.</p>
     ${msg}
+    ${noteLine}
     ${detailLine}
     ${link}
     <p>— <em>COLM Guidance Office</em></p>
@@ -153,7 +160,7 @@ Deno.serve(async (req) => {
         from: SENDER,
         to: [student.auth_email],
         subject: body.subject,
-        html: buildEmail(student.first_name, body.subject, body.message, body.details, body.portal_url),
+        html: buildEmail(student.first_name, body.subject, body.message, body.note, body.details, body.portal_url),
       }),
     });
 

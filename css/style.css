@@ -3580,6 +3580,14 @@ button:disabled {
     background: #dc2626;
 }
 
+.appointments-table .table-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    justify-items: center;
+    align-items: center;
+    gap: 6px;
+}
+
 @media (max-width: 768px) {
     .image-lightbox-close {
         top: -40px;
