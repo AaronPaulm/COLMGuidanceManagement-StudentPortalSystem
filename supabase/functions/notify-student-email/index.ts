@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
   const headers = corsHeadersFor(req);
 
   if (req.method === "OPTIONS") {
-    return new Response("ok", { status: 204, headers });
+    return new Response("ok", { headers });
   }
 
   try {
