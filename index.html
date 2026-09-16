@@ -30,7 +30,7 @@
 
       <nav class="role-switch" aria-label="Login Role">
         <button type="button" id="studentBtn" class="active" data-role="student">Student</button>
-        <button type="button" id="counselorBtn" data-role="counselor">Guidance Counselor</button>
+                        <button type="button" id="counselorBtn" data-role="counselor">Guidance Personnel</button>
       </nav>
 
       <p id="staffNotice">Sign in as Student</p>
@@ -137,8 +137,8 @@
         const role = activeBtn ? activeBtn.getAttribute("data-role") : "student";
 
         if (role === "counselor") {
-          staffNotice.textContent = "Sign in as Guidance Counselor";
-          submitBtn.textContent = "Login as Guidance Counselor";
+          staffNotice.textContent = "Sign in as Guidance Personnel";
+          submitBtn.textContent = "Login as Guidance Personnel";
         } else {
           staffNotice.textContent = "Sign in as Student";
           submitBtn.textContent = "Login as Student";

@@ -169,7 +169,7 @@ function openVisitationSlip(opts) {
                 <div><span class="cb"></span>referral to the JHS Coordinator</div>
                 <div><span class="cb"></span>referral to the SHS Coordinator</div>
                 <div><span class="cb"></span>referral to the Discipline Officer</div>
-                <div><span class="cb"></span>referral to Registered Guidance Counselor</div>
+                <div><span class="cb"></span>referral to Registered Guidance Personnel</div>
               </div>
 
               <p class="privacy"><strong>Data Privacy Act:</strong> All data gathered will be kept confidential in compliance with Republic Act 10173 otherwise known as the Data Privacy Act of 2012 and shall only be used for school record purposes and shall be accessed only by authorized school personnel.</p>

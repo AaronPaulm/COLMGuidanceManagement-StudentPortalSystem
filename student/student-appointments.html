@@ -113,7 +113,7 @@
         </header>
 
         <div class="section-title">
-            <h2>Guidance Counselors</h2>
+            <h2>Guidance Personnel</h2>
         </div>
         <div class="counselor-list-card" id="counselorListCard">
             <div class="empty-state">Loading…</div>
@@ -139,12 +139,12 @@
                 <div class="form-field">
                     <label for="apptConcernInput">Concern Details</label>
                     <textarea id="apptConcernInput" rows="4" required placeholder="Briefly describe what you'd like to talk about"></textarea>
-                    <span class="hint">Be specific — describe your concern in 1–2 clear sentences so your counselor can prepare (e.g. "I've been feeling anxious about my grades lately").</span>
+                    <span class="hint">Be specific — describe your concern in 1–2 clear sentences so your guidance personnel can prepare (e.g. "I've been feeling anxious about my grades lately").</span>
                     <span class="hint warn">Please use respectful, appropriate language when describing your concern.</span>
                 </div>
                 <div class="appt-form-row">
                     <div class="form-field field-counselor">
-                        <label for="counselorSelect">Counselor</label>
+                        <label for="counselorSelect">Guidance Personnel</label>
                         <select id="counselorSelect" required></select>
                     </div>
                     <div class="form-field field-date">
@@ -179,7 +179,7 @@
             <table class="simple-table student-appointments-table">
                 <thead>
                     <tr>
-                        <th>Counselor</th>
+                        <th>Guidance Personnel</th>
                         <th>Date</th>
                         <th>Time</th>
                         <th>Concern Type</th>
@@ -206,7 +206,7 @@
             <div class="modal-body">
                 <div class="case-meta-grid">
                     <div class="case-meta-item">
-                        <label>Counselor</label>
+                        <label>Guidance Personnel</label>
                         <div id="apptDetailCounselor">—</div>
                     </div>
                     <div class="case-meta-item">
@@ -230,7 +230,7 @@
                         <div id="apptDetailConcern">—</div>
                     </div>
                     <div class="case-meta-item" style="grid-column: 1 / -1;" id="apptDetailNoteWrap">
-                        <label>Note from your counselor</label>
+                        <label>Note from your guidance personnel</label>
                         <div id="apptDetailNote">—</div>
                     </div>
                 </div>
@@ -514,7 +514,7 @@
       const concern = document.getElementById("apptConcernInput").value.trim();
       if (concern.length < 20) {
         showToast(
-          "Please describe your concern in 1–2 clear sentences so your counselor can prepare for your appointment.",
+          "Please describe your concern in 1–2 clear sentences so your guidance personnel can prepare for your appointment.",
           "error"
         );
         document.getElementById("apptConcernInput").focus();
@@ -551,7 +551,7 @@
         return;
       }
       if (clashing && clashing.length) {
-        showToast("That time slot is already booked with this counselor — please choose another.", "error");
+        showToast("That time slot is already booked with this guidance personnel — please choose another.", "error");
         return;
       }
 
@@ -559,7 +559,7 @@
       const isAvailable = !selectedCounselor || (selectedCounselor.availability_status || "available").toLowerCase() === "available";
       if (!isAvailable) {
         const proceed = await confirmDialog(
-          "This counselor is currently marked unavailable — your request may take longer to be reviewed. Submit anyway?",
+          "This guidance personnel is currently marked unavailable — your request may take longer to be reviewed. Submit anyway?",
           { confirmLabel: "Submit Anyway" }
         );
         if (!proceed) return;

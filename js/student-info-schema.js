@@ -244,7 +244,7 @@ window.STUDENT_INFO_SCHEMA = (function () {
       id: "health",
       numeral: "IV",
       title: "Health",
-      description: "This helps your guidance counselor understand how to support you. Answers stay confidential.",
+      description: "This helps your guidance personnel understand how to support you. Answers stay confidential.",
       req: { mode: "subblocks", required: ["A"] },
       fields: [
         { type: "subblock", zone: "A", label: "A. Health Status (required)" },
@@ -301,7 +301,7 @@ window.STUDENT_INFO_SCHEMA = (function () {
       id: "tests",
       numeral: "VI",
       title: "Test Results",
-      description: "Guidance/aptitude tests you have taken, if any. Your counselor may also fill this in during interviews.",
+      description: "Guidance/aptitude tests you have taken, if any. Your guidance personnel may also fill this in during interviews.",
       req: { mode: "none" },
       fields: [
         {
@@ -326,7 +326,7 @@ window.STUDENT_INFO_SCHEMA = (function () {
 
   const NOTES_SECTION = {
     numeral: "VII",
-    title: "Significant Notes (For Guidance Counselors only)",
+    title: "Significant Notes (For Guidance Personnel only)",
     columns: [
       { key: "date", label: "Date", type: "date" },
       { key: "incident", label: "Incident", type: "text" },
