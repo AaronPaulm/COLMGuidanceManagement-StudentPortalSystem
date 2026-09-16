@@ -507,7 +507,6 @@
       const { data, error } = await supabaseClient
         .from("intervention_templates")
         .select("intervention_template_id, title, file_path, file_name")
-        .eq("counselor_id", currentCounselor.counselor_id)
         .order("title", { ascending: true });
 
       if (error) {
@@ -634,7 +633,6 @@
       const { data, error } = await supabaseClient
         .from("cases")
         .select(CASE_DETAIL_SELECT)
-        .eq("counselor_id", currentCounselor.counselor_id)
         .order("created_at", { ascending: false });
 
       if (error) {

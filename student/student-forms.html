@@ -728,6 +728,25 @@
           });
         }
       } else {
+        // If a counselor re-opened a submitted form, the student's previous
+        // answers still exist on record — prefill them so the student edits
+        // rather than starts over.
+        const { data: priorSubmission, error: priorErr } = await supabaseClient
+          .from("form_submissions")
+          .select("form_answers(question_id, answer_value)")
+          .eq("assignment_id", assignment.assignment_id)
+          .order("submission_id", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (priorErr) {
+          console.error(priorErr);
+        } else if (priorSubmission?.form_answers) {
+          priorSubmission.form_answers.forEach((ans) => {
+            answers[ans.question_id] = ans.answer_value;
+          });
+        }
+
         // Pick up where the student left off if a draft exists for this
         // assignment (autosaved a few hundred ms after each keystroke).
         const saved = loadDraft(draftKey("answerDraft", assignment.assignment_id));
@@ -784,6 +803,30 @@
       btn.textContent = "Submitting…";
 
       try {
+        // If this assignment was re-opened for editing after a previous
+        // submission, that submitted response is still on record. Delete it
+        // (and its answers) first so the re-submission stays the single
+        // source of truth — no stale answer row can outlive its submission.
+        const { data: priorSubmission, error: priorErr } = await supabaseClient
+          .from("form_submissions")
+          .select("submission_id")
+          .eq("assignment_id", activeAssignment.assignment_id)
+          .maybeSingle();
+        if (priorErr) {
+          throw priorErr;
+        } else if (priorSubmission) {
+          const { error: delAnswersErr } = await supabaseClient
+            .from("form_answers")
+            .delete()
+            .eq("submission_id", priorSubmission.submission_id);
+          if (delAnswersErr) throw delAnswersErr;
+          const { error: delSubmissionErr } = await supabaseClient
+            .from("form_submissions")
+            .delete()
+            .eq("submission_id", priorSubmission.submission_id);
+          if (delSubmissionErr) throw delSubmissionErr;
+        }
+
         const { data: submission, error: subErr } = await supabaseClient
           .from("form_submissions")
           .insert({ assignment_id: activeAssignment.assignment_id })

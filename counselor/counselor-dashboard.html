@@ -453,9 +453,9 @@
       const from = range.from ? dayStr(range.from) : null;
       const toDay = range.to ? dayStr(range.to) : null;
 
-      let apptQuery = supabaseClient.from("appointments").select("status, concern_category").eq("counselor_id", counselorId);
-      let caseQuery = supabaseClient.from("cases").select("status, created_at").eq("counselor_id", counselorId);
-      let visitQuery = supabaseClient.from("visit_logs").select("visitor_type, visit_time").eq("counselor_id", counselorId);
+      let apptQuery = supabaseClient.from("appointments").select("status, concern_category");
+      let caseQuery = supabaseClient.from("cases").select("status, created_at");
+      let visitQuery = supabaseClient.from("visit_logs").select("visitor_type, visit_time");
 
       if (from && toDay) {
         apptQuery = apptQuery.gte("appointment_date", from).lte("appointment_date", toDay);
@@ -475,18 +475,15 @@
         supabaseClient
           .from("appointments")
           .select("appointment_id", { count: "exact", head: true })
-          .eq("counselor_id", counselorId)
           .eq("status", "pending"),
         supabaseClient
           .from("cases")
           .select("case_id", { count: "exact", head: true })
-          .eq("counselor_id", counselorId)
           .neq("status", "resolved"),
         supabaseClient.from("students").select("student_id", { count: "exact", head: true }).eq("is_archived", false),
         supabaseClient
           .from("appointments")
           .select("appointment_id", { count: "exact", head: true })
-          .eq("counselor_id", counselorId)
           .eq("status", "conducted")
           .gte("appointment_date", firstOfMonthStr()),
         apptQuery,

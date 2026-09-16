@@ -623,8 +623,7 @@
     function buildAppointmentsQuery() {
       let query = supabaseClient
         .from("appointments")
-        .select(APPOINTMENTS_SELECT, { count: "exact" })
-        .eq("counselor_id", currentCounselor.counselor_id);
+        .select(APPOINTMENTS_SELECT, { count: "exact" });
 
       // "Rescheduled" isn't a status a row ever sits in (rescheduling keeps
       // an appointment "approved," just on a new date/time) — it's a history
@@ -644,7 +643,6 @@
       const { count, error } = await supabaseClient
         .from("appointments")
         .select("appointment_id", { count: "exact", head: true })
-        .eq("counselor_id", currentCounselor.counselor_id)
         .eq("status", "pending");
 
       const option = document.querySelector('#appointmentsFilterSelect option[value="pending"]');

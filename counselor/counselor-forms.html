@@ -632,7 +632,7 @@
       renderFields();
     });
 
-    const FORMS_SELECT = "form_id, form_name, description, created_at, form_questions(count)";
+    const FORMS_SELECT = "form_id, form_name, description, created_at, form_questions(question_id)";
     const FORMS_PAGE_SIZE = 20;
     let formsOffset = 0;
     let formsHasMore = false;
@@ -640,7 +640,7 @@
     function appendFormRows(data) {
       const list = document.getElementById("formsListStaff");
       data.forEach((f) => {
-        const questionCount = f.form_questions?.[0]?.count ?? 0;
+        const questionCount = Array.isArray(f.form_questions) ? f.form_questions.length : 0;
 
         const card = document.createElement("div");
         card.className = "form-library-card";
@@ -692,9 +692,7 @@
       const { data, error } = await supabaseClient
         .from("forms")
         .select(FORMS_SELECT)
-        .eq("counselor_id", currentCounselor.counselor_id)
         .order("created_at", { ascending: false })
-        .range(0, FORMS_PAGE_SIZE - 1);
 
       if (error) {
         list.innerHTML = `<div class="empty-state">Couldn't load forms.</div>`;
@@ -726,7 +724,6 @@
       const { data, error } = await supabaseClient
         .from("forms")
         .select(FORMS_SELECT)
-        .eq("counselor_id", currentCounselor.counselor_id)
         .order("created_at", { ascending: false })
         .range(formsOffset, formsOffset + FORMS_PAGE_SIZE - 1);
 
@@ -1012,7 +1009,10 @@
 
       const [{ data: students, error: stErr }, { data: existing, error: exErr }] = await Promise.all([
         supabaseClient.from("students").select("student_id, first_name, last_name, student_number, user_id").eq("is_archived", false).order("first_name", { ascending: true }),
-        supabaseClient.from("form_assignments").select("student_id, school_year").eq("form_id", form.form_id),
+        supabaseClient
+          .from("form_assignments")
+          .select("assignment_id, student_id, school_year, status")
+          .eq("form_id", form.form_id),
       ]);
 
       if (stErr || exErr) {
@@ -1068,16 +1068,20 @@
 
     function updateAssignYearHints() {
       const year = defaultSchoolYear();
-      const assignedThisYear = new Set(
-        existingAssignmentsForForm.filter((a) => a.school_year === year).map((a) => a.student_id)
+      const assignedThisYear = new Map(
+        existingAssignmentsForForm.filter((a) => a.school_year === year).map((a) => [a.student_id, a])
       );
 
       document.querySelectorAll("#assignStudentList .assign-student-row").forEach((row) => {
         const studentId = Number(row.dataset.studentId);
         const hintEl = row.querySelector(".assign-year-hint");
-        const isAssigned = assignedThisYear.has(studentId);
-        hintEl.textContent = isAssigned ? `Already assigned for ${year}` : "";
-        hintEl.style.display = isAssigned ? "" : "none";
+        const existing = assignedThisYear.get(studentId);
+        let hint = "";
+        if (existing) {
+          hint = existing.status === "submitted" ? `Submitted — will re-open for editing` : `Already assigned for ${year}`;
+        }
+        hintEl.textContent = hint;
+        hintEl.style.display = existing ? "" : "none";
       });
     }
 
@@ -1131,14 +1135,25 @@
       // silently created a second assignment row (and the same form
       // appearing twice, forever "Not Started," on the student's own Forms
       // page). Drop anyone already assigned to this form for this exact
-      // school year before inserting.
-      const alreadyAssignedIds = new Set(
-        existingAssignmentsForForm.filter((a) => a.school_year === schoolYear).map((a) => a.student_id)
+      // school year before inserting — EXCEPT students whose submission was
+      // already turned in: re-adding them re-opens the form so the student
+      // can edit their answers again.
+      const assignedThisYear = new Map(
+        existingAssignmentsForForm.filter((a) => a.school_year === schoolYear).map((a) => [a.student_id, a])
       );
-      const newStudentIds = Array.from(checkedStudentIds).filter((id) => !alreadyAssignedIds.has(id));
-      const skippedCount = checkedStudentIds.size - newStudentIds.length;
+      const newStudentIds = [];
+      const reassignRows = [];
+      checkedStudentIds.forEach((id) => {
+        const existing = assignedThisYear.get(id);
+        if (!existing) {
+          newStudentIds.push(id);
+        } else if (existing.status === "submitted") {
+          reassignRows.push(existing);
+        }
+      });
+      const skippedCount = checkedStudentIds.size - newStudentIds.length - reassignRows.length;
 
-      if (newStudentIds.length === 0) {
+      if (newStudentIds.length === 0 && reassignRows.length === 0) {
         showToast(`All selected students are already assigned this form for ${schoolYear}.`, "info");
         closeAssignModal();
         return;
@@ -1154,6 +1169,23 @@
       const btn = document.getElementById("assignSaveBtn");
       btn.disabled = true;
       btn.textContent = "Assigning…";
+
+      if (reassignRows.length) {
+        const { error: reoErr } = await supabaseClient
+          .from("form_assignments")
+          .update({ status: "assigned", submitted_at: null, counselor_id: currentCounselor.counselor_id })
+          .in(
+            "assignment_id",
+            reassignRows.map((r) => r.assignment_id)
+          );
+        if (reoErr) {
+          btn.disabled = false;
+          btn.textContent = "Assign";
+          showToast("Couldn't re-open the form: " + reoErr.message, "error");
+          console.error(reoErr);
+          return;
+        }
+      }
 
       const { error } = await supabaseClient.from("form_assignments").insert(rows);
 
@@ -1172,23 +1204,29 @@
 
       const studentsById = {};
       allStudentsForAssign.forEach((s) => (studentsById[s.student_id] = s));
-      const notifRows = newStudentIds
-        .map((studentId) => studentsById[studentId]?.user_id)
-        .filter(Boolean)
-        .map((userId) => ({
-          recipient_user_id: userId,
-          type: "form",
-          title: `New form assigned: ${assigningForm.form_name}`,
-          link: "student-forms.html",
-        }));
+      const notifiedStudentIds = [...newStudentIds, ...reassignRows.map((r) => r.student_id)];
+      const notifRows = notifiedStudentIds
+        .map((studentId) => {
+          const user = studentsById[studentId];
+          if (!user?.user_id) return null;
+          const reassigned = reassignRows.some((r) => r.student_id === studentId);
+          return {
+            recipient_user_id: user.user_id,
+            type: "form",
+            title: reassigned
+              ? `Form re-opened for editing: ${assigningForm.form_name}`
+              : `New form assigned: ${assigningForm.form_name}`,
+            link: "student-forms.html",
+          };
+        })
+        .filter(Boolean);
       if (notifRows.length) await supabaseClient.from("notifications").insert(notifRows);
 
-      showToast(
-        skippedCount
-          ? `Assigned to ${newStudentIds.length} student${newStudentIds.length === 1 ? "" : "s"} (${skippedCount} already had it for ${schoolYear}).`
-          : `Assigned to ${newStudentIds.length} student${newStudentIds.length === 1 ? "" : "s"}.`,
-        "success"
-      );
+      const summaryParts = [];
+      if (newStudentIds.length) summaryParts.push(`${newStudentIds.length} assigned`);
+      if (reassignRows.length) summaryParts.push(`${reassignRows.length} re-opened for editing`);
+      if (skippedCount) summaryParts.push(`${skippedCount} already had it for ${schoolYear}`);
+      showToast(`Saved: ${summaryParts.join(" · ")}.`, "success");
       closeAssignModal();
     });
 
@@ -1413,7 +1451,6 @@
       const { data, error } = await supabaseClient
         .from("intervention_templates")
         .select("intervention_template_id, title, file_path, file_name, created_at")
-        .eq("counselor_id", currentCounselor.counselor_id)
         .order("created_at", { ascending: false });
 
       if (error) {

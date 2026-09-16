@@ -520,7 +520,6 @@
       return supabaseClient
         .from("visit_logs")
         .select(VISIT_LOGS_SELECT)
-        .eq("counselor_id", currentCounselor.counselor_id)
         .order("visit_time", { ascending: false })
         .then(({ data, error }) => {
           if (error) {

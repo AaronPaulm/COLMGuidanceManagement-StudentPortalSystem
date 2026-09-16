@@ -454,8 +454,7 @@
 
       let query = supabaseClient
         .from("cases")
-        .select("file_number, nature_of_incident, status, created_at, students(first_name, last_name, section)")
-        .eq("counselor_id", currentCounselor.counselor_id);
+        .select("file_number, nature_of_incident, status, created_at, students(first_name, last_name, section)");
       if (from) query = query.gte("created_at", from);
       if (toEndOfDay) query = query.lte("created_at", toEndOfDay);
 
@@ -502,8 +501,7 @@
         .from("cases")
         .select(
           "nature_of_incident, created_at, students(first_name, last_name), case_sessions(session_date, action_taken, session_note, recommendation, created_at)"
-        )
-        .eq("counselor_id", currentCounselor.counselor_id);
+        );
       if (from) query = query.gte("created_at", from);
       if (toEndOfDay) query = query.lte("created_at", toEndOfDay);
 
