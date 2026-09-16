@@ -2390,6 +2390,28 @@ body.table-resizing * {
 
 /* ---------- Assigned Forms (student) ---------- */
 
+/* Card container that wraps the whole Assigned Forms area on the student
+   Forms page — the group reads as one card, and each assigned form keeps
+   its own tile inside it. */
+.assigned-forms-card {
+    background: #fafbfc;
+    border: 1px solid #eef2f6;
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+    padding: 18px;
+    margin-bottom: 6px;
+}
+
+.assigned-forms-card .assigned-form-tile {
+    background: #fff;
+}
+
+.assigned-forms-card .empty-state {
+    text-align: left;
+    padding: 18px 8px;
+    margin: 0;
+}
+
 .assigned-forms-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
