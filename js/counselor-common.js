@@ -75,7 +75,7 @@ function openVisitationSlip(opts) {
         .fill.fixed { flex:none; width:120px; }
         .reason { font-size:13.5px; margin-bottom:16px; }
         .reason .lines { margin-top:4px; }
-        .reason .line { border-bottom:1px solid #111827; min-height:21px; padding:0 4px; font-size:13px; overflow:visible; white-space:pre-wrap; overflow-wrap:break-word; word-break:break-word; }
+        .reason-box { border:1px solid #111827; min-height:66px; padding:4px; font-size:13px; overflow:visible; white-space:pre-wrap; overflow-wrap:break-word; word-break:break-word; }
         .actions-title { font-size:13.5px; margin-bottom:8px; }
         .actions { display:grid; grid-template-columns:1fr 1fr; gap:9px 28px; font-size:13px; margin-bottom:18px; }
         .cb { display:inline-block; width:11px; height:11px; border:1px solid #111827; margin-right:7px; vertical-align:-1px; }
@@ -156,9 +156,7 @@ function openVisitationSlip(opts) {
               <div class="reason">
                 Reason for Visit:
                 <div class="lines">
-                  <div class="line">${ccEscapeHtml(concern)}</div>
-                  <div class="line"></div>
-                  <div class="line"></div>
+                  <div class="reason-box">${ccEscapeHtml(concern)}</div>
                 </div>
               </div>
 
