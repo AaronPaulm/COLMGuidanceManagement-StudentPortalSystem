@@ -244,7 +244,7 @@
         supabaseClient.from("counselors").select("counselor_id").eq("availability_status", "available").limit(1),
         supabaseClient
           .from("appointments")
-          .select("appointment_id, concern, appointment_date, appointment_time, counselors(first_name, last_name)")
+          .select("appointment_id, concern_category, appointment_date, appointment_time, counselors(first_name, last_name)")
           .eq("student_id", studentId)
           .eq("status", "approved")
           .gte("appointment_date", todayStr())
@@ -280,7 +280,7 @@
         upcomingWrap.innerHTML = `
           <div class="upcoming-item">
             <div class="upcoming-item-body">
-              <h3>${escapeHtml(item.concern || "Guidance Session")}</h3>
+              <h3>${escapeHtml(item.concern_category || "Guidance Session")}</h3>
               <small>${formatDate(item.appointment_date)} · ${formatTime(item.appointment_time)} · ${escapeHtml(counselorName)}</small>
             </div>
             <span class="badge badge-approved">Approved</span>
