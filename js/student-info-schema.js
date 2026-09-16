@@ -363,14 +363,20 @@ window.STUDENT_INFO_SCHEMA = (function () {
     return disabled ? "disabled" : "";
   }
 
-  // Normalizes any phone input to 09XX-XXX-XXXX: digits are extracted,
-  // capped at 11, and the dashes are inserted at positions 4 and 8.
+  // Normalizes any phone value to +63 XXX XXX XXXX: the leading local
+  // 0 or national 63 is dropped, digits are capped at 10, and the +63
+  // country code + spaces are applied progressively while typing.
   function formatPhone(value) {
-    const d = String(value ?? "").replace(/\D/g, "").slice(0, 11);
+    let d = String(value ?? "").replace(/\D/g, "");
+    if (d.startsWith("09") && d.length > 10) d = d.slice(1);
+    else if (d.startsWith("63") && d.length > 10) d = d.slice(2);
+    d = d.slice(0, 10);
     if (!d) return "";
-    if (d.length > 7) return `${d.slice(0, 4)}-${d.slice(4, 7)}-${d.slice(7)}`;
-    if (d.length > 4) return `${d.slice(0, 4)}-${d.slice(4)}`;
-    return d;
+    let out = "+63";
+    if (d.length > 0) out += " " + d.slice(0, 3);
+    if (d.length > 3) out += " " + d.slice(3, 6);
+    if (d.length > 6) out += " " + d.slice(6);
+    return out;
   }
 
   // Basic but practical email check: something@something.something.
@@ -403,7 +409,7 @@ window.STUDENT_INFO_SCHEMA = (function () {
       case "email":
         return `<input type="email" data-email="1" data-field="${escAttr(field.key)}" value="${escAttr(v)}" ${dis}>`;
       case "tel": {
-        const mask = field.phone ? ` data-phone="1"` : "";
+        const mask = field.phone ? ` data-phone="1" maxlength="16" inputmode="tel"` : "";
         return `<input type="tel" data-field="${escAttr(field.key)}" value="${escAttr(v)}" ${mask} ${dis}>`;
       }
       default: {

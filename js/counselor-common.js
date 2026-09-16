@@ -8,6 +8,19 @@ function ccEscapeHtml(str) {
   return div.innerHTML;
 }
 
+function ccFormatPhone(value) {
+  let d = String(value ?? "").replace(/\D/g, "");
+  if (d.startsWith("09") && d.length > 10) d = d.slice(1);
+  else if (d.startsWith("63") && d.length > 10) d = d.slice(2);
+  d = d.slice(0, 10);
+  if (!d) return "";
+  let out = "+63";
+  if (d.length > 0) out += " " + d.slice(0, 3);
+  if (d.length > 3) out += " " + d.slice(3, 6);
+  if (d.length > 6) out += " " + d.slice(6);
+  return out;
+}
+
 // Official school letterhead bands for the print pop-ups.
 //  - On screen: absolutely-pinned to the top/bottom of the 8.5x11 paper
 //    sheet preview.
@@ -47,6 +60,7 @@ function schoolPrintLetterhead() {
 // as the Reports page's openPrintableReport().
 function openVisitationSlip(opts) {
   const { studentName, gradeSection = "", parentGuardian = "", contactNumber = "", date, time, concern = "" } = opts;
+  const formattedContact = ccFormatPhone(contactNumber);
 
   const win = window.open("", "_blank");
   if (!win) {
@@ -130,7 +144,7 @@ function openVisitationSlip(opts) {
                 <label>Time:</label>
                 <div class="fill">${ccEscapeHtml(time)}</div>
                 <label>Contact No.:</label>
-                <div class="fill">${ccEscapeHtml(contactNumber)}</div>
+                <div class="fill">${ccEscapeHtml(formattedContact)}</div>
               </div>
               <div class="row">
                 <label>Home Address:</label>

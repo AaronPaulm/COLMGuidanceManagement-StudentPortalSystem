@@ -1353,7 +1353,7 @@
 
     // Input masks run on every keystroke (and paste/autofill): block digits
     // in word-only fields, keep digits+decimal in amounts, and auto-format
-    // mobile numbers to 09XX-XXX-XXXX. Enforcement is by stripping, so a
+    // mobile numbers to +63 XXX XXX XXXX. Enforcement is by stripping, so a
     // disallowed character simply never appears. Mirrors the sanitization
     // already applied at render time, so data stays consistent.
     document.getElementById("sisFieldsContainer").addEventListener("input", (e) => {
@@ -1371,12 +1371,9 @@
         }
         if (digits !== el.value) el.value = digits;
       } else if (ds.phone === "1") {
-        const d = el.value.replace(/\D/g, "").slice(0, 11);
-        let out = "";
-        if (d.length > 7) out = `${d.slice(0, 4)}-${d.slice(4, 7)}-${d.slice(7)}`;
-        else if (d.length > 4) out = `${d.slice(0, 4)}-${d.slice(4)}`;
-        else out = d;
-        if (out !== el.value) el.value = out;
+        if (el.value !== STUDENT_INFO_SCHEMA.formatPhone(el.value)) {
+          el.value = STUDENT_INFO_SCHEMA.formatPhone(el.value);
+        }
       }
     });
 

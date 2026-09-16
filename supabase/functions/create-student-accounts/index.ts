@@ -103,6 +103,16 @@ interface StudentResult {
   error: string | null;
 }
 
+function normalizePhone(value: string | null | undefined): string | null {
+  let d = String(value ?? "").replace(/\D/g, "");
+  if (!d) return null;
+  if (d.startsWith("09") && d.length > 10) d = d.slice(1);
+  else if (d.startsWith("63") && d.length > 10) d = d.slice(2);
+  d = d.slice(0, 10);
+  if (!d) return null;
+  return "+63 " + [d.slice(0, 3), d.slice(3, 6), d.slice(6)].filter(Boolean).join(" ");
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = corsHeadersFor(req);
 
@@ -297,7 +307,7 @@ Deno.serve(async (req) => {
         last_name: lastName || null,
         year_level: row.level?.trim() || null,
         section: row.section?.trim() || section || null,
-        contact_number: row.contactNumber?.trim() || null,
+        contact_number: normalizePhone(row.contactNumber),
         education_level: inferEducationLevel(row.level) || educationLevel || null,
         email_verified: false,
         auth_email: email,

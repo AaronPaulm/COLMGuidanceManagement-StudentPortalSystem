@@ -242,7 +242,7 @@
                     </div>
                     <div class="form-field">
                         <label for="editContact">Contact Number</label>
-                        <input type="text" id="editContact">
+                        <input type="tel" id="editContact" placeholder="+63 917 123 4567" maxlength="16" inputmode="tel">
                     </div>
                     <div class="form-field">
                         <label for="editGuardian">Parent/Guardian</label>
@@ -428,6 +428,19 @@
         month: "short",
         day: "numeric",
       });
+    }
+
+    function formatPhone(value) {
+      let d = String(value ?? "").replace(/\D/g, "");
+      if (d.startsWith("09") && d.length > 10) d = d.slice(1);
+      else if (d.startsWith("63") && d.length > 10) d = d.slice(2);
+      d = d.slice(0, 10);
+      if (!d) return "";
+      let out = "+63";
+      if (d.length > 0) out += " " + d.slice(0, 3);
+      if (d.length > 3) out += " " + d.slice(3, 6);
+      if (d.length > 6) out += " " + d.slice(6);
+      return out;
     }
 
     function capitalize(str) {
@@ -1076,7 +1089,7 @@
       document.getElementById("editEducationLevel").value = s.education_level || "";
       populateYearLevelOptions(s.education_level, s.year_level);
       document.getElementById("editSection").value = s.section || "";
-      document.getElementById("editContact").value = s.contact_number || "";
+      document.getElementById("editContact").value = formatPhone(s.contact_number);
       document.getElementById("editGuardian").value = s.parent_guardian || "";
       document.getElementById("editEmail").value = s.student_email || "";
 
@@ -1135,6 +1148,10 @@
       if (e.target.id === "studentDetailModalOverlay") {
         document.getElementById("studentDetailModalOverlay").classList.remove("show");
       }
+    });
+
+    document.getElementById("editContact").addEventListener("input", (e) => {
+      e.target.value = formatPhone(e.target.value);
     });
 
     document.getElementById("saveStudentBtn").addEventListener("click", async () => {
