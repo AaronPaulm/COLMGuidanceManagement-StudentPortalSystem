@@ -1,0 +1,24 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/dashboard", "destination": "/student/student-dashboard.html" },
+    { "source": "/appointments", "destination": "/student/student-appointments.html" },
+    { "source": "/forms", "destination": "/student/student-forms.html" },
+    { "source": "/history", "destination": "/student/student-history.html" },
+    { "source": "/profile", "destination": "/student/student-profile.html" },
+    { "source": "/announcements", "destination": "/student/student-announcements.html" },
+    { "source": "/verify-email", "destination": "/verify-email.html" },
+    { "source": "/forgot-password", "destination": "/forgot-password.html" },
+    { "source": "/reset-password", "destination": "/reset-password.html" },
+    { "source": "/counselor", "destination": "/counselor/counselor-dashboard.html" },
+    { "source": "/counselor/dashboard", "destination": "/counselor/counselor-dashboard.html" },
+    { "source": "/counselor/appointments", "destination": "/counselor/counselor-appointments.html" },
+    { "source": "/counselor/cases", "destination": "/counselor/counselor-cases.html" },
+    { "source": "/counselor/students", "destination": "/counselor/counselor-student.html" },
+    { "source": "/counselor/forms", "destination": "/counselor/counselor-forms.html" },
+    { "source": "/counselor/reports", "destination": "/counselor/counselor-reports.html" },
+    { "source": "/counselor/visit-logs", "destination": "/counselor/counselor-visit-logs.html" },
+    { "source": "/counselor/announcements", "destination": "/counselor/counselor-announcements.html" },
+    { "source": "/counselor/account", "destination": "/counselor/counselor-account.html" }
+  ]
+}
