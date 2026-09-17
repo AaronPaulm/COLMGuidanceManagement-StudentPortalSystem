@@ -93,7 +93,14 @@
                 <li class="desktop-only">
                     <a href="counselor-account.html">
                         <i class="fa-solid fa-user"></i>
-                        <span>Account</span>
+                        <span>Profile</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-account-management.html">
+                        <i class="fa-solid fa-user-gear"></i>
+                        <span>Accounts Management</span>
                     </a>
                 </li>
                 <li class="desktop-only">
@@ -128,7 +135,9 @@
 
         <a href="counselor-reports.html"><i class="fa-solid fa-chart-line"></i> Reports</a>
 
-        <a href="counselor-account.html"><i class="fa-solid fa-user"></i> Account</a>
+        <a href="counselor-account.html"><i class="fa-solid fa-user"></i> Profile</a>
+
+        <a href="counselor-account-management.html"><i class="fa-solid fa-user-gear"></i> Accounts Management</a>
 
         <a href="#" id="mobileLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
 
@@ -201,6 +210,13 @@
                         <input type="text" id="titleInput" required maxlength="150">
                     </div>
                     <div class="form-field" style="margin-top:14px;">
+                        <label for="categoryInput">Category</label>
+                        <select id="categoryInput">
+                            <option value="announcement">Announcement</option>
+                            <option value="event">Event</option>
+                        </select>
+                    </div>
+                    <div class="form-field" style="margin-top:14px;">
                         <label for="dateInput">Date</label>
                         <input type="date" id="dateInput" required>
                     </div>
@@ -256,12 +272,14 @@
       return div.innerHTML;
     }
 
+    
+
     async function loadAnnouncements() {
       const { data, error } = await supabaseClient
         .from("announcements")
         .select(
-          "announcement_id, title, announcement_content, announcement_date, counselors(first_name, last_name)"
-        )
+          "announcement_id, title, announcement_content, announcement_date, counselors(first_name, last_name)"      
+          )
         .order("announcement_date", { ascending: false });
 
       if (error) {
@@ -350,7 +368,7 @@
         row.className = "staff-list-item";
         row.innerHTML = `
           <div>
-            <h3>${escapeHtml(a.title)}</h3>
+<h3>${escapeHtml(a.title)}</h3>
             <p>${escapeHtml(a.announcement_content)}</p>
             <small>Posted by ${escapeHtml(posted)}</small>
           </div>

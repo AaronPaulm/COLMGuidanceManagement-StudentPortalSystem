@@ -107,7 +107,14 @@
                 <li class="desktop-only">
                     <a href="counselor-account.html">
                         <i class="fa-solid fa-user"></i>
-                        <span>Account</span>
+                        <span>Profile</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-account-management.html">
+                        <i class="fa-solid fa-user-gear"></i>
+                        <span>Accounts Management</span>
                     </a>
                 </li>
                 <li class="desktop-only">
@@ -142,7 +149,9 @@
 
         <a href="counselor-reports.html"><i class="fa-solid fa-chart-line"></i> Reports</a>
 
-        <a href="counselor-account.html"><i class="fa-solid fa-user"></i> Account</a>
+        <a href="counselor-account.html"><i class="fa-solid fa-user"></i> Profile</a>
+
+        <a href="counselor-account-management.html"><i class="fa-solid fa-user-gear"></i> Accounts Management</a>
 
         <a href="#" id="mobileLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
 
@@ -218,6 +227,10 @@
                     <div class="builder-section-label">First Session</div>
 
                     <div class="form-field">
+                        <label for="caseDetailsInput">Details of the Case</label>
+                        <textarea id="caseDetailsInput" rows="3"></textarea>
+                    </div>
+                    <div class="form-field" style="margin-top:14px;">
                         <label for="caseActionInput">Action Taken</label>
                         <textarea id="caseActionInput" rows="2"></textarea>
                     </div>
@@ -319,6 +332,10 @@
                         <label>Days Open</label>
                         <div id="caseDetailDaysOpen">—</div>
                     </div>
+                    <div class="case-meta-item">
+                        <label>Last Edited</label>
+                        <div id="caseDetailEdited">—</div>
+                    </div>
                 </div>
 
                 <div class="builder-section-label" style="margin-top:0;">Interventions</div>
@@ -348,6 +365,10 @@
                     <div class="builder-section-label">Add Session</div>
                     <form id="addSessionForm">
                         <div class="form-field">
+                            <label for="sessionDetailsInput">Details of the Case</label>
+                            <textarea id="sessionDetailsInput" rows="3"></textarea>
+                        </div>
+                        <div class="form-field" style="margin-top:14px;">
                             <label for="sessionActionInput">Action Taken</label>
                             <textarea id="sessionActionInput" rows="2"></textarea>
                         </div>
@@ -438,6 +459,7 @@
   <script src="../js/pagination.js"></script>
   <script>
     let currentCounselor = null;
+    let counselorNameById = {};
     let allCasesById = {};
     let allCases = [];
     let casesPage = 1;
@@ -450,7 +472,7 @@
     // Every field the detail modal renders, plus the list — kept as one
     // string so a file delete can re-fetch the same shape for one case.
     const CASE_DETAIL_SELECT =
-      "case_id, nature_of_incident, status, school_year, file_number, created_at, students(first_name, last_name, section, user_id), case_sessions(session_id, session_date, action_taken, session_note, recommendation, created_at, appointment_id, case_session_attachments(attachment_id, file_path, file_name), case_signed_documents(document_id, file_path, file_name)), interventions(intervention_id, title, file_path, file_name, is_visible_to_student, created_at)";
+      "case_id, nature_of_incident, status, school_year, file_number, created_at, updated_at, updated_by, students(first_name, last_name, section, user_id), case_sessions(session_id, session_date, details, action_taken, session_note, recommendation, updated_by, created_at, appointment_id, case_session_attachments(attachment_id, file_path, file_name), case_signed_documents(document_id, file_path, file_name)), interventions(intervention_id, title, file_path, file_name, is_visible_to_student, created_at)";
 
     function escapeHtml(str) {
       const div = document.createElement("div");
@@ -672,6 +694,7 @@
 
       const studentId = Number(document.getElementById("caseStudentSelect").value);
       const nature = document.getElementById("caseNatureInput").value.trim();
+      const details = document.getElementById("caseDetailsInput").value.trim();
       const action = document.getElementById("caseActionInput").value.trim();
       const note = document.getElementById("caseNoteInput").value.trim();
       const recommendation = document.getElementById("caseRecommendationInput").value.trim();
@@ -706,6 +729,7 @@
         .insert({
           student_id: studentId,
           counselor_id: currentCounselor.counselor_id,
+          updated_by: currentCounselor.counselor_id,
           nature_of_incident: nature,
           school_year: defaultSchoolYear(),
         })
@@ -720,11 +744,13 @@
       }
 
       let session = null;
-      if (action || note || recommendation || caseAllFiles.length) {
+      if (details || action || note || recommendation || caseAllFiles.length) {
         const { data: sess, error: sessionError } = await supabaseClient
           .from("case_sessions")
           .insert({
             case_id: newCase.case_id,
+            updated_by: currentCounselor.counselor_id,
+            details: details || null,
             action_taken: action || null,
             session_note: note || null,
             recommendation: recommendation || null,
@@ -735,6 +761,7 @@
           console.error(sessionError);
         } else {
           session = sess;
+          touchCase(newCase.case_id);
         }
       }
 
@@ -835,13 +862,14 @@
 
       return `
         <div class="case-timeline-item">
-          <div class="case-timeline-date">${formatDate(s.session_date || s.created_at)}</div>
+          <div class="case-timeline-date">${formatDate(s.session_date || s.created_at)}${s.updated_by ? ` <span class="timeline-author">· logged by ${escapeHtml(counselorNameById[s.updated_by] || "—")}</span>` : ""}</div>
+          ${s.details ? `<div class="case-timeline-row"><strong>Details of the Case:</strong> ${escapeHtml(s.details)}</div>` : ""}
           ${s.action_taken ? `<div class="case-timeline-row"><strong>Action:</strong> ${escapeHtml(s.action_taken)}</div>` : ""}
           ${s.session_note ? `<div class="case-timeline-row"><strong>Note:</strong> ${escapeHtml(s.session_note)}</div>` : ""}
           ${s.recommendation ? `<div class="case-timeline-row"><strong>Recommendation:</strong> ${escapeHtml(s.recommendation)}</div>` : ""}
           ${attachmentsHtml}
           ${signedHtml}
-          ${!s.action_taken && !s.session_note && !s.recommendation && !attachments.length && !signedDocs.length ? `<div class="case-timeline-row">Case opened.</div>` : ""}
+          ${!s.details && !s.action_taken && !s.session_note && !s.recommendation && !attachments.length && !signedDocs.length ? `<div class="case-timeline-row">Case opened.</div>` : ""}
         </div>
       `;
     }
@@ -1037,6 +1065,9 @@
       // just saves them the mental math of "how long has this been open."
       const daysOpen = Math.floor((Date.now() - new Date(c.created_at).getTime()) / 86400000);
       document.getElementById("caseDetailDaysOpen").textContent = `${daysOpen} day${daysOpen === 1 ? "" : "s"}`;
+      document.getElementById("caseDetailEdited").textContent = c.updated_at
+        ? `${counselorNameById[c.updated_by] || "—"} · ${formatDate(c.updated_at)}`
+        : "—";
 
       renderInterventionsList(c);
 
@@ -1142,6 +1173,17 @@
       currentCaseId = null;
     }
 
+    // Bump a case's "last touched" audit trail when a session is logged, so
+    // the header's Last Edited reflects anything done to the case.
+    function touchCase(caseId) {
+      supabaseClient
+        .from("cases")
+        .update({ updated_at: new Date().toISOString(), updated_by: currentCounselor.counselor_id })
+        .eq("case_id", caseId)
+        .then(() => {})
+        .catch((err) => console.error(err));
+    }
+
     document.getElementById("caseDetailCloseBtn").addEventListener("click", closeCaseDetail);
     document.getElementById("caseDetailModalOverlay").addEventListener("click", (e) => {
       if (e.target.id === "caseDetailModalOverlay") closeCaseDetail();
@@ -1153,7 +1195,7 @@
 
       const { error } = await supabaseClient
         .from("cases")
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .update({ status: newStatus, updated_at: new Date().toISOString(), updated_by: currentCounselor.counselor_id })
         .eq("case_id", currentCaseId);
 
       if (error) {
@@ -1387,10 +1429,10 @@
       e.preventDefault();
       if (!currentCaseId) return;
 
+      const details = document.getElementById("sessionDetailsInput").value.trim();
       const action = document.getElementById("sessionActionInput").value.trim();
       const note = document.getElementById("sessionNoteInput").value.trim();
       const recommendation = document.getElementById("sessionRecommendationInput").value.trim();
-
       const proofInput = document.getElementById("sessionProofInput");
       const proofCameraInput = document.getElementById("sessionProofCameraInput");
       const signedInput = document.getElementById("sessionSignedInput");
@@ -1420,6 +1462,8 @@
         .from("case_sessions")
         .insert({
           case_id: currentCaseId,
+          updated_by: currentCounselor.counselor_id,
+          details: details || null,
           action_taken: action || null,
           session_note: note || null,
           recommendation: recommendation || null,
@@ -1433,6 +1477,8 @@
         console.error(error);
         return;
       }
+
+      touchCase(currentCaseId);
 
       if (files.length) {
         startBtnLoading(btn, "Uploading files…");
@@ -1545,6 +1591,15 @@
       if (!result) return;
 
       currentCounselor = result.counselor;
+      const { data: counselorsData, error: counselorsError } = await supabaseClient
+        .from("counselors")
+        .select("counselor_id, first_name, last_name");
+      if (counselorsError) console.error(counselorsError);
+      counselorNameById = {};
+      (counselorsData || []).forEach((c) => {
+        const name = `${c.first_name} ${c.last_name}`.trim();
+        counselorNameById[c.counselor_id] = name;
+      });
       await Promise.all([loadCases(), loadStudentsForSelect(), loadInterventionTemplates()]);
       hidePageLoadOverlay();
     })();

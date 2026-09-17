@@ -33,7 +33,7 @@ function ccFormatPhone(value) {
 //    band so reports still print clean.
 function schoolPrintHeaderFooterHtml() {
   return `
-    <div class="print-school-header"><img src="../images/school-header.png" alt="" onerror="this.parentElement.style.display='none'"></div>
+    <div class="print-school-header"><img src="../images/school-header.png" alt="" style="height:135px!important;object-fit:cover;object-position:top;" onerror="this.parentElement.style.display='none'"></div>
     <div class="print-school-footer"><img src="../images/school-footer.png" alt="" onerror="this.parentElement.style.display='none'"></div>`;
 }
 
@@ -76,7 +76,7 @@ function openVisitationSlip(opts) {
       <title>Parent/Guardian&rsquo;s Visitation Slip</title>
       <style>
         html { background:#eef1f5; margin:0; padding:0; }
-        body { font-family: Arial, sans-serif; color:#111827; width:8.5in; min-height:11in; margin:24px auto; box-sizing:border-box; position:relative; background:#fff; box-shadow:0 2px 18px rgba(0,0,0,.28); padding:192px 40px 130px; }
+        body { font-family: Arial, sans-serif; color:#111827; width:8.5in; min-height:11in; margin:24px auto; box-sizing:border-box; position:relative; background:#fff; box-shadow:0 2px 18px rgba(0,0,0,.28); padding:140px 40px 130px; }
         .print-school-header, .print-school-footer { background:#fff; }
         .print-school-header img, .print-school-footer img { width:100%; height:auto; display:block; }
         .print-school-header { position:absolute; top:0; left:0; right:0; }
@@ -107,12 +107,12 @@ function openVisitationSlip(opts) {
           .print-btn { display:none; }
           html { background:#fff; }
           body { width:auto; min-height:auto; margin:0; padding:0; box-shadow:none; position:static; }
-          .print-school-header { position:fixed; top:0; left:0; right:0; z-index:10; height:187px; overflow:hidden; }
+          .print-school-header { position:fixed; top:0; left:0; right:0; z-index:10; height:135px; overflow:hidden; }
           .print-school-footer { position:fixed; bottom:0; left:0; right:0; z-index:10; height:100px; overflow:hidden; }
           .print-letterhead { display:table; width:8.5in; border-collapse:collapse; }
           .print-letterhead > thead { display:table-header-group; }
           .print-letterhead > thead > tr { display:table-row; }
-          .print-letterhead > thead > tr > td { display:table-cell; height:187px; padding:0; border:none; }
+          .print-letterhead > thead > tr > td { display:table-cell; height:135px; padding:0; border:none; }
           .print-letterhead > tfoot { display:table-footer-group; }
           .print-letterhead > tfoot > tr { display:table-row; }
           .print-letterhead > tfoot > tr > td { display:table-cell; height:100px; padding:0; border:none; }
@@ -604,22 +604,106 @@ function highlightActiveNav() {
 highlightActiveNav();
 
 const INACTIVITY_LIMIT_MS = 15 * 60 * 1000; // 15 minutes
+const WARNING_LEAD_MS = 60 * 1000; // warn during the final minute
+
+let sessionWarningEl = null;
+let sessionCountdownTimer = null;
+
+function formatCountdown(ms) {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+// Builds (once) and returns the inactivity-warning overlay, appended to body.
+function getSessionWarningOverlay() {
+  if (sessionWarningEl) return sessionWarningEl;
+
+  sessionWarningEl = document.createElement("div");
+  sessionWarningEl.className = "modal-overlay";
+  sessionWarningEl.id = "sessionWarningOverlay";
+  sessionWarningEl.hidden = true;
+  sessionWarningEl.innerHTML = `
+    <div class="modal-box" style="max-width:420px; text-align:center;">
+      <div class="modal-body" style="padding:26px 24px;">
+        <i class="fa-solid fa-clock" style="font-size:28px; color:#d97706; margin-bottom:10px;"></i>
+        <h3 style="margin:0 0 6px;">You're about to be signed out</h3>
+        <p style="margin:0 0 4px; color:#6b7280;">Inactivity this long signs you out for security.</p>
+        <p style="margin:0 0 18px;"><strong style="font-size:22px; color:#111827;" id="sessionWarningCountdown">1:00</strong></p>
+        <div class="form-actions" style="justify-content:center;">
+          <button type="button" class="btn btn-outline" id="sessionWarningLogoutBtn">Sign Out Now</button>
+          <button type="button" class="btn btn-primary" id="sessionWarningStayBtn">Stay Signed In</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  sessionWarningEl.querySelector("#sessionWarningStayBtn").addEventListener("click", () => {
+    dismissSessionWarning();
+    recordActivity();
+  });
+  sessionWarningEl.querySelector("#sessionWarningLogoutBtn").addEventListener("click", () => {
+    logoutCounselor("timeout");
+  });
+
+  document.body.appendChild(sessionWarningEl);
+  return sessionWarningEl;
+}
+
+function dismissSessionWarning() {
+  clearInterval(sessionCountdownTimer);
+  sessionCountdownTimer = null;
+  if (sessionWarningEl) {
+    sessionWarningEl.classList.remove("show");
+    sessionWarningEl.hidden = true;
+  }
+}
+
+function showSessionWarning() {
+  const overlay = getSessionWarningOverlay();
+  overlay.classList.add("show");
+  overlay.hidden = false;
+
+  clearInterval(sessionCountdownTimer);
+  sessionCountdownTimer = setInterval(() => {
+    const last = Number(sessionStorage.getItem("lastActivity"));
+    const remaining = last ? INACTIVITY_LIMIT_MS - (Date.now() - last) : 0;
+    const countEl = document.getElementById("sessionWarningCountdown");
+    if (countEl) countEl.textContent = formatCountdown(remaining);
+    if (remaining <= 0) {
+      clearInterval(sessionCountdownTimer);
+      sessionCountdownTimer = null;
+      logoutCounselor("timeout");
+    }
+  }, 1000);
+}
 
 async function logoutCounselor(reason) {
   sessionStorage.removeItem("counselorName");
   sessionStorage.removeItem("lastActivity");
+  dismissSessionWarning();
   await supabaseClient.auth.signOut();
   window.location.href = reason ? `../index.html?reason=${reason}` : "../index.html";
 }
 
 function recordActivity() {
   sessionStorage.setItem("lastActivity", Date.now().toString());
+  // Interacting again cancels the warning so an active user is never logged out.
+  if (sessionWarningEl && sessionWarningEl.classList.contains("show")) dismissSessionWarning();
 }
 
 function checkInactivity() {
   const last = Number(sessionStorage.getItem("lastActivity"));
-  if (last && Date.now() - last > INACTIVITY_LIMIT_MS) {
+  if (!last) return;
+  const remaining = INACTIVITY_LIMIT_MS - (Date.now() - last);
+
+  if (remaining <= 0) {
     logoutCounselor("timeout");
+  } else if (remaining <= WARNING_LEAD_MS) {
+    showSessionWarning();
+  } else if (sessionWarningEl && sessionWarningEl.classList.contains("show")) {
+    dismissSessionWarning();
   }
 }
 

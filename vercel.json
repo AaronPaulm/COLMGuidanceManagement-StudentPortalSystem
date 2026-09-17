@@ -19,6 +19,7 @@
     { "source": "/counselor/reports", "destination": "/counselor/counselor-reports.html" },
     { "source": "/counselor/visit-logs", "destination": "/counselor/counselor-visit-logs.html" },
     { "source": "/counselor/announcements", "destination": "/counselor/counselor-announcements.html" },
-    { "source": "/counselor/account", "destination": "/counselor/counselor-account.html" }
+    { "source": "/counselor/account", "destination": "/counselor/counselor-account.html" },
+    { "source": "/counselor/account-management", "destination": "/counselor/counselor-account-management.html" }
   ]
 }

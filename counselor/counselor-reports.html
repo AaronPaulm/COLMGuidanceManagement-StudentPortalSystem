@@ -31,6 +31,33 @@
     @media (max-width: 600px) {
       .anecdotal-grid { grid-template-columns: 1fr; }
     }
+    .intake-section-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: #2456b3;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 6px;
+      margin: 22px 0 14px;
+    }
+    .intake-sub-title {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #374151;
+      margin: 16px 0 10px;
+    }
+    .intake-type-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin: 4px 0 12px;
+      font-size: 13px;
+    }
+    .intake-type-label { font-weight: 600; }
+    .intake-type-option { display: inline-flex; align-items: center; gap: 6px; }
+    .intake-type-option input[type="radio"] { accent-color: #2456b3; }
   </style>
 </head>
 <body>
@@ -115,7 +142,14 @@
                 <li class="desktop-only">
                     <a href="counselor-account.html">
                         <i class="fa-solid fa-user"></i>
-                        <span>Account</span>
+                        <span>Profile</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-account-management.html">
+                        <i class="fa-solid fa-user-gear"></i>
+                        <span>Accounts Management</span>
                     </a>
                 </li>
                 <li class="desktop-only">
@@ -150,7 +184,9 @@
 
         <a href="counselor-reports.html"><i class="fa-solid fa-chart-line"></i> Reports</a>
 
-        <a href="counselor-account.html"><i class="fa-solid fa-user"></i> Account</a>
+        <a href="counselor-account.html"><i class="fa-solid fa-user"></i> Profile</a>
+
+        <a href="counselor-account-management.html"><i class="fa-solid fa-user-gear"></i> Accounts Management</a>
 
         <a href="#" id="mobileLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
 
@@ -168,8 +204,13 @@
             <select id="reportSchoolYearSelect" class="table-search" style="width:auto;">
                 <option value="">All time</option>
             </select>
+            <select id="reportSortSelect" class="table-search" style="width:auto;">
+                <option value="date-desc">Date (newest first)</option>
+                <option value="date-asc">Date (oldest first)</option>
+                <option value="student">Student name</option>
+            </select>
         </div>
-        <span class="hint" style="display:block; margin-bottom:16px;">School Year applies to Incident Reports and Case Notes. Leave on "All time" for no date filtering.</span>
+        <span class="hint" style="display:block; margin-bottom:16px;">School Year and Sort by apply to Incident Reports and Case Notes when generated. Leave school year on "All time" for no date filtering.</span>
 
         <div class="report-grid">
             <div class="report-card">
@@ -189,6 +230,12 @@
                 <h3>Anecdotal Reports</h3>
                 <p>Per-student incident record with description, action taken, and recommendations.</p>
                 <button type="button" class="btn btn-outline" id="genAnecdotalBtn">Generate</button>
+            </div>
+            <div class="report-card">
+                <div class="report-card-icon"><i class="fa-solid fa-clipboard-user"></i></div>
+                <h3>Intake Sheets</h3>
+                <p>Guidance intake form with victim, complainant, and respondent details.</p>
+                <button type="button" class="btn btn-outline" id="genIntakeBtn">Generate</button>
             </div>
         </div>
 
@@ -294,6 +341,291 @@
         </div>
     </div>
 
+    <!-- Intake Sheet Modal -->
+    <div class="modal-overlay" id="intakeModalOverlay">
+        <div class="modal-box wide">
+            <div class="modal-header">
+                <h3>Intake Sheet</h3>
+                <button type="button" class="modal-close" id="intakeModalCloseBtn" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="intakeForm">
+                    <div class="form-field">
+                        <label for="intakeStudentSearch">If student, search to prefill the victim details</label>
+                        <div class="anecdotal-search-wrap">
+                            <input type="text" id="intakeStudentSearch" placeholder="Type to search name, section, or grade…" autocomplete="off">
+                            <div class="anecdotal-results" id="intakeStudentResults"></div>
+                        </div>
+                    </div>
+
+                    <div class="anecdotal-prefill" id="intakePrefillSection">
+                        <div class="form-field" style="margin-top:0;">
+                            <label for="intakeCaseSelect">Select Case</label>
+                            <select id="intakeCaseSelect"><option value="">— none —</option></select>
+                        </div>
+                        <div class="form-field" style="margin-top:10px; display:none;" id="intakeSessionField">
+                            <label for="intakeSessionSelect">Select Session</label>
+                            <select id="intakeSessionSelect"><option value="">— none —</option></select>
+                        </div>
+                        <div class="anecdotal-prefill-hint" id="intakePrefillHint">Case details have been filled in below. You can still edit any field.</div>
+                    </div>
+
+                    <div class="intake-section-title">Victim</div>
+                    <div class="anecdotal-grid">
+                        <div class="form-field">
+                            <label for="intakeVictimName">Name</label>
+                            <input type="text" id="intakeVictimName">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeVictimGrade">Grade &amp; Section</label>
+                            <input type="text" id="intakeVictimGrade" readonly>
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeVictimDob">Date of Birth</label>
+                            <input type="date" id="intakeVictimDob">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeVictimAge">Age</label>
+                            <input type="number" id="intakeVictimAge" min="0" max="99">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeVictimSex">Sex</label>
+                            <select id="intakeVictimSex"><option value="">—</option><option>Male</option><option>Female</option></select>
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeVictimAdviser">Adviser</label>
+                            <input type="text" id="intakeVictimAdviser">
+                        </div>
+                    </div>
+
+                    <div class="intake-sub-title">Parents</div>
+                    <div class="anecdotal-grid">
+                        <div class="form-field">
+                            <label for="intakeVMotherName">Mother&rsquo;s Name</label>
+                            <input type="text" id="intakeVMotherName">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeVMotherAge">Mother&rsquo;s Age</label>
+                            <input type="number" id="intakeVMotherAge" min="0" max="120">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeVMotherOccupation">Mother&rsquo;s Occupation</label>
+                            <input type="text" id="intakeVMotherOccupation">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeVMotherAddress">Mother&rsquo;s Address</label>
+                            <input type="text" id="intakeVMotherAddress">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeVMotherContact">Mother&rsquo;s Contact No.</label>
+                            <input type="text" id="intakeVMotherContact">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeVFatherName">Father&rsquo;s Name</label>
+                            <input type="text" id="intakeVFatherName">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeVFatherAge">Father&rsquo;s Age</label>
+                            <input type="number" id="intakeVFatherAge" min="0" max="120">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeVFatherOccupation">Father&rsquo;s Occupation</label>
+                            <input type="text" id="intakeVFatherOccupation">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeVFatherAddress">Father&rsquo;s Address</label>
+                            <input type="text" id="intakeVFatherAddress">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeVFatherContact">Father&rsquo;s Contact No.</label>
+                            <input type="text" id="intakeVFatherContact">
+                        </div>
+                    </div>
+
+                    <div class="intake-section-title">Complainant</div>
+                    <div style="margin-bottom:12px;">
+                        <label for="intakeComplainantSearch">If student, search to prefill the complainant details</label>
+                        <div class="anecdotal-search-wrap">
+                            <input type="text" id="intakeComplainantSearch" placeholder="Type to search name, section, or grade…" autocomplete="off">
+                            <div class="anecdotal-results" id="intakeComplainantResults"></div>
+                        </div>
+                    </div>
+                    <div class="anecdotal-grid">
+                        <div class="form-field">
+                            <label for="intakeComplainantName">Name</label>
+                            <input type="text" id="intakeComplainantName">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeComplainantGrade">Grade &amp; Section</label>
+                            <input type="text" id="intakeComplainantGrade">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeComplainantDob">Date of Birth</label>
+                            <input type="date" id="intakeComplainantDob">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeComplainantAge">Age</label>
+                            <input type="number" id="intakeComplainantAge" min="0" max="99">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeComplainantSex">Sex</label>
+                            <select id="intakeComplainantSex"><option value="">—</option><option>Male</option><option>Female</option></select>
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeComplainantAdviser">Adviser</label>
+                            <input type="text" id="intakeComplainantAdviser">
+                        </div>
+                    </div>
+
+                    <div class="intake-section-title">Respondent</div>
+                    <div class="intake-type-row">
+                        <label class="intake-type-label">If respondent is:</label>
+                        <label class="intake-type-option">
+                            <input type="radio" name="intakeRespondentType" id="intakeRespondentPersonnel" value="personnel"> C-1. School Personnel
+                        </label>
+                        <label class="intake-type-option">
+                            <input type="radio" name="intakeRespondentType" id="intakeRespondentStudent" value="student"> C-2. Student
+                        </label>
+                    </div>
+                    <div id="intakeRespondentSearchField" style="display:none; margin-bottom:12px;">
+                        <label for="intakeRespondentSearch">Search student to prefill the respondent details</label>
+                        <div class="anecdotal-search-wrap">
+                            <input type="text" id="intakeRespondentSearch" placeholder="Type to search name, section, or grade…" autocomplete="off">
+                            <div class="anecdotal-results" id="intakeRespondentResults"></div>
+                        </div>
+                    </div>
+                    <div class="anecdotal-grid">
+                        <div class="form-field">
+                            <label for="intakeRespondentName">Name</label>
+                            <input type="text" id="intakeRespondentName">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeRespondentGrade">Grade &amp; Section</label>
+                            <input type="text" id="intakeRespondentGrade">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeRespondentDob">Date of Birth</label>
+                            <input type="date" id="intakeRespondentDob">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeRespondentAge">Age</label>
+                            <input type="number" id="intakeRespondentAge" min="0" max="99">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeRespondentSex">Sex</label>
+                            <select id="intakeRespondentSex"><option value="">—</option><option>Male</option><option>Female</option></select>
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeRespondentAdviser">Adviser</label>
+                            <input type="text" id="intakeRespondentAdviser">
+                        </div>
+                    </div>
+
+                    <div class="intake-sub-title" id="intakeParentGuardianTitle">Parent/Guardian</div>
+                    <div id="intakeParentGuardianBlock">
+                        <div class="anecdotal-grid">
+                            <div class="form-field">
+                                <label for="intakeRMotherName">Mother&rsquo;s Name</label>
+                                <input type="text" id="intakeRMotherName">
+                            </div>
+                            <div class="form-field">
+                                <label for="intakeRMotherAge">Mother&rsquo;s Age</label>
+                                <input type="number" id="intakeRMotherAge" min="0" max="120">
+                            </div>
+                            <div class="form-field">
+                                <label for="intakeRMotherOccupation">Mother&rsquo;s Occupation</label>
+                                <input type="text" id="intakeRMotherOccupation">
+                            </div>
+                            <div class="form-field">
+                                <label for="intakeRMotherAddress">Mother&rsquo;s Address</label>
+                                <input type="text" id="intakeRMotherAddress">
+                            </div>
+                            <div class="form-field">
+                                <label for="intakeRMotherContact">Mother&rsquo;s Contact No.</label>
+                                <input type="text" id="intakeRMotherContact">
+                            </div>
+                            <div class="form-field">
+                                <label for="intakeRFatherName">Father&rsquo;s Name</label>
+                                <input type="text" id="intakeRFatherName">
+                            </div>
+                            <div class="form-field">
+                                <label for="intakeRFatherAge">Father&rsquo;s Age</label>
+                                <input type="number" id="intakeRFatherAge" min="0" max="120">
+                            </div>
+                            <div class="form-field">
+                                <label for="intakeRFatherOccupation">Father&rsquo;s Occupation</label>
+                                <input type="text" id="intakeRFatherOccupation">
+                            </div>
+                            <div class="form-field">
+                                <label for="intakeRFatherAddress">Father&rsquo;s Address</label>
+                                <input type="text" id="intakeRFatherAddress">
+                            </div>
+                            <div class="form-field">
+                                <label for="intakeRFatherContact">Father&rsquo;s Contact No.</label>
+                                <input type="text" id="intakeRFatherContact">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-field anecdotal-textarea-field">
+                        <label for="intakeDetailsInput">Details of the Case</label>
+                        <textarea id="intakeDetailsInput" rows="4"></textarea>
+                    </div>
+
+                    <div class="intake-section-title">Action Taken</div>
+                    <div class="anecdotal-grid">
+                        <div class="form-field">
+                            <label for="intakeAction1">1.</label>
+                            <input type="text" id="intakeAction1">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeAction2">2.</label>
+                            <input type="text" id="intakeAction2">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeAction3">3.</label>
+                            <input type="text" id="intakeAction3">
+                        </div>
+                    </div>
+
+                    <div class="intake-section-title">Recommendations</div>
+                    <div class="anecdotal-grid">
+                        <div class="form-field">
+                            <label for="intakeRecommendation1">1.</label>
+                            <input type="text" id="intakeRecommendation1">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeRecommendation2">2.</label>
+                            <input type="text" id="intakeRecommendation2">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeRecommendation3">3.</label>
+                            <input type="text" id="intakeRecommendation3">
+                        </div>
+                    </div>
+
+                    <div class="intake-section-title">Prepared By</div>
+                    <div class="anecdotal-grid">
+                        <div class="form-field">
+                            <label for="intakePreparedName">Name</label>
+                            <input type="text" id="intakePreparedName" placeholder="Name over Printed Name">
+                        </div>
+                        <div class="form-field">
+                            <label for="intakeDesignation">Designation</label>
+                            <input type="text" id="intakeDesignation" placeholder="e.g. Guidance Counselor">
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="intakeGenerateBtn">Generate Report</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/supabaseClient.js"></script>
   <script src="../js/counselor-common.js"></script>
@@ -341,7 +673,7 @@
         <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
           <style>
             html { background:#eef1f5; margin:0; padding:0; }
-            body { font-family: Arial, sans-serif; color:#111827; width:8.5in; min-height:11in; margin:24px auto; box-sizing:border-box; position:relative; background:#fff; box-shadow:0 2px 18px rgba(0,0,0,.28); padding:192px 40px 130px; }
+            body { font-family: Arial, sans-serif; color:#111827; width:8.5in; min-height:11in; margin:24px auto; box-sizing:border-box; position:relative; background:#fff; box-shadow:0 2px 18px rgba(0,0,0,.28); padding:140px 40px 130px; }
             .print-school-header, .print-school-footer { background:#fff; }
             .print-school-header img, .print-school-footer img { width:100%; height:auto; display:block; }
             .print-school-header { position:absolute; top:0; left:0; right:0; }
@@ -363,12 +695,12 @@
               .print-btn { display:none; }
               html { background:#fff; }
               body { width:auto; min-height:auto; margin:0; padding:0; box-shadow:none; position:static; }
-              .print-school-header { position:fixed; top:0; left:0; right:0; z-index:10; height:187px; overflow:hidden; }
+              .print-school-header { position:fixed; top:0; left:0; right:0; z-index:10; height:135px; overflow:hidden; }
               .print-school-footer { position:fixed; bottom:0; left:0; right:0; z-index:10; height:100px; overflow:hidden; }
               .print-letterhead { display:table; width:8.5in; border-collapse:collapse; }
               .print-letterhead > thead { display:table-header-group; }
               .print-letterhead > thead > tr { display:table-row; }
-              .print-letterhead > thead > tr > td { display:table-cell; height:187px; padding:0; border:none; }
+              .print-letterhead > thead > tr > td { display:table-cell; height:135px; padding:0; border:none; }
               .print-letterhead > tfoot { display:table-footer-group; }
               .print-letterhead > tfoot > tr { display:table-row; }
               .print-letterhead > tfoot > tr > td { display:table-cell; height:100px; padding:0; border:none; }
@@ -428,6 +760,32 @@
       return { from, toEndOfDay: `${to}T23:59:59`, to };
     }
 
+    // The "Sort by" dropdown applies when a report is generated, so the
+    // printed document itself stays a plain report. Incidents and case notes
+    // both carry _sortDate (ms epoch) and student name, so one sorter covers
+    // both generators.
+    function getReportSort() {
+      return document.getElementById("reportSortSelect").value;
+    }
+
+    function sortReportRows(rows) {
+      const sort = getReportSort();
+      const sorted = [...rows];
+
+      if (sort === "student") {
+        return sorted.sort((a, b) =>
+          String(a.student || "").localeCompare(String(b.student || ""))
+        );
+      }
+
+      const asc = sort === "date-asc";
+      return sorted.sort((a, b) => {
+        const da = a._sortDate || 0;
+        const db = b._sortDate || 0;
+        return asc ? da - db : db - da;
+      });
+    }
+
     function populateReportSchoolYearSelect() {
       const select = document.getElementById("reportSchoolYearSelect");
       const current = defaultSchoolYear();
@@ -471,14 +829,17 @@
         return;
       }
 
-      const rows = data.map((c) => ({
-        fileNumber: c.file_number || "—",
-        student: c.students ? `${c.students.first_name} ${c.students.last_name}` : "Unknown",
-        section: c.students?.section || "—",
-        nature: c.nature_of_incident,
-        status: capitalize(c.status),
-        date: formatDate(c.created_at),
-      }));
+      const rows = sortReportRows(
+        data.map((c) => ({
+          fileNumber: c.file_number || "—",
+          student: c.students ? `${c.students.first_name} ${c.students.last_name}` : "Unknown",
+          section: c.students?.section || "—",
+          nature: c.nature_of_incident,
+          status: capitalize(c.status),
+          date: formatDate(c.created_at),
+          _sortDate: new Date(c.created_at).getTime(),
+        }))
+      );
 
       openPrintableReport(
         "Incident Reports",
@@ -513,24 +874,27 @@
         return;
       }
 
-      const rows = [];
-      (data || []).forEach((c) => {
-        const student = c.students ? `${c.students.first_name} ${c.students.last_name}` : "Unknown";
-        (c.case_sessions || [])
-          // Skip the placeholder session created automatically when a case
-          // is opened with no notes yet — nothing to report on there.
-          .filter((s) => s.action_taken || s.session_note || s.recommendation)
-          .forEach((s) => {
-            rows.push({
-              student,
-              case: c.nature_of_incident,
-              date: formatDate(s.session_date || s.created_at),
-              action: s.action_taken || "—",
-              note: s.session_note || "—",
-              recommendation: s.recommendation || "—",
+      const rows = sortReportRows([
+        ...(data || []).flatMap((c) => {
+          const student = c.students ? `${c.students.first_name} ${c.students.last_name}` : "Unknown";
+          return (c.case_sessions || [])
+            // Skip the placeholder session created automatically when a case
+            // is opened with no notes yet — nothing to report on there.
+            .filter((s) => s.action_taken || s.session_note || s.recommendation)
+            .map((s) => {
+              const dateVal = s.session_date || s.created_at;
+              return {
+                student,
+                case: c.nature_of_incident,
+                date: formatDate(dateVal),
+                action: s.action_taken || "—",
+                note: s.session_note || "—",
+                recommendation: s.recommendation || "—",
+                _sortDate: new Date(dateVal).getTime(),
+              };
             });
-          });
-      });
+        }),
+      ]);
 
       if (!rows.length) {
         showToast("No case notes found for the selected range.", "info");
@@ -682,7 +1046,7 @@
 
       const { data: sessions, error } = await supabaseClient
         .from("case_sessions")
-        .select("session_id, session_date, action_taken, session_note, recommendation")
+        .select("session_id, session_date, details, action_taken, session_note, recommendation")
         .eq("case_id", caseId)
         .order("session_date", { ascending: false });
 
@@ -702,7 +1066,7 @@
               const date = s.session_date
                 ? new Date(s.session_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                 : "No date";
-              const snippet = (s.session_note || s.action_taken || "").slice(0, 50);
+              const snippet = (s.details || s.session_note || s.action_taken || "").slice(0, 50);
               return `<option value="${s.session_id}">${date}${snippet ? ` — ${escapeHtml(snippet)}${(s.session_note || "").length > 50 ? "…" : ""}` : ""}</option>`;
             }
           )
@@ -726,7 +1090,7 @@
 
       if (session) {
         document.getElementById("anecdotalDescriptionInput").value =
-          session.session_note || (theCase ? theCase.nature_of_incident : "");
+          session.details || session.session_note || (theCase ? theCase.nature_of_incident : "");
         document.getElementById("anecdotalActionInput").value = session.action_taken || "";
         document.getElementById("anecdotalRecommendationInput").value = session.recommendation || "";
       }
@@ -773,7 +1137,7 @@
           <title>Anecdotal Report</title>
           <style>
             html { background:#eef1f5; margin:0; padding:0; }
-            body { font-family: Arial, sans-serif; color:#111827; width:8.5in; min-height:11in; margin:24px auto; box-sizing:border-box; position:relative; display:flex; flex-direction:column; background:#fff; box-shadow:0 2px 18px rgba(0,0,0,.28); padding:192px 40px 130px; }
+            body { font-family: Arial, sans-serif; color:#111827; width:8.5in; min-height:11in; margin:24px auto; box-sizing:border-box; position:relative; display:flex; flex-direction:column; background:#fff; box-shadow:0 2px 18px rgba(0,0,0,.28); padding:140px 40px 130px; }
             .print-school-header, .print-school-footer { background:#fff; }
             .print-school-header img, .print-school-footer img { width:100%; height:auto; display:block; }
             .print-school-header { position:absolute; top:0; left:0; right:0; }
@@ -801,12 +1165,12 @@
               .print-btn { display:none; }
               html { background:#fff; }
               body { width:auto; min-height:auto; margin:0; padding:0; box-shadow:none; position:static; display:block; }
-              .print-school-header { position:fixed; top:0; left:0; right:0; z-index:10; height:187px; overflow:hidden; }
+              .print-school-header { position:fixed; top:0; left:0; right:0; z-index:10; height:135px; overflow:hidden; }
               .print-school-footer { position:fixed; bottom:0; left:0; right:0; z-index:10; height:100px; overflow:hidden; }
               .print-letterhead { display:table; width:8.5in; border-collapse:collapse; }
               .print-letterhead > thead { display:table-header-group; }
               .print-letterhead > thead > tr { display:table-row; }
-              .print-letterhead > thead > tr > td { display:table-cell; height:187px; padding:0; border:none; }
+              .print-letterhead > thead > tr > td { display:table-cell; height:135px; padding:0; border:none; }
               .print-letterhead > tfoot { display:table-footer-group; }
               .print-letterhead > tfoot > tr { display:table-row; }
               .print-letterhead > tfoot > tr > td { display:table-cell; height:100px; padding:0; border:none; }
@@ -975,6 +1339,794 @@
       document.getElementById("anecdotalForm").addEventListener("submit", generateAnecdotal);
     }
 
+    // -------- Intake Sheet (printable DepEd-style intake form) --------
+
+    let intakeStudents = [];
+    let intakeCases = [];
+    let intakeSelectedStudentId = null;
+    let intakeSelectedRespondentId = null;
+    let intakeSessionsCache = [];
+
+    function intakeOpenModal() {
+      document.getElementById("intakeModalOverlay").classList.add("show");
+    }
+
+    function intakeCloseModal() {
+      document.getElementById("intakeModalOverlay").classList.remove("show");
+    }
+
+    function intakeStudentDisplay(s) {
+      return `${s.first_name} ${s.last_name}` +
+        (s.section ? ` — ${s.section}` : "") +
+        (s.year_level ? `, ${s.year_level}` : "");
+    }
+
+    function intakeRenderSearch(query) {
+      const resultsEl = document.getElementById("intakeStudentResults");
+      const q = (query || "").trim().toLowerCase();
+
+      if (!q) {
+        resultsEl.classList.remove("show");
+        resultsEl.innerHTML = "";
+        return;
+      }
+
+      const matches = intakeStudents
+        .filter((s) => {
+          const hay = `${s.first_name} ${s.last_name} ${s.section || ""} ${s.year_level || ""}`.toLowerCase();
+          return hay.includes(q);
+        })
+        .slice(0, 10);
+
+      if (!matches.length) {
+        resultsEl.innerHTML = `<div class="result-empty">No students match “${escapeHtml(query)}”.</div>`;
+        resultsEl.classList.add("show");
+        return;
+      }
+
+      resultsEl.innerHTML = matches
+        .map(
+          (s) =>
+            `<div class="result-item" data-id="${s.student_id}">${escapeHtml(intakeStudentDisplay(s))}</div>`
+        )
+        .join("");
+      resultsEl.classList.add("show");
+    }
+
+    function intakeCloseResults() {
+      document.getElementById("intakeStudentResults").classList.remove("show");
+      document.getElementById("intakeStudentResults").innerHTML = "";
+    }
+
+    function intakePickStudent(id) {
+      const s = intakeStudents.find((x) => x.student_id === id);
+      if (!s) return;
+      intakeSelectedStudentId = id;
+      document.getElementById("intakeStudentSearch").value = intakeStudentDisplay(s);
+      intakeCloseResults();
+      intakeSelectStudent();
+    }
+
+    function intakeRenderRespondentSearch(query) {
+      const resultsEl = document.getElementById("intakeRespondentResults");
+      const q = (query || "").trim().toLowerCase();
+
+      if (!q) {
+        resultsEl.classList.remove("show");
+        resultsEl.innerHTML = "";
+        return;
+      }
+
+      const matches = intakeStudents
+        .filter((s) => {
+          const hay = `${s.first_name} ${s.last_name} ${s.section || ""} ${s.year_level || ""}`.toLowerCase();
+          return hay.includes(q);
+        })
+        .slice(0, 10);
+
+      if (!matches.length) {
+        resultsEl.innerHTML = `<div class="result-empty">No students match “${escapeHtml(query)}”.</div>`;
+        resultsEl.classList.add("show");
+        return;
+      }
+
+      resultsEl.innerHTML = matches
+        .map(
+          (s) =>
+            `<div class="result-item" data-id="${s.student_id}">${escapeHtml(intakeStudentDisplay(s))}</div>`
+        )
+        .join("");
+      resultsEl.classList.add("show");
+    }
+
+    function intakeCloseRespondentResults() {
+      document.getElementById("intakeRespondentResults").classList.remove("show");
+      document.getElementById("intakeRespondentResults").innerHTML = "";
+    }
+
+    function intakePickRespondentStudent(id) {
+      const s = intakeStudents.find((x) => x.student_id === id);
+      if (!s) return;
+      intakeSelectedRespondentId = id;
+      document.getElementById("intakeRespondentSearch").value = intakeStudentDisplay(s);
+      intakeCloseRespondentResults();
+      document.getElementById("intakeRespondentName").value = `${s.first_name} ${s.last_name}`;
+      document.getElementById("intakeRespondentGrade").value = [s.year_level, s.section].filter(Boolean).join(" – ");
+
+      // DOB, age, sex and the parent/guardian block come from the student's
+      // latest submitted info sheet; empty values are skipped so nothing
+      // blanks out an existing entry.
+      supabaseClient
+        .from("student_info_sheets")
+        .select("school_year, answers, status")
+        .eq("student_id", id)
+        .order("school_year", { ascending: false })
+        .then(({ data, error }) => {
+          if (error) {
+            console.error(error);
+            return;
+          }
+          const rows = data || [];
+          const sheet = rows.find((r) => r.school_year === defaultSchoolYear()) || rows.find((r) => r.status === "submitted");
+          if (!sheet) return;
+          intakeApplyRespondentInfoSheet(sheet.answers || {});
+        });
+    }
+
+    function intakeApplyRespondentInfoSheet(answers) {
+      const set = (id2, value) => {
+        const el = document.getElementById(id2);
+        if (el && value !== undefined && value !== null && value !== "") el.value = value;
+      };
+      set("intakeRespondentDob", answers.dob || "");
+      set("intakeRespondentAge", answers.age || "");
+      set("intakeRespondentSex", answers.gender || "");
+      set("intakeRMotherName", answers.mother_name || "");
+      set("intakeRMotherAge", answers.mother_age || "");
+      set("intakeRMotherOccupation", answers.mother_occupation || "");
+      set("intakeRFatherName", answers.father_name || "");
+      set("intakeRFatherAge", answers.father_age || "");
+      set("intakeRFatherOccupation", answers.father_occupation || "");
+      const familyHome = answers.address || "";
+      set("intakeRMotherAddress", familyHome);
+      set("intakeRFatherAddress", familyHome);
+    }
+
+    function intakeRenderComplainantSearch(query) {
+      const resultsEl = document.getElementById("intakeComplainantResults");
+      const q = (query || "").trim().toLowerCase();
+
+      if (!q) {
+        resultsEl.classList.remove("show");
+        resultsEl.innerHTML = "";
+        return;
+      }
+
+      const matches = intakeStudents
+        .filter((s) => {
+          const hay = `${s.first_name} ${s.last_name} ${s.section || ""} ${s.year_level || ""}`.toLowerCase();
+          return hay.includes(q);
+        })
+        .slice(0, 10);
+
+      if (!matches.length) {
+        resultsEl.innerHTML = `<div class="result-empty">No students match “${escapeHtml(query)}”.</div>`;
+        resultsEl.classList.add("show");
+        return;
+      }
+
+      resultsEl.innerHTML = matches
+        .map(
+          (s) =>
+            `<div class="result-item" data-id="${s.student_id}">${escapeHtml(intakeStudentDisplay(s))}</div>`
+        )
+        .join("");
+      resultsEl.classList.add("show");
+    }
+
+    function intakeCloseComplainantResults() {
+      document.getElementById("intakeComplainantResults").classList.remove("show");
+      document.getElementById("intakeComplainantResults").innerHTML = "";
+    }
+
+    function intakePickComplainantStudent(id) {
+      const s = intakeStudents.find((x) => x.student_id === id);
+      if (!s) return;
+      document.getElementById("intakeComplainantSearch").value = intakeStudentDisplay(s);
+      intakeCloseComplainantResults();
+      document.getElementById("intakeComplainantName").value = `${s.first_name} ${s.last_name}`;
+      document.getElementById("intakeComplainantGrade").value = [s.year_level, s.section].filter(Boolean).join(" – ");
+
+      // DOB, age and sex come from the student's latest submitted info sheet;
+      // empty values are skipped so nothing blanks out an existing entry.
+      supabaseClient
+        .from("student_info_sheets")
+        .select("school_year, answers, status")
+        .eq("student_id", id)
+        .order("school_year", { ascending: false })
+        .then(({ data, error }) => {
+          if (error) {
+            console.error(error);
+            return;
+          }
+          const rows = data || [];
+          const sheet = rows.find((r) => r.school_year === defaultSchoolYear()) || rows.find((r) => r.status === "submitted");
+          if (!sheet) return;
+          const ans = sheet.answers || {};
+          const set = (fid, value) => {
+            const el = document.getElementById(fid);
+            if (el && value !== undefined && value !== null && value !== "") el.value = value;
+          };
+          set("intakeComplainantDob", ans.dob || "");
+          set("intakeComplainantAge", ans.age || "");
+          set("intakeComplainantSex", ans.gender || "");
+        });
+    }
+
+    // Birthdate / age are kept in sync: picking a date auto-fills the age.
+    function intakeCalculateAge(dobStr) {
+      if (!dobStr) return "";
+      const dob = new Date(dobStr);
+      const today = new Date();
+      let age = today.getFullYear() - dob.getFullYear();
+      const m = today.getMonth() - dob.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+      return Number.isFinite(age) ? age : "";
+    }
+
+    // Copies the matching Student Info Sheet keys into the victim fields.
+    // Empty values are skipped so nothing blanks out an existing entry.
+    function intakeApplyInfoSheet(answers) {
+      const set = (id, value) => {
+        const el = document.getElementById(id);
+        if (el && value !== undefined && value !== null && value !== "") el.value = value;
+      };
+      set("intakeVictimDob", answers.dob || "");
+      set("intakeVictimAge", answers.age || "");
+      set("intakeVictimSex", answers.gender || "");
+      set("intakeVMotherName", answers.mother_name || "");
+      set("intakeVMotherAge", answers.mother_age || "");
+      set("intakeVMotherOccupation", answers.mother_occupation || "");
+      set("intakeVFatherName", answers.father_name || "");
+      set("intakeVFatherAge", answers.father_age || "");
+      set("intakeVFatherOccupation", answers.father_occupation || "");
+      // The info sheet stores one family home address (student's address) but
+      // no separate mother/father home address or parent phone fields, so both
+      // parent Address rows get the family home address and Contact rows stay
+      // blank for manual entry.
+      const familyHome = answers.address || "";
+      set("intakeVMotherAddress", familyHome);
+      set("intakeVFatherAddress", familyHome);
+    }
+
+    function intakeSelectStudent() {
+      const id = intakeSelectedStudentId;
+      const s = intakeStudents.find((x) => x.student_id === id);
+      const victimName = document.getElementById("intakeVictimName");
+      const gradeInput = document.getElementById("intakeVictimGrade");
+      victimName.value = s ? `${s.first_name} ${s.last_name}` : "";
+      gradeInput.value = s ? [s.year_level, s.section].filter(Boolean).join(" – ") : "";
+
+      const prefillSection = document.getElementById("intakePrefillSection");
+      const caseSelect = document.getElementById("intakeCaseSelect");
+      const sessionSelect = document.getElementById("intakeSessionSelect");
+      const hint = document.getElementById("intakePrefillHint");
+
+      if (!id) {
+        prefillSection.classList.remove("show");
+        hint.classList.remove("show");
+        return;
+      }
+
+      prefillSection.classList.add("show");
+      hint.classList.remove("show");
+      sessionSelect.innerHTML = `<option value="">— none —</option>`;
+      document.getElementById("intakeSessionField").style.display = "none";
+
+      // Pull the victim's profile (DOB, age, sex, parents) from their
+      // Student Info Sheet so the intake form isn't retyped every time.
+      // Current school year first, falling back to the latest submitted
+      // sheet (that's the one most likely to be complete). Counselors can
+      // still edit any field after the values land.
+      supabaseClient
+        .from("student_info_sheets")
+        .select("school_year, answers, status")
+        .eq("student_id", id)
+        .order("school_year", { ascending: false })
+        .then(({ data, error }) => {
+          if (error) {
+            console.error(error);
+            return;
+          }
+          const rows = data || [];
+          const sheet = rows.find((r) => r.school_year === defaultSchoolYear()) || rows.find((r) => r.status === "submitted");
+          if (!sheet) return;
+          intakeApplyInfoSheet(sheet.answers || {});
+        });
+
+      supabaseClient
+        .from("cases")
+        .select("case_id, nature_of_incident, status, created_at")
+        .eq("student_id", id)
+        .order("created_at", { ascending: false })
+        .then(({ data, error }) => {
+          if (error) {
+            showToast("Couldn't load cases: " + error.message, "error");
+            return;
+          }
+          intakeCases = data || [];
+          caseSelect.innerHTML =
+            `<option value="">— none —</option>` +
+            intakeCases
+              .map(
+                (c) =>
+                  `<option value="${c.case_id}">${escapeHtml(c.nature_of_incident)} (${escapeHtml(c.status)})</option>`
+              )
+              .join("");
+          caseSelect.closest(".form-field").style.display = intakeCases.length ? "" : "none";
+        });
+    }
+
+    async function intakeSelectCase() {
+      const caseId = Number(document.getElementById("intakeCaseSelect").value);
+      const sessionSelect = document.getElementById("intakeSessionSelect");
+      const hint = document.getElementById("intakePrefillHint");
+
+      if (!caseId) {
+        sessionSelect.innerHTML = `<option value="">— none —</option>`;
+        document.getElementById("intakeSessionField").style.display = "none";
+        hint.classList.remove("show");
+        intakeSessionsCache = [];
+        return;
+      }
+
+      sessionSelect.innerHTML = `<option value="">Loading…</option>`;
+      document.getElementById("intakeSessionField").style.display = "";
+
+      const { data: sessions, error } = await supabaseClient
+        .from("case_sessions")
+        .select("session_id, session_date, details, action_taken, session_note, recommendation")
+        .eq("case_id", caseId)
+        .order("session_date", { ascending: false });
+
+      if (error) {
+        showToast("Couldn't load sessions: " + error.message, "error");
+        sessionSelect.innerHTML = `<option value="">— none —</option>`;
+        intakeSessionsCache = [];
+        return;
+      }
+
+      intakeSessionsCache = sessions || [];
+      sessionSelect.innerHTML =
+        `<option value="">— none —</option>` +
+        intakeSessionsCache
+          .map(
+            (s) => {
+              const date = s.session_date
+                ? new Date(s.session_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                : "No date";
+              const snippet = (s.details || s.session_note || s.action_taken || "").slice(0, 50);
+              return `<option value="${s.session_id}">${date}${snippet ? ` — ${escapeHtml(snippet)}${(s.session_note || "").length > 50 ? "…" : ""}` : ""}</option>`;
+            }
+          )
+          .join("");
+
+      hint.classList.remove("show");
+    }
+
+    function intakeSelectSession() {
+      const sessionId = Number(document.getElementById("intakeSessionSelect").value);
+      const hint = document.getElementById("intakePrefillHint");
+
+      if (!sessionId) {
+        hint.classList.remove("show");
+        return;
+      }
+
+      const caseId = Number(document.getElementById("intakeCaseSelect").value);
+      const theCase = intakeCases.find((c) => c.case_id === caseId);
+      const session = intakeSessionsCache.find((s) => s.session_id === sessionId);
+
+      if (!session) {
+        hint.classList.add("show");
+        return;
+      }
+
+      document.getElementById("intakeDetailsInput").value =
+        session.details || session.session_note || (theCase ? theCase.nature_of_incident : "");
+      document.getElementById("intakeAction1").value = session.action_taken || "";
+      document.getElementById("intakeRecommendation1").value = session.recommendation || "";
+      hint.classList.add("show");
+    }
+
+    function formatDob(dateStr) {
+      if (!dateStr) return "";
+      return new Date(dateStr).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    }
+
+    function openIntakeReport() {
+      const val = (id) => document.getElementById(id).value.trim();
+      const escape = escapeHtml;
+      const win = window.open("", "_blank");
+      if (!win) {
+        showToast("Please allow pop-ups to generate this report.", "error");
+        return;
+      }
+
+      // Only the respondent's Parent/Guardian block prints when C-2 Student
+      // is chosen; personnel records don't carry parent details on this form.
+      const respondentIsStudent = document.getElementById("intakeRespondentStudent").checked;
+      const respondentTypeTitle = respondentIsStudent
+        ? "C-2. If respondent is a Student"
+        : "C-1. If respondent is a School Personnel";
+
+      const respondentName = val("intakeRespondentName");
+      const respondentGrade = val("intakeRespondentGrade");
+      const respondentDob = val("intakeRespondentDob");
+      const respondentAge = val("intakeRespondentAge");
+      const respondentSex = val("intakeRespondentSex");
+      const respondentAdviser = val("intakeRespondentAdviser");
+
+      const personRow = (name, grade, dob, age, sex, adviser) => `
+        <div class="row"><label>Name:</label><div class="fill" style="flex:3;">${escape(name)}</div><label>Grade &amp; Section:</label><div class="fill">${escape(grade)}</div></div>
+        <div class="row"><label>Date of Birth:</label><div class="fill">${escape(dob)}</div><label>Age:</label><div class="fill fixed">${escape(age)}</div><label>Sex:</label><div class="fill fixed">${escape(sex)}</div><label>Adviser:</label><div class="fill">${escape(adviser)}</div></div>`;
+
+      const parentBlock = (motherName, motherAge, motherOcc, motherAddr, motherContact,
+                           fatherName, fatherAge, fatherOcc, fatherAddr, fatherContact) => `
+        <div class="row"><label>Mother:</label><div class="fill" style="flex:2;">${escape(motherName)}</div><label>Age:</label><div class="fill fixed">${escape(motherAge)}</div><label>Occupation:</label><div class="fill">${escape(motherOcc)}</div></div>
+        <div class="row"><label>Address:</label><div class="fill">${escape(motherAddr)}</div><label>Contact No.:</label><div class="fill fixed">${escape(motherContact)}</div></div>
+        <div class="row"><label>Father:</label><div class="fill" style="flex:2;">${escape(fatherName)}</div><label>Age:</label><div class="fill fixed">${escape(fatherAge)}</div><label>Occupation:</label><div class="fill">${escape(fatherOcc)}</div></div>
+        <div class="row"><label>Address:</label><div class="fill">${escape(fatherAddr)}</div><label>Contact No.:</label><div class="fill fixed">${escape(fatherContact)}</div></div>`;
+
+      const numberedLines = (fields) =>
+        [1, 2, 3].map((i) => `<div class="row"><label>${i}.</label><div class="fill">${escape(fields[i])}</div></div>`).join("");
+
+      win.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Intake Sheet</title>
+          <style>
+            html { background:#eef1f5; margin:0; padding:0; }
+            body { font-family: Arial, sans-serif; color:#111827; width:8.5in; min-height:11in; margin:24px auto; box-sizing:border-box; position:relative; display:flex; flex-direction:column; background:#fff; box-shadow:0 2px 18px rgba(0,0,0,.28); padding:140px 40px 130px; }
+            .print-school-header, .print-school-footer { background:#fff; }
+            .print-school-header img, .print-school-footer img { width:100%; height:auto; display:block; }
+            .print-school-header { position:absolute; top:0; left:0; right:0; }
+            .print-school-footer { position:absolute; bottom:0; left:0; right:0; }
+            h1 { font-size:16px; text-align:center; text-transform:uppercase; letter-spacing:.03em; margin:0 0 8px; }
+            h2 { font-size:13px; text-transform:uppercase; border-bottom:1px solid #111827; margin:13px 0 6px; padding-bottom:2px; }
+            .row { display:flex; align-items:flex-end; gap:10px; font-size:13px; margin-bottom:13px; }
+            .row label { white-space:nowrap; font-weight:600; }
+            .fill { flex:1; min-height:18px; border-bottom:1px solid #111827; padding:0 2px; }
+            .fill.fixed { flex:none; width:110px; text-align:center; }
+            .block { margin-bottom:16px; }
+            .block-label { font-size:13px; font-weight:600; margin-bottom:6px; }
+            .block-area { border:1px solid #d1d5db; padding:10px; font-size:13px; white-space:pre-wrap; overflow-wrap:break-word; word-break:break-word; }
+            .sign-row { display:flex; flex-direction:column; align-items:center; gap:16px; margin-top:auto; padding-top:40px; font-size:13px; }
+            .sign-block { text-align:center; }
+            .sig-line { width:260px; border-bottom:1px solid #111827; margin:0 auto; padding:0 0 4px; font-size:12.5px; }
+            .print-btn { position:fixed; top:12px; right:12px; z-index:20; padding:8px 16px; border-radius:8px; border:none; background:#2563eb; color:#fff; font-weight:600; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.25); }
+            .print-letterhead { display:contents; border-collapse:collapse; }
+            .print-letterhead > thead, .print-letterhead > tfoot { display:none; }
+            .print-letterhead > tbody { display:contents; }
+            .print-letterhead > tbody > tr { display:contents; }
+            .print-letterhead > tbody > tr > td { display:contents; }
+            @media screen and (max-width: 900px) { body { width:100%; min-height:auto; margin:0; box-shadow:none; } }
+            @page { size:8.5in 11in; margin:0; }
+            @media print {
+              .print-btn { display:none; }
+              html { background:#fff; }
+              body { width:auto; min-height:auto; margin:0; padding:0; box-shadow:none; position:static; display:block; }
+              .print-school-header { position:fixed; top:0; left:0; right:0; z-index:10; height:135px; overflow:hidden; }
+              .print-school-footer { position:fixed; bottom:0; left:0; right:0; z-index:10; height:100px; overflow:hidden; }
+              .print-letterhead { display:table; width:8.5in; border-collapse:collapse; }
+              .print-letterhead > thead { display:table-header-group; }
+              .print-letterhead > thead > tr { display:table-row; }
+              .print-letterhead > thead > tr > td { display:table-cell; height:135px; padding:0; border:none; }
+              .print-letterhead > tfoot { display:table-footer-group; }
+              .print-letterhead > tfoot > tr { display:table-row; }
+              .print-letterhead > tfoot > tr > td { display:table-cell; height:100px; padding:0; border:none; }
+              .print-letterhead > tbody { display:table-row-group; }
+              .print-letterhead > tbody > tr { display:table-row; }
+              .print-letterhead > tbody > tr > td { display:table-cell; vertical-align:top; padding:4px 40px 10px; border:none; }
+              .sign-row { margin-top:auto; padding-top:40px; }
+            }
+          </style>
+        </head>
+        <body>
+          ${schoolPrintHeaderFooterHtml()}
+          <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+          <table class="print-letterhead">
+            ${schoolPrintLetterhead()}
+            <tbody>
+              <tr>
+                <td>
+                  <h1>Intake Sheet</h1>
+
+                  <h2>Victim</h2>
+                  <div class="row"><label>Name:</label><div class="fill" style="flex:3;">${escape(val("intakeVictimName"))}</div><label>Grade &amp; Section:</label><div class="fill">${escape(val("intakeVictimGrade"))}</div></div>
+                  <div class="row"><label>Date of Birth:</label><div class="fill">${escape(formatDob(val("intakeVictimDob")))}</div><label>Age:</label><div class="fill fixed">${escape(val("intakeVictimAge"))}</div><label>Sex:</label><div class="fill fixed">${escape(val("intakeVictimSex"))}</div><label>Adviser:</label><div class="fill">${escape(val("intakeVictimAdviser"))}</div></div>
+                  <h2>Parents</h2>
+                  ${parentBlock(
+                    val("intakeVMotherName"), val("intakeVMotherAge"), val("intakeVMotherOccupation"), val("intakeVMotherAddress"), val("intakeVMotherContact"),
+                    val("intakeVFatherName"), val("intakeVFatherAge"), val("intakeVFatherOccupation"), val("intakeVFatherAddress"), val("intakeVFatherContact")
+                  )}
+
+                  <h2>Complainant</h2>
+                  ${personRow(
+                    val("intakeComplainantName"), val("intakeComplainantGrade"),
+                    formatDob(val("intakeComplainantDob")), val("intakeComplainantAge"), val("intakeComplainantSex"), val("intakeComplainantAdviser")
+                  )}
+
+                  <h2>Respondent</h2>
+                  <p style="font-size:13px; margin:0 0 8px; font-weight:600;">${escape(respondentTypeTitle)}</p>
+                  ${personRow(
+                    respondentName, respondentGrade, formatDob(respondentDob), respondentAge, respondentSex, respondentAdviser
+                  )}
+
+                  ${respondentIsStudent ? `
+                    <h2>Parent/Guardian</h2>
+                    ${parentBlock(
+                      val("intakeRMotherName"), val("intakeRMotherAge"), val("intakeRMotherOccupation"), val("intakeRMotherAddress"), val("intakeRMotherContact"),
+                      val("intakeRFatherName"), val("intakeRFatherAge"), val("intakeRFatherOccupation"), val("intakeRFatherAddress"), val("intakeRFatherContact")
+                    )}` : ""}
+
+                  <h2>Details of the Case</h2>
+                  <div class="block-area">${escape(val("intakeDetailsInput"))}</div>
+
+                  <h2>Action Taken</h2>
+                  ${numberedLines({
+                    1: val("intakeAction1"),
+                    2: val("intakeAction2"),
+                    3: val("intakeAction3"),
+                  })}
+
+                  <h2>Recommendations</h2>
+                  ${numberedLines({
+                    1: val("intakeRecommendation1"),
+                    2: val("intakeRecommendation2"),
+                    3: val("intakeRecommendation3"),
+                  })}
+
+                  <div class="sign-row">
+                    <div class="sign-block">
+                      <div class="sig-line">${escape(val("intakePreparedName")) || "Name over Printed Name"}</div>
+                      <div>Prepared by</div>
+                    </div>
+                    <div class="sign-block">
+                      <div class="sig-line">${escape(val("intakeDesignation")) || "Designation"}</div>
+                      <div>Designation</div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+      `);
+      win.document.close();
+    }
+
+    function generateIntake(e) {
+      e.preventDefault();
+      const victimName = document.getElementById("intakeVictimName").value.trim();
+      if (!intakeSelectedStudentId && !victimName) {
+        showToast("Please enter the victim's name or select a student.", "error");
+        return;
+      }
+      if (!document.getElementById("intakeDetailsInput").value.trim()) {
+        showToast("Please describe the details of the case.", "error");
+        return;
+      }
+      openIntakeReport();
+      intakeCloseModal();
+      intakeResetForm();
+    }
+
+    function intakeResetForm() {
+      [
+        "intakeVictimName",
+        "intakeVictimGrade",
+        "intakeVictimDob",
+        "intakeVictimAge",
+        "intakeVictimSex",
+        "intakeVictimAdviser",
+        "intakeVMotherName",
+        "intakeVMotherAge",
+        "intakeVMotherOccupation",
+        "intakeVMotherAddress",
+        "intakeVMotherContact",
+        "intakeVFatherName",
+        "intakeVFatherAge",
+        "intakeVFatherOccupation",
+        "intakeVFatherAddress",
+        "intakeVFatherContact",
+        "intakeComplainantName",
+        "intakeComplainantGrade",
+        "intakeComplainantDob",
+        "intakeComplainantAge",
+        "intakeComplainantSex",
+        "intakeComplainantAdviser",
+        "intakeRespondentName",
+        "intakeRespondentGrade",
+        "intakeRespondentDob",
+        "intakeRespondentAge",
+        "intakeRespondentSex",
+        "intakeRespondentAdviser",
+        "intakeRMotherName",
+        "intakeRMotherAge",
+        "intakeRMotherOccupation",
+        "intakeRMotherAddress",
+        "intakeRMotherContact",
+        "intakeRFatherName",
+        "intakeRFatherAge",
+        "intakeRFatherOccupation",
+        "intakeRFatherAddress",
+        "intakeRFatherContact",
+        "intakeDetailsInput",
+        "intakeAction1",
+        "intakeAction2",
+        "intakeAction3",
+        "intakeRecommendation1",
+        "intakeRecommendation2",
+        "intakeRecommendation3",
+        "intakePreparedName",
+        "intakeDesignation",
+      ].forEach((id) => (document.getElementById(id).value = ""));
+
+      document.getElementById("intakeRespondentPersonnel").checked = false;
+      document.getElementById("intakeRespondentStudent").checked = false;
+      document.getElementById("intakeParentGuardianBlock").style.display = "block";
+      document.getElementById("intakeParentGuardianTitle").style.display = "block";
+      document.getElementById("intakeRespondentSearch").value = "";
+      document.getElementById("intakeRespondentSearchField").style.display = "none";
+      intakeSelectedRespondentId = null;
+      document.getElementById("intakeComplainantSearch").value = "";
+      intakeCloseComplainantResults();
+
+      const caseSelect = document.getElementById("intakeCaseSelect");
+      caseSelect.innerHTML = `<option value="">— none —</option>`;
+      caseSelect.closest(".form-field").style.display = "none";
+      const sessionSelect = document.getElementById("intakeSessionSelect");
+      sessionSelect.innerHTML = `<option value="">— none —</option>`;
+      document.getElementById("intakeSessionField").style.display = "none";
+      document.getElementById("intakePrefillSection").classList.remove("show");
+      document.getElementById("intakePrefillHint").classList.remove("show");
+      intakeSessionsCache = [];
+      intakeResetSearch();
+    }
+
+    function intakeResetSearch() {
+      intakeSelectedStudentId = null;
+      document.getElementById("intakeStudentSearch").value = "";
+      intakeCloseResults();
+      document.getElementById("intakeVictimName").value = "";
+      document.getElementById("intakeVictimGrade").value = "";
+      document.getElementById("intakePrefillSection").classList.remove("show");
+      document.getElementById("intakePrefillHint").classList.remove("show");
+    }
+
+    async function openIntakeModalFlow() {
+      const { data, error } = await supabaseClient
+        .from("students")
+        .select("student_id, first_name, last_name, year_level, section")
+        .eq("is_archived", false)
+        .order("first_name", { ascending: true });
+      if (error) {
+        showToast("Couldn't load students: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+      intakeStudents = data || [];
+      intakeResetForm();
+      if (currentCounselor) {
+        document.getElementById("intakePreparedName").value =
+          `${currentCounselor.first_name || ""} ${currentCounselor.last_name || ""}`.trim();
+      }
+      intakeOpenModal();
+    }
+
+    function wireIntakeReport() {
+      wireReportButton("genIntakeBtn", openIntakeModalFlow);
+
+      const searchInput = document.getElementById("intakeStudentSearch");
+      const resultsEl = document.getElementById("intakeStudentResults");
+
+      searchInput.addEventListener("input", () => intakeRenderSearch(searchInput.value));
+      searchInput.addEventListener("blur", () => {
+        setTimeout(() => {
+          if (document.activeElement !== searchInput) intakeCloseResults();
+        }, 150);
+      });
+      searchInput.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") intakeCloseResults();
+      });
+
+      resultsEl.addEventListener("mousedown", (e) => e.preventDefault());
+      resultsEl.addEventListener("click", (e) => {
+        const item = e.target.closest(".result-item");
+        if (item) intakePickStudent(Number(item.dataset.id));
+      });
+
+      document.getElementById("intakeModalCloseBtn").addEventListener("click", intakeCloseModal);
+      document.getElementById("intakeModalOverlay").addEventListener("click", (e) => {
+        if (e.target.id === "intakeModalOverlay") intakeCloseModal();
+      });
+      document.getElementById("intakeCaseSelect").addEventListener("change", intakeSelectCase);
+      document.getElementById("intakeSessionSelect").addEventListener("change", intakeSelectSession);
+      document.getElementById("intakeForm").addEventListener("submit", generateIntake);
+
+      // Respondent student search (C-2 Student) — same pattern as the victim.
+      const respSearch = document.getElementById("intakeRespondentSearch");
+      const respResults = document.getElementById("intakeRespondentResults");
+      respSearch.addEventListener("input", () => intakeRenderRespondentSearch(respSearch.value));
+      respSearch.addEventListener("blur", () => {
+        setTimeout(() => {
+          if (document.activeElement !== respSearch) intakeCloseRespondentResults();
+        }, 150);
+      });
+      respSearch.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") intakeCloseRespondentResults();
+      });
+      respResults.addEventListener("mousedown", (e) => e.preventDefault());
+      respResults.addEventListener("click", (e) => {
+        const item = e.target.closest(".result-item");
+        if (item) intakePickRespondentStudent(Number(item.dataset.id));
+      });
+
+      // Complainant student search — complainant can be a student or a
+      // different entity, so this is just a convenience prefill.
+      const compSearch = document.getElementById("intakeComplainantSearch");
+      const compResults = document.getElementById("intakeComplainantResults");
+      compSearch.addEventListener("input", () => intakeRenderComplainantSearch(compSearch.value));
+      compSearch.addEventListener("blur", () => {
+        setTimeout(() => {
+          if (document.activeElement !== compSearch) intakeCloseComplainantResults();
+        }, 150);
+      });
+      compSearch.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") intakeCloseComplainantResults();
+      });
+      compResults.addEventListener("mousedown", (e) => e.preventDefault());
+      compResults.addEventListener("click", (e) => {
+        const item = e.target.closest(".result-item");
+        if (item) intakePickComplainantStudent(Number(item.dataset.id));
+      });
+
+      // Birthdate ↔ age: typing/picking a date auto-fills the age field.
+      const bindAgeToDob = (dobId, ageId) => {
+        document.getElementById(dobId).addEventListener("change", () => {
+          const dob = document.getElementById(dobId).value;
+          const age = intakeCalculateAge(dob);
+          if (age !== "") document.getElementById(ageId).value = age;
+        });
+      };
+      bindAgeToDob("intakeVictimDob", "intakeVictimAge");
+      bindAgeToDob("intakeComplainantDob", "intakeComplainantAge");
+      bindAgeToDob("intakeRespondentDob", "intakeRespondentAge");
+
+      // Toggle the Respondent's Parent/Guardian block: only relevant when the
+      // respondent type is C-2 (Student).
+      const toggleParentGuardianBlock = () => {
+        const show = document.getElementById("intakeRespondentStudent").checked;
+        document.getElementById("intakeParentGuardianBlock").style.display = show ? "block" : "none";
+        document.getElementById("intakeParentGuardianTitle").style.display = show ? "block" : "none";
+      };
+      document.getElementById("intakeRespondentPersonnel").addEventListener("change", toggleParentGuardianBlock);
+      document.getElementById("intakeRespondentStudent").addEventListener("change", toggleParentGuardianBlock);
+
+      // Show the respondent student search only when C-2. Student is selected.
+      const toggleRespondentSearch = (show) => {
+        document.getElementById("intakeRespondentSearchField").style.display = show ? "block" : "none";
+      };
+      document.getElementById("intakeRespondentPersonnel").addEventListener("change", () => toggleRespondentSearch(false));
+      document.getElementById("intakeRespondentStudent").addEventListener("change", () => toggleRespondentSearch(true));
+    }
+
     // Every generator is an async query + a new-tab popup — without this,
     // there was no feedback while the query ran and nothing stopped a
     // double-click from firing the query (and opening the popup) twice.
@@ -997,6 +2149,7 @@
     wireReportButton("genIncidentReportsBtn", generateIncidentReports);
     wireReportButton("genCaseNotesBtn", generateCaseNotes);
     wireAnecdotalReport();
+    wireIntakeReport();
 
     (async () => {
       const result = await requireCounselorAuth();

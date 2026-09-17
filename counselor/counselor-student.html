@@ -92,7 +92,14 @@
                 <li class="desktop-only">
                     <a href="counselor-account.html">
                         <i class="fa-solid fa-user"></i>
-                        <span>Account</span>
+                        <span>Profile</span>
+                    </a>
+                </li>
+
+                <li class="desktop-only">
+                    <a href="counselor-account-management.html">
+                        <i class="fa-solid fa-user-gear"></i>
+                        <span>Accounts Management</span>
                     </a>
                 </li>
                 <li class="desktop-only">
@@ -127,7 +134,9 @@
 
         <a href="counselor-reports.html"><i class="fa-solid fa-chart-line"></i> Reports</a>
 
-        <a href="counselor-account.html"><i class="fa-solid fa-user"></i> Account</a>
+        <a href="counselor-account.html"><i class="fa-solid fa-user"></i> Profile</a>
+
+        <a href="counselor-account-management.html"><i class="fa-solid fa-user-gear"></i> Accounts Management</a>
 
         <a href="#" id="mobileLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Log Out</a>
 
@@ -576,7 +585,7 @@
         supabaseClient
           .from("students")
           .select(
-            "student_id, user_id, student_number, first_name, last_name, year_level, section, contact_number, parent_guardian, student_email, education_level, is_archived, archived_at, review_dismissed_at"
+            "student_id, user_id, student_number, first_name, last_name, year_level, section, contact_number, parent_guardian, student_email, education_level, is_archived, archived_at"
           )
           .order("last_name", { ascending: true }),
         // One row per student who submitted this year's info sheet —
@@ -734,7 +743,6 @@
       // they'd be flagged as due again for a level they were just batch-set to.
       if (yearLevel) {
         payload.year_level = yearLevel;
-        payload.review_dismissed_at = null;
       }
 
       const ids = batchEditStudents.map((s) => s.student_id);
@@ -1173,8 +1181,6 @@
 
       const newEducationLevel = document.getElementById("editEducationLevel").value || null;
       const newYearLevel = document.getElementById("editYearLevel").value || null;
-      const levelChanged =
-        newEducationLevel !== currentDetailStudent.education_level || newYearLevel !== currentDetailStudent.year_level;
 
       const payload = {
         first_name: firstName,
@@ -1187,7 +1193,6 @@
         parent_guardian: document.getElementById("editGuardian").value.trim() || null,
         student_email: document.getElementById("editEmail").value.trim() || null,
       };
-      if (levelChanged) payload.review_dismissed_at = null;
 
       const { error } = await supabaseClient
         .from("students")

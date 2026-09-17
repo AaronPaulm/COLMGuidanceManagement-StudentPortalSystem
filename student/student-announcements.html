@@ -132,6 +132,7 @@
 
                 <div class="CalendarLegend">
                     <span><i class="legend-dot event"></i> Has announcement</span>
+                    <span class="month-summary" id="monthSummaryLabel"></span>
                 </div>
 
                 <button type="button" class="btn btn-outline btn-block" id="todayBtn" style="margin-top:14px;">
@@ -142,6 +143,7 @@
             <div>
                 <div class="CalendarFilterBar">
                     <span class="filter-label" id="selectedDateLabel">Today's Announcements</span>
+                    <span class="filter-count" id="selectedDayCount"></span>
                 </div>
                 <div id="announcementsList"></div>
             </div>
@@ -304,6 +306,15 @@
 
         grid.appendChild(cell);
       }
+
+      const monthPrefix = `${viewYear}-${pad(viewMonth + 1)}`;
+      const monthItems = allAnnouncements.filter(
+        (a) => a.announcement_date.startsWith(monthPrefix) && a.announcement_date >= today
+      );
+      const summaryLabel = document.getElementById("monthSummaryLabel");
+      summaryLabel.textContent = monthItems.length
+        ? `${monthItems.length} Upcoming Announcement${monthItems.length === 1 ? "" : "s"}`
+        : "No upcoming announcements this month";
     }
 
     function renderDayList(dateStr) {
@@ -315,6 +326,11 @@
         dateStr === todayStr()
           ? `Today's Announcements — ${formatLong(dateStr)}`
           : formatLong(dateStr);
+
+      const countBadge = document.getElementById("selectedDayCount");
+      countBadge.textContent = items.length
+        ? `${items.length} announcement${items.length === 1 ? "" : "s"}`
+        : "";
 
       if (items.length === 0) {
         list.innerHTML = `

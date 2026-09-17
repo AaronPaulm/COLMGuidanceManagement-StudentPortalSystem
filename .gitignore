@@ -1,5 +1,8 @@
 # Secrets — never commit these
 apikeyresend.txt
+dfd-level0.drawio
+dfd-level1.drawio
+DFD.md
 *.env
 .env.*
 
