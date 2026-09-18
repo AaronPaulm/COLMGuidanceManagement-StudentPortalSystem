@@ -1277,18 +1277,48 @@ padding-right: 4.5rem;
 
 @media (max-width: 640px) {
     .verify-notice-banner {
-        align-items: flex-start;
-        gap: 12px;
-        padding: 16px;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: start;
+        gap: 8px 10px;
+        padding: 12px;
+    }
+
+    .verify-notice-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        font-size: 17px;
+    }
+
+    .verify-notice-eyebrow {
+        margin-bottom: 1px;
+        font-size: 10px;
+    }
+
+    .verify-notice-body h2 {
+        margin-bottom: 2px;
+        font-size: 15px;
+    }
+
+    .verify-notice-body p {
+        font-size: 12px;
+        line-height: 1.35;
     }
 
     .verify-notice-actions {
+        grid-column: 1 / -1;
         width: 100%;
-        margin-left: 58px;
+        margin-left: 0;
     }
 
     .verify-notice-actions .btn {
         flex: 1;
+        min-width: 0;
+        padding: 7px 10px;
+        font-size: 12px;
+        white-space: normal;
+        overflow-wrap: anywhere;
     }
 }
 
@@ -1503,6 +1533,34 @@ padding-right: 4.5rem;
     margin-left: auto;
     color: #374151;
     font-weight: 600;
+}
+
+@media (max-width: 640px) {
+    .CalendarWrap {
+        padding: 12px;
+    }
+
+    .CalendarWeekdays,
+    .CalendarGrid {
+        gap: 5px;
+    }
+
+    .CalendarWrap .cal-day {
+        aspect-ratio: 1;
+        min-height: 42px;
+        font-size: 14px;
+    }
+
+    .cal-day .cal-count {
+        top: 2px;
+        right: 2px;
+        min-width: 14px;
+        height: 14px;
+        padding: 0 2px;
+        border-radius: 7px;
+        font-size: 9px;
+        line-height: 14px;
+    }
 }
 
 .CalendarFilterBar {
@@ -2016,6 +2074,7 @@ padding-right: 4.5rem;
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
+  min-width: 0;
  padding: 40px 20px;
 
 }
@@ -2073,11 +2132,43 @@ padding-right: 4.5rem;
 #loginForm,
 .auth-card {
   width: 100%;
+  min-width: 0;
   max-width: 420px;
   background: #fff;
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+
+#verifyNotice {
+  width: 100%;
+  max-width: 420px;
+  overflow-wrap: anywhere;
+}
+
+#verifyOtpForm strong {
+  overflow-wrap: anywhere;
+}
+
+#verifyEmailForm button,
+#verifyOtpForm button {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: 42px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+#verifyOtpForm .link-btn {
+  margin-right: auto;
+  margin-left: auto;
+  padding: 8px 4px;
+  background: transparent;
+  color: #2563eb;
+  font-weight: 400;
 }
 
 #loginForm label,
@@ -2130,6 +2221,26 @@ padding-right: 4.5rem;
 #skipVerifyBtn.link-btn:hover {
   background: #f3f4f6;
   text-decoration: none;
+}
+
+@media (max-width: 600px) {
+  #verifyEmailForm,
+  #verifyOtpForm {
+    padding: 18px;
+  }
+
+  #verifyOtpForm .verify-intro,
+  #verifyEmailForm .verify-intro,
+  #verifyOtpForm .error-msg,
+  #verifyEmailForm .error-msg {
+    overflow-wrap: anywhere;
+  }
+
+  #skipVerifyBtn.link-btn {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
 }
 
 #loginBtn {
@@ -3199,12 +3310,26 @@ body.table-resizing * {
     white-space: nowrap;
 }
 
+.field-time {
+    max-width: none;
+    width: 100%;
+    margin-inline: 0;
+    align-items: stretch;
+    text-align: left;
+}
+
+.appt-time-group {
+    width: 100%;
+    align-self: stretch;
+    text-align: left;
+}
+
 .appt-slot-grid {
     margin-top: 2px;
     background: #fff;
     border: 1px solid #e6eaf2;
     border-radius: 12px;
-    padding: 14px;
+    padding: 12px;
     max-height: 300px;
     overflow-y: auto;
     box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
@@ -3217,7 +3342,7 @@ body.table-resizing * {
 .appt-slot-sections {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    gap: 14px;
 }
 
 @media (max-width: 640px) {
@@ -3232,14 +3357,14 @@ body.table-resizing * {
     letter-spacing: .06em;
     text-transform: uppercase;
     color: #8a94a6;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     padding-left: 2px;
 }
 
 .appt-slot-row {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
 }
 
 .appt-slot {
@@ -3247,7 +3372,7 @@ body.table-resizing * {
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 9px 12px;
+    padding: 8px 10px;
     border: 1px solid #e2e8f0;
     background: #fff;
     color: #334155;
@@ -3307,11 +3432,23 @@ body.table-resizing * {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    width: 100%;
     margin-bottom: 6px;
+    text-align: left;
 }
 
 .appt-time-heading label {
+    display: block;
+    flex: 1 1 auto;
+    width: auto;
     margin-bottom: 0;
+    text-align: left;
+}
+
+.appt-time-group > .appt-unavailable-note {
+    display: block;
+    width: 100%;
+    text-align: left;
 }
 
 .appt-slot-legend {
@@ -4563,6 +4700,87 @@ img.img-lazy.is-loaded {
 
 .confirm-modal-box .modal-content-text {
     margin: 0;
+}
+
+.appointment-review-modal {
+    max-width: 560px;
+}
+
+.appointment-review-eyebrow {
+    display: block;
+    margin-bottom: 3px;
+    color: #2563eb;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.appointment-review-intro {
+    margin: 0 0 18px;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.appointment-review-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.appointment-review-item {
+    min-width: 0;
+    padding: 12px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+.appointment-review-item span {
+    display: block;
+    margin-bottom: 4px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.appointment-review-item strong,
+.appointment-review-item p {
+    margin: 0;
+    color: #1e293b;
+    font-size: 14px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.appointment-review-full {
+    grid-column: 1 / -1;
+}
+
+.appointment-review-actions {
+    gap: 10px;
+    margin-top: 20px;
+}
+
+@media (max-width: 480px) {
+    .appointment-review-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .appointment-review-full {
+        grid-column: auto;
+    }
+
+    .appointment-review-actions {
+        flex-direction: column-reverse;
+    }
+
+    .appointment-review-actions .btn {
+        width: 100%;
+    }
 }
 
 @media (max-width: 480px) {

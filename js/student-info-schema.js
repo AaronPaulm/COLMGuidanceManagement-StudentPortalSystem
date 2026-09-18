@@ -367,6 +367,7 @@ window.STUDENT_INFO_SCHEMA = (function () {
     { field: "email", column: "student_email" },
     { field: "contact", column: "contact_number" },
     { field: "guardian_name", column: "parent_guardian" },
+    { field: "year_level", column: "year_level" },
     { field: "course", column: "course" },
   ];
 

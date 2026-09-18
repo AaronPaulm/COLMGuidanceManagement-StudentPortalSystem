@@ -154,18 +154,20 @@
                     </div>
                 </div>
                 <div class="form-field field-time">
-                    <div class="appt-time-heading">
-                        <label>Time</label>
-                        <div class="appt-slot-legend" id="apptSlotLegend">
-                            <span><span class="appt-legend-swatch appt-legend-free"></span>Available</span>
-                            <span><span class="appt-legend-swatch appt-legend-booked"></span>Booked</span>
+                    <div class="appt-time-group">
+                        <div class="appt-time-heading">
+                            <label>Time slots</label>
+                            <div class="appt-slot-legend" id="apptSlotLegend">
+                                <span><span class="appt-legend-swatch appt-legend-free"></span>Available</span>
+                                <span><span class="appt-legend-swatch appt-legend-booked"></span>Booked</span>
+                            </div>
                         </div>
+                        <input type="hidden" id="apptTimeInput">
+                        <div id="apptAvailabilityBanner" class="appt-unavailable-note" style="display:none;"></div>
+                        <div id="apptSlotGrid" class="appt-slot-grid" aria-live="polite"></div>
+                        <div class="appt-slots-meta" id="apptSlotsMeta"></div>
+                        <span class="hint" id="apptSlotsHint" style="display:none;"></span>
                     </div>
-                    <input type="hidden" id="apptTimeInput">
-                    <div id="apptAvailabilityBanner" class="appt-unavailable-note" style="display:none;"></div>
-                    <div id="apptSlotGrid" class="appt-slot-grid" aria-live="polite"></div>
-                    <div class="appt-slots-meta" id="apptSlotsMeta"></div>
-                    <span class="hint" id="apptSlotsHint" style="display:none;"></span>
                 </div>
                 <div class="form-note-banner"><i class="fa-regular fa-clock"></i> Guidance office hours: Monday–Saturday, 8:00 AM–5:00 PM.</div>
                 <div class="form-actions">
@@ -249,6 +251,51 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="apptReviewModalOverlay" role="dialog" aria-modal="true" aria-labelledby="apptReviewTitle">
+        <div class="modal-box appointment-review-modal">
+            <div class="modal-header">
+                <div>
+                    <span class="appointment-review-eyebrow">Review request</span>
+                    <h3 id="apptReviewTitle">Confirm your appointment</h3>
+                </div>
+                <button type="button" class="modal-close" id="apptReviewCloseBtn" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="appointment-review-intro">Please check the details below before sending your appointment request.</p>
+                <div class="appointment-review-summary">
+                    <div class="appointment-review-item">
+                        <span>Guidance Personnel</span>
+                        <strong id="apptReviewCounselor">—</strong>
+                    </div>
+                    <div class="appointment-review-item">
+                        <span>Date</span>
+                        <strong id="apptReviewDate">—</strong>
+                    </div>
+                    <div class="appointment-review-item">
+                        <span>Time</span>
+                        <strong id="apptReviewTime">—</strong>
+                    </div>
+                    <div class="appointment-review-item">
+                        <span>Concern Type</span>
+                        <strong id="apptReviewConcernType">—</strong>
+                    </div>
+                    <div class="appointment-review-item appointment-review-full">
+                        <span>Concern Details</span>
+                        <p id="apptReviewConcern">—</p>
+                    </div>
+                </div>
+                <div class="form-actions appointment-review-actions">
+                    <button type="button" class="btn btn-outline" id="apptReviewCancelBtn">Go Back</button>
+                    <button type="button" class="btn btn-primary" id="apptReviewConfirmBtn">
+                        <i class="fa-solid fa-paper-plane"></i> Confirm &amp; Submit
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
       <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/supabaseClient.js"></script>
   <script src="../js/table-column-resize.js"></script>
@@ -258,6 +305,7 @@
     let allCounselors = [];
     let allAppointments = [];
     let takenSlots = new Set();
+    let pendingAppointmentSubmission = null;
 
     // Caps how many unresolved requests one student can have queued up at
     // once, so a burst of submissions can't flood a counselor's pending
@@ -303,6 +351,24 @@
       const period = h >= 12 ? "PM" : "AM";
       const h12 = h % 12 === 0 ? 12 : h % 12;
       return `${h12}:${pad(m)} ${period}`;
+    }
+
+    function closeAppointmentReview() {
+      document.getElementById("apptReviewModalOverlay").classList.remove("show");
+      pendingAppointmentSubmission = null;
+    }
+
+    function openAppointmentReview(payload, selectedCounselor) {
+      pendingAppointmentSubmission = { payload, selectedCounselor };
+      const counselorName = selectedCounselor
+        ? `${selectedCounselor.first_name} ${selectedCounselor.last_name}`
+        : "Any available guidance personnel";
+      document.getElementById("apptReviewCounselor").textContent = counselorName;
+      document.getElementById("apptReviewDate").textContent = formatDate(payload.appointment_date);
+      document.getElementById("apptReviewTime").textContent = formatTime(payload.appointment_time);
+      document.getElementById("apptReviewConcernType").textContent = payload.concern_category || "—";
+      document.getElementById("apptReviewConcern").textContent = payload.concern;
+      document.getElementById("apptReviewModalOverlay").classList.add("show");
     }
 
     function capitalize(str) {
@@ -748,6 +814,10 @@
         school_year: defaultSchoolYear(),
       };
 
+      openAppointmentReview(payload, selectedCounselor);
+    });
+
+    async function submitAppointment(payload, selectedCounselor) {
       // takenSlots (from the slot grid) already blocked a visible clash
       // above. The office-wide unique index (migrations/
       // appointments_office_slot_shared.sql) stays the backstop for two
@@ -796,6 +866,19 @@
       clearSlotSelection();
       showToast("Appointment request submitted.", "success");
       await loadAppointments();
+    }
+
+    document.getElementById("apptReviewConfirmBtn").addEventListener("click", async () => {
+      if (!pendingAppointmentSubmission) return;
+      const { payload, selectedCounselor } = pendingAppointmentSubmission;
+      closeAppointmentReview();
+      await submitAppointment(payload, selectedCounselor);
+    });
+
+    document.getElementById("apptReviewCancelBtn").addEventListener("click", closeAppointmentReview);
+    document.getElementById("apptReviewCloseBtn").addEventListener("click", closeAppointmentReview);
+    document.getElementById("apptReviewModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "apptReviewModalOverlay") closeAppointmentReview();
     });
 
     window.addEventListener("app:notification", (e) => {
