@@ -247,8 +247,7 @@
                     </div>
                     <div class="form-field">
                         <label for="editSection">Section</label>
-                        <input type="text" id="editSection" list="sectionSuggestions" placeholder="e.g. Rizal, STEM-A">
-                        <datalist id="sectionSuggestions"></datalist>
+                        <input type="text" id="editSection" placeholder="e.g. Rizal, STEM-A">
                     </div>
                     <div class="form-field">
                         <label for="editContact">Contact Number</label>
@@ -348,7 +347,7 @@
                 <span class="hint" style="display:block; margin-bottom:14px;">Leave a field blank to leave it unchanged for the selected students.</span>
                 <div class="form-field">
                     <label for="batchEditSection">Section</label>
-                    <input type="text" id="batchEditSection" list="sectionSuggestions" placeholder="e.g. Rizal, STEM-A">
+                    <input type="text" id="batchEditSection" placeholder="e.g. Rizal, STEM-A">
                     <span class="hint" id="batchEditSectionHint" style="display:none;"></span>
                 </div>
                 <div class="form-field" style="margin-top:14px;">
@@ -441,9 +440,10 @@
     }
 
     function formatPhone(value) {
-      let d = String(value ?? "").replace(/\D/g, "");
-      if (d.startsWith("09") && d.length > 10) d = d.slice(1);
-      else if (d.startsWith("63") && d.length > 10) d = d.slice(2);
+      const raw = String(value ?? "").trim();
+      let d = raw.replace(/\D/g, "");
+      if (raw.startsWith("+63") || /^63[\s-]?9/.test(raw)) d = d.slice(2);
+      else if (d.startsWith("09")) d = d.slice(1);
       d = d.slice(0, 10);
       if (!d) return "";
       let out = "+63";
@@ -529,10 +529,6 @@
 
     function updateSectionSuggestions() {
       const sections = [...new Set(allStudents.map((s) => s.section).filter(Boolean))].sort();
-
-      document.getElementById("sectionSuggestions").innerHTML = sections
-        .map((s) => `<option value="${escapeHtml(s)}"></option>`)
-        .join("");
 
       const filterSelect = document.getElementById("sectionFilterSelect");
       const currentValue = filterSelect.value;
@@ -957,7 +953,7 @@
 
       STUDENT_INFO_SCHEMA.sections.forEach((sec) => {
         html += `<div class="builder-section-label">${escAttr(sec.numeral)}. ${escAttr(sec.title)}</div>`;
-        html += `<div class="sis-grid" style="margin-bottom:16px;">${sec.fields
+        html += `<div class="sis-grid ${sec.id === "personal" ? "sis-grid-personal" : ""}" style="margin-bottom:16px;">${sec.fields
           .map((f) => STUDENT_INFO_SCHEMA.fieldHtml(f, answers[f.key], true))
           .join("")}</div>`;
       });
@@ -1172,6 +1168,15 @@
 
       const firstName = document.getElementById("editFirstName").value.trim();
       const lastName = document.getElementById("editLastName").value.trim();
+      const email = document.getElementById("editEmail").value.trim();
+
+      if (email && !/^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?)*\.[A-Z]{2,}$/i.test(email)) {
+        showToast("Please enter a valid email address (name@domain.com).", "error");
+        document.getElementById("editEmail").focus();
+        btn.disabled = false;
+        btn.textContent = "Save Changes";
+        return;
+      }
       if (!firstName || !lastName) {
         btn.disabled = false;
         btn.textContent = "Save Changes";
@@ -1191,7 +1196,7 @@
         section: document.getElementById("editSection").value.trim() || null,
         contact_number: document.getElementById("editContact").value.trim() || null,
         parent_guardian: document.getElementById("editGuardian").value.trim() || null,
-        student_email: document.getElementById("editEmail").value.trim() || null,
+        student_email: email || null,
       };
 
       const { error } = await supabaseClient

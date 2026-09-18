@@ -28,25 +28,51 @@
 // ============================================================
 
 window.STUDENT_INFO_SCHEMA = (function () {
-  // Shared course list for the Course combobox. Students can type any
-  // course; this list just offers quick picks.
-  const COURSE_OPTIONS = [
-    "Bachelor of Science in Accountancy",
-    "Bachelor of Science in Business Administration",
-    "Bachelor of Science in Computer Science",
-    "Bachelor of Science in Information Technology",
-    "Bachelor of Science in Nursing",
-    "Bachelor of Science in Education",
-    "Bachelor of Science in Psychology",
-    "Bachelor of Science in Social Work",
-    "Bachelor of Science in Criminology",
-    "Bachelor of Science in Hospitality Management",
-    "Bachelor of Arts in Communication",
-    "Bachelor of Arts in English Language",
-    "Bachelor of Elementary Education",
-    "Associate in Computer Technology",
-    "Others (please specify)",
+  const COURSE_GROUPS = [
+    {
+      label: "ACCOUNTANCY & MANAGEMENT DEPARTMENT",
+      options: [
+        "BACHELOR OF SCIENCE IN ACCOUNTANCY",
+        "BACHELOR OF SCIENCE IN BUSINESS ADMINISTRATION MAJOR IN FINANCIAL MANAGEMENT",
+        "BACHELOR OF SCIENCE IN ENTREPRENEURSHIP",
+        "BACHELOR OF SCIENCE IN BUSINESS ADMINISTRATION MAJOR IN HUMAN RESOURCE MANAGEMENT",
+        "BACHELOR OF SCIENCE IN BUSINESS ADMINISTRATION MAJOR IN MARKETING MANAGEMENT",
+      ],
+    },
+    {
+      label: "COMPUTER STUDIES DEPARTMENT",
+      options: [
+        "BACHELOR OF SCIENCE IN COMPUTER SCIENCE",
+        "BACHELOR OF SCIENCE IN INFORMATION TECHNOLOGY",
+      ],
+    },
+    {
+      label: "CRIMINAL JUSTICE EDUCATION DEPARTMENT",
+      options: ["BACHELOR OF SCIENCE IN CRIMINOLOGY"],
+    },
+    {
+      label: "EDUCATION DEPARTMENT",
+      options: [
+        "BACHELOR OF TECHNOLOGY AND LIVELIHOOD EDUCATION MAJOR IN HOME ECONOMICS",
+        "BACHELOR OF TECHNICAL-VOCATIONAL TEACHER EDUCATION MAJOR IN COMPUTER HARDWARE SERVICING",
+        "BACHELOR OF TECHNICAL-VOCATIONAL TEACHER EDUCATION MAJOR IN FOOD SERVICE MANAGEMENT",
+        "BACHELOR OF TECHNICAL-VOCATIONAL TEACHER EDUCATION MAJOR IN ANIMAL AND CROP SCIENCE",
+        "BACHELOR OF TECHNOLOGY AND LIVELIHOOD EDUCATION MAJOR IN AGRI-FISHERY ARTS",
+      ],
+    },
+    {
+      label: "HOSPITALITY AND INSTITUTIONAL MANAGEMENT DEPARTMENT",
+      options: [
+        "BACHELOR OF SCIENCE IN HOSPITALITY MANAGEMENT",
+        "BACHELOR OF SCIENCE IN TOURISM MANAGEMENT",
+      ],
+    },
+    {
+      label: "ALLIED SCIENCE DEPARTMENT",
+      options: ["BACHELOR OF SCIENCE IN RADIOLOGIC TECHNOLOGY"],
+    },
   ];
+  const COURSE_OPTIONS = COURSE_GROUPS.flatMap((group) => group.options);
 
   // ---------- Sections I–VI (student-facing) ----------
 
@@ -73,9 +99,9 @@ window.STUDENT_INFO_SCHEMA = (function () {
         { key: "dob", label: "Date of Birth", type: "date", half: true },
         { key: "pob", label: "Place of Birth", type: "text", noDigits: true, half: true },
         { key: "religion", label: "Religion", type: "text", noDigits: true, half: true },
-        { key: "year_level", label: "Year Level", type: "text", auto: true, half: true },
-        { key: "section", label: "Section", type: "text", auto: true, half: true },
-        { key: "course", label: "Course", type: "datalist", options: COURSE_OPTIONS, half: true, optional: true },
+        { key: "year_level", label: "Year Level", type: "text", auto: true, half: true, layout: "quarter" },
+        { key: "section", label: "Section", type: "text", auto: true, half: true, layout: "quarter" },
+        { key: "course", label: "Course", type: "select", optionGroups: COURSE_GROUPS, options: COURSE_OPTIONS, layout: "wide", optional: true },
         { key: "complexion", label: "Complexion", type: "text", noDigits: true, half: true },
         { key: "height_m", label: "Height (m)", type: "number", step: "0.01", min: 0, half: true },
         { key: "weight_kg", label: "Weight (kg)", type: "number", min: 0, half: true },
@@ -363,13 +389,24 @@ window.STUDENT_INFO_SCHEMA = (function () {
     return disabled ? "disabled" : "";
   }
 
+  function courseLabel(course) {
+    return String(course)
+      .toLowerCase()
+      .replace(/(^|[\s-])([a-z])/g, (_, separator, letter) => `${separator}${letter.toUpperCase()}`);
+  }
+
+  function optionLabel(field, option) {
+    return field.key === "course" ? courseLabel(option) : option;
+  }
+
   // Normalizes any phone value to +63 XXX XXX XXXX: the leading local
   // 0 or national 63 is dropped, digits are capped at 10, and the +63
   // country code + spaces are applied progressively while typing.
   function formatPhone(value) {
-    let d = String(value ?? "").replace(/\D/g, "");
-    if (d.startsWith("09") && d.length > 10) d = d.slice(1);
-    else if (d.startsWith("63") && d.length > 10) d = d.slice(2);
+    const raw = String(value ?? "").trim();
+    let d = raw.replace(/\D/g, "");
+    if (raw.startsWith("+63") || /^63[\s-]?9/.test(raw)) d = d.slice(2);
+    else if (d.startsWith("09")) d = d.slice(1);
     d = d.slice(0, 10);
     if (!d) return "";
     let out = "+63";
@@ -379,9 +416,13 @@ window.STUDENT_INFO_SCHEMA = (function () {
     return out;
   }
 
-  // Basic but practical email check: something@something.something.
+  // Practical email check for user-entered personal addresses. This is not
+  // intended to implement the entire RFC; it rejects whitespace, malformed
+  // local parts, and domains without a valid two-character TLD.
   function isValidEmail(value) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value ?? "").trim());
+    const email = String(value ?? "").trim();
+    if (!email || email.length > 254) return false;
+    return /^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?)*\.[A-Z]{2,}$/i.test(email);
   }
 
   function simpleInputHtml(field, value, disabled) {
@@ -467,12 +508,32 @@ window.STUDENT_INFO_SCHEMA = (function () {
       case "select":
         return `<div class="sis-select-wrap"><select data-field="${escAttr(field.key)}" ${disabledAttr(disabled)}>
             <option value="">— Select —</option>
-            ${(field.options || [])
-              .map(
-                (o) =>
-                  `<option value="${escAttr(o)}" ${String(value ?? "") === o ? "selected" : ""}>${esc(o)}</option>`
-              )
-              .join("")}
+            ${
+              field.optionGroups
+                ? field.optionGroups
+                    .map(
+                      (group) => `<optgroup label="${escAttr(group.label)}">
+                        ${group.options
+                          .map(
+                            (o) =>
+                              `<option value="${escAttr(o)}" ${String(value ?? "") === o ? "selected" : ""}>${esc(optionLabel(field, o))}</option>`
+                          )
+                          .join("")}
+                      </optgroup>`
+                    )
+                    .join("")
+                : (field.options || [])
+                    .map(
+                      (o) =>
+                        `<option value="${escAttr(o)}" ${String(value ?? "") === o ? "selected" : ""}>${esc(optionLabel(field, o))}</option>`
+                    )
+                    .join("")
+            }
+            ${
+              value && !(field.options || []).includes(String(value))
+                ? `<option value="${escAttr(value)}" selected>Previously saved: ${esc(value)}</option>`
+                : ""
+            }
           </select></div>`;
       case "datalist":
         return `<input type="text" data-field="${escAttr(field.key)}" list="${escAttr(field.key + "-list")}" value="${escAttr(value ?? "")}" ${disabledAttr(disabled)}>
@@ -529,7 +590,7 @@ window.STUDENT_INFO_SCHEMA = (function () {
 
     const hint = field.hint ? `<span class="hint">${esc(field.hint)}</span>` : "";
     return `
-      <div class="sis-field ${field.half ? "half" : ""}">
+      <div class="sis-field ${field.half ? "half" : ""} ${field.layout ? `sis-field-${escAttr(field.layout)}` : ""}">
         <div class="form-field">
           <label>${esc(field.label)}</label>
           ${fieldInnerHtml(field, value, disabled)}

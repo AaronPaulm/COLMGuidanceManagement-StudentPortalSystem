@@ -1131,7 +1131,7 @@
       const container = document.getElementById("sisFieldsContainer");
       container.innerHTML = isCert
         ? certStepHtml()
-        : `<div class="sis-grid">${s.fields.map((f) => STUDENT_INFO_SCHEMA.fieldHtml(f, sisAnswers[f.key], sisReadOnly)).join("")}</div>`;
+        : `<div class="sis-grid ${s.id === "personal" ? "sis-grid-personal" : ""}">${s.fields.map((f) => STUDENT_INFO_SCHEMA.fieldHtml(f, sisAnswers[f.key], sisReadOnly)).join("")}</div>`;
 
       document.getElementById("sisNextBtn").style.display = sisStep === n - 1 ? "none" : "";
       document.getElementById("sisSubmitBtn").style.display = isCert && !sisReadOnly ? "" : "none";

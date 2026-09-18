@@ -103,14 +103,16 @@ interface StudentResult {
   error: string | null;
 }
 
+const PHONE_PATTERN = /^\+63\s?9\d{2}\s?\d{3}\s?\d{4}$/;
+
 function normalizePhone(value: string | null | undefined): string | null {
+  if (!String(value ?? "").trim()) return null;
   let d = String(value ?? "").replace(/\D/g, "");
-  if (!d) return null;
-  if (d.startsWith("09") && d.length > 10) d = d.slice(1);
-  else if (d.startsWith("63") && d.length > 10) d = d.slice(2);
-  d = d.slice(0, 10);
-  if (!d) return null;
-  return "+63 " + [d.slice(0, 3), d.slice(3, 6), d.slice(6)].filter(Boolean).join(" ");
+  if (d.startsWith("09") && d.length === 11) d = d.slice(1);
+  else if (d.startsWith("63") && d.length === 12) d = d.slice(2);
+  if (d.length !== 10 || !d.startsWith("9")) return null;
+  const normalized = "+63 " + [d.slice(0, 3), d.slice(3, 6), d.slice(6)].join(" ");
+  return PHONE_PATTERN.test(normalized) ? normalized : null;
 }
 
 Deno.serve(async (req) => {
@@ -238,6 +240,21 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      const normalizedPhone = normalizePhone(row.contactNumber);
+      if (String(row.contactNumber || "").trim() && !normalizedPhone) {
+        results.push({
+          firstName,
+          lastName,
+          studentNumber,
+          username,
+          email: `${emailSlug}@colm.edu.ph`,
+          tempPassword: "",
+          success: false,
+          error: "Invalid phone number. Use +63 9XX XXX XXXX.",
+        });
+        continue;
+      }
+
       let email = `${emailSlug}@colm.edu.ph`;
       let created: { user?: { id: string } } | null = null;
       let createError: { code?: string; message?: string } | null = null;
@@ -307,7 +324,7 @@ Deno.serve(async (req) => {
         last_name: lastName || null,
         year_level: row.level?.trim() || null,
         section: row.section?.trim() || section || null,
-        contact_number: normalizePhone(row.contactNumber),
+        contact_number: normalizedPhone,
         education_level: inferEducationLevel(row.level) || educationLevel || null,
         email_verified: false,
         auth_email: email,

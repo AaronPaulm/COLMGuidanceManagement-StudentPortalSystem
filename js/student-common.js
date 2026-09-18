@@ -530,12 +530,16 @@ function maybeShowEmailVerifyBanner(userId) {
       banner.id = "emailVerifyBanner";
       banner.className = "verify-notice-banner";
       banner.innerHTML = `
-        <i class="fa-solid fa-envelope-circle-check"></i>
+        <div class="verify-notice-icon" aria-hidden="true">
+          <i class="fa-solid fa-envelope-circle-check"></i>
+        </div>
         <div class="verify-notice-body">
-          <p><strong>Verify your email</strong> — add a personal email so password-reset links can reach you.</p>
+          <span class="verify-notice-eyebrow">Account security</span>
+          <h2>Verify your email</h2>
+          <p>Add a personal email so password-reset links and important account notifications can reach you.</p>
         </div>
         <div class="verify-notice-actions">
-          <button type="button" class="btn btn-primary" onclick="location.href='../verify-email.html'">Verify now</button>
+          <button type="button" class="btn btn-primary" onclick="location.href='../verify-email.html'"><i class="fa-solid fa-arrow-right"></i> Verify now</button>
           <button type="button" class="btn btn-outline email-verify-dismiss">Later</button>
         </div>
       `;

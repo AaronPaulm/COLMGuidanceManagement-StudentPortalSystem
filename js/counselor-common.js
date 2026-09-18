@@ -9,9 +9,10 @@ function ccEscapeHtml(str) {
 }
 
 function ccFormatPhone(value) {
-  let d = String(value ?? "").replace(/\D/g, "");
-  if (d.startsWith("09") && d.length > 10) d = d.slice(1);
-  else if (d.startsWith("63") && d.length > 10) d = d.slice(2);
+  const raw = String(value ?? "").trim();
+  let d = raw.replace(/\D/g, "");
+  if (raw.startsWith("+63") || /^63[\s-]?9/.test(raw)) d = d.slice(2);
+  else if (d.startsWith("09")) d = d.slice(1);
   d = d.slice(0, 10);
   if (!d) return "";
   let out = "+63";
