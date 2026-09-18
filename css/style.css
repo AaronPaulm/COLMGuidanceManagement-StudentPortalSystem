@@ -1353,6 +1353,7 @@ padding-right: 4.5rem;
     align-items: start;
     margin-top: 30px;
     margin-bottom: 10px;
+    min-width: 0;
 }
 
 .CalendarWrap {
@@ -1363,6 +1364,8 @@ padding-right: 4.5rem;
     max-width: 900px;
     width: 100%;
     margin: 0 auto;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .CalendarWrap .CalendarHeader h3 {
@@ -1383,6 +1386,8 @@ padding-right: 4.5rem;
 
 .CalendarHeader h3 {
     margin: 0;
+    min-width: 0;
+    text-align: center;
 }
 
 .CalendarHeader .cal-nav-btn {
@@ -1406,8 +1411,9 @@ padding-right: 4.5rem;
 .CalendarWeekdays,
 .CalendarGrid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 4px;
+    min-width: 0;
 }
 
 .CalendarWeekdays span {
@@ -1594,6 +1600,10 @@ padding-right: 4.5rem;
     white-space: nowrap;
 }
 
+.CalendarLayout > div {
+    min-width: 0;
+}
+
 .staff-list-item {
     background: #fff;
     border-radius: 14px;
@@ -1607,8 +1617,13 @@ padding-right: 4.5rem;
     flex-wrap: wrap;
 }
 
+.staff-list-item > div:first-child {
+    min-width: 0;
+}
+
 .staff-list-item h3 {
     margin: 0 0 6px;
+    overflow-wrap: anywhere;
 }
 
 .ann-cat {
@@ -1635,6 +1650,7 @@ padding-right: 4.5rem;
 .staff-list-item p {
     color: #4b5563;
     margin: 0 0 6px;
+    overflow-wrap: anywhere;
 }
 
 .staff-list-item small {
@@ -1990,9 +2006,31 @@ padding-right: 4.5rem;
 
     .CalendarLayout {
         grid-template-columns: 1fr;
+        justify-items: center;
+        width: 100%;
+    }
+
+    .CalendarLayout > .CalendarWrap {
+        grid-column: 1;
+        width: 100%;
+        max-width: 560px;
+        margin-inline: auto;
+    }
+
+    .CalendarLayout > div:not(.CalendarWrap) {
+        grid-column: 1;
+        width: 100%;
+        max-width: 560px;
+        margin-inline: auto;
+    }
+
+    .CalendarWrap {
+        box-sizing: border-box;
+        max-width: calc(100vw - 30px);
     }
 
     .cal-day {
+        min-width: 0;
         font-size: 12px;
     }
 
