@@ -176,7 +176,7 @@
             </div>
         </div>
 
-        <div class="simple-table-wrap">
+        <div class="simple-table-wrap students-table-wrap">
             <table class="simple-table students-table">
                 <thead>
                     <tr>
@@ -184,6 +184,7 @@
                         <th>Student #</th>
                         <th>Name</th>
                         <th>Education Level</th>
+                        <th>Course</th>
                         <th>Year Level</th>
                         <th>Section</th>
                         <th>Info Sheet</th>
@@ -238,6 +239,14 @@
                             <option value="junior_high">Junior High School (Grade 7-10)</option>
                             <option value="senior_high">Senior High School (Grade 11-12)</option>
                         </select>
+                    </div>
+                    <div class="form-field course-field-wide course-dropdown-field">
+                        <label for="editCourse">Course</label>
+                        <div class="course-select-wrap">
+                            <select id="editCourse" class="course-select">
+                                <option value="">— Not set —</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="form-field">
                         <label for="editYearLevel">Year Level</label>
@@ -422,6 +431,8 @@
       return div.innerHTML;
     }
 
+    populateCourseOptions();
+
     function escAttr(str) {
       return String(str ?? "")
         .replace(/&/g, "&amp;")
@@ -461,6 +472,20 @@
       return { college: "College", junior_high: "Junior High School", senior_high: "Senior High School" }[value] || "—";
     }
 
+    function populateCourseOptions() {
+      const select = document.getElementById("editCourse");
+      select.innerHTML =
+        `<option value="">— Not set —</option>` +
+        STUDENT_INFO_SCHEMA.courseGroups
+          .map(
+            (group) =>
+              `<optgroup label="${escapeHtml(group.label)}">${group.options
+                .map((course) => `<option value="${escapeHtml(course)}">${escapeHtml(course)}</option>`)
+                .join("")}</optgroup>`
+          )
+          .join("");
+    }
+
     function studentRowHtml(s) {
       const name = `${s.first_name} ${s.last_name}`;
       const sisCell = s.is_archived
@@ -474,6 +499,7 @@
           <td>${escapeHtml(s.student_number) || "—"}</td>
           <td>${escapeHtml(name)}</td>
           <td>${educationLevelLabel(s.education_level)}</td>
+          <td>${escapeHtml(s.course) || "—"}</td>
           <td>${escapeHtml(s.year_level) || "—"}</td>
           <td>${escapeHtml(s.section) || "—"}</td>
           <td>${sisCell}</td>
@@ -487,7 +513,7 @@
       const pager = document.getElementById("studentsPagination");
 
       if (!students.length) {
-        list.innerHTML = `<tr class="table-empty"><td colspan="8">No students found.</td></tr>`;
+        list.innerHTML = `<tr class="table-empty"><td colspan="9">No students found.</td></tr>`;
         pager.innerHTML = "";
         return;
       }
@@ -575,13 +601,13 @@
 
     async function loadStudents() {
       const list = document.getElementById("studentsList");
-      list.innerHTML = `<tr class="table-empty"><td colspan="8">Loading…</td></tr>`;
+      list.innerHTML = `<tr class="table-empty"><td colspan="9">Loading…</td></tr>`;
 
       const [{ data, error }, { data: sheets, error: sheetsError }] = await Promise.all([
         supabaseClient
           .from("students")
           .select(
-            "student_id, user_id, student_number, first_name, last_name, year_level, section, contact_number, parent_guardian, student_email, education_level, is_archived, archived_at"
+            "student_id, user_id, student_number, first_name, last_name, year_level, section, course, contact_number, parent_guardian, student_email, education_level, is_archived, archived_at"
           )
           .order("last_name", { ascending: true }),
         // One row per student who submitted this year's info sheet —
@@ -594,7 +620,7 @@
       ]);
 
       if (error) {
-        list.innerHTML = `<tr class="table-empty"><td colspan="8">Couldn't load students.</td></tr>`;
+        list.innerHTML = `<tr class="table-empty"><td colspan="9">Couldn't load students.</td></tr>`;
         console.error(error);
         return;
       }
@@ -1092,6 +1118,7 @@
       document.getElementById("editLastName").value = s.last_name || "";
       document.getElementById("editStudentNumber").value = s.student_number || "";
       document.getElementById("editEducationLevel").value = s.education_level || "";
+      document.getElementById("editCourse").value = s.course || "";
       populateYearLevelOptions(s.education_level, s.year_level);
       document.getElementById("editSection").value = s.section || "";
       document.getElementById("editContact").value = formatPhone(s.contact_number);
@@ -1192,6 +1219,7 @@
         last_name: lastName,
         student_number: document.getElementById("editStudentNumber").value.trim() || null,
         education_level: newEducationLevel,
+        course: document.getElementById("editCourse").value || null,
         year_level: newYearLevel,
         section: document.getElementById("editSection").value.trim() || null,
         contact_number: document.getElementById("editContact").value.trim() || null,

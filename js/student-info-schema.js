@@ -367,6 +367,7 @@ window.STUDENT_INFO_SCHEMA = (function () {
     { field: "email", column: "student_email" },
     { field: "contact", column: "contact_number" },
     { field: "guardian_name", column: "parent_guardian" },
+    { field: "course", column: "course" },
   ];
 
   // ---------- Rendering / collecting helpers (shared) ----------
@@ -757,6 +758,7 @@ window.STUDENT_INFO_SCHEMA = (function () {
 
   return {
     sections: SECTIONS,
+    courseGroups: COURSE_GROUPS,
     notesSection: NOTES_SECTION,
     syncToStudentRecord: SYNC_TO_STUDENT_RECORD,
     fieldHtml,

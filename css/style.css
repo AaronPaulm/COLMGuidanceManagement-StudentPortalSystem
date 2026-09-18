@@ -877,28 +877,42 @@ padding-right: 4.5rem;
 }
 
 .students-table {
-    table-layout: fixed;
+    table-layout: auto;
+}
+
+.students-table-wrap {
+    overflow-x: auto;
+}
+
+.students-table {
+    min-width: 1200px;
 }
 
 .students-table th:nth-child(1) { width: 4%; }
-.students-table th:nth-child(2) { width: 12%; }
-.students-table th:nth-child(3) { width: 22%; }
-.students-table th:nth-child(4) { width: 17%; }
-.students-table th:nth-child(5) { width: 12%; }
-.students-table th:nth-child(6) { width: 12%; }
-.students-table th:nth-child(7) { width: 13%; }
-.students-table th:nth-child(8) { width: 8%; }
-.students-table td:nth-child(8) { text-align: center; }
+.students-table th:nth-child(2) { width: 10%; }
+.students-table th:nth-child(3) { width: 16%; }
+.students-table th:nth-child(4) { width: 13%; }
+.students-table th:nth-child(5) { width: 25%; }
+.students-table th:nth-child(6) { width: 9%; }
+.students-table th:nth-child(7) { width: 9%; }
+.students-table th:nth-child(8),
+.students-table td:nth-child(8) {
+    min-width: 120px;
+}
+.students-table th:nth-child(9),
+.students-table td:nth-child(9) {
+    min-width: 72px;
+}
+.students-table td:nth-child(5) { overflow-wrap: anywhere; }
+.students-table td:nth-child(8),
+.students-table td:nth-child(9) {
+    white-space: nowrap;
+}
+.students-table td:nth-child(9) { text-align: center; }
 
-/* 8 columns is too many to stay legible at the generic .simple-table
+/* 9 columns is too many to stay legible at the generic .simple-table
    480px scroll floor — give it more room before the horizontal scroll
    kicks in, so cells like Education Level don't get crushed. */
-@media (max-width: 1024px) {
-    .students-table {
-        min-width: 760px;
-    }
-}
-
 .bulk-action-bar {
     display: flex;
     align-items: center;
@@ -3457,7 +3471,79 @@ body.table-resizing * {
     margin-bottom: 10px;
 }
 
+.profile-primary-fields {
+    display: grid;
+    grid-template-columns: 2fr 1.4fr 1fr;
+    gap: 16px;
+    grid-column: 1 / -1;
+}
+
+.course-field-wide {
+    grid-column: 1 / -1;
+}
+
+.course-select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 12px 44px 12px 14px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
+    color: #172554 !important;
+    font-size: 14px !important;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.course-select-wrap {
+    position: relative;
+}
+
+.course-select-wrap::after {
+    content: "\f078";
+    position: absolute;
+    top: 50%;
+    right: 14px;
+    transform: translateY(-50%);
+    z-index: 2;
+    font-family: "Font Awesome 6 Free";
+    font-size: 11px;
+    font-weight: 900;
+    color: #2563eb;
+    pointer-events: none;
+}
+
+.course-select-wrap .course-select {
+    position: relative;
+    z-index: 1;
+}
+
+.course-select:hover {
+    border-color: #93c5fd !important;
+    background: #f0f7ff !important;
+}
+
+.course-select:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, .14), 0 4px 12px rgba(37, 99, 235, .08) !important;
+}
+
+.course-select optgroup {
+    color: #1d4ed8;
+    font-weight: 700;
+}
+
+.course-select option {
+    color: #111827;
+    font-weight: 400;
+}
+
 @media (max-width: 640px) {
+    .profile-primary-fields {
+        grid-template-columns: 1fr;
+    }
+
     .info-edit-grid {
         grid-template-columns: 1fr;
     }

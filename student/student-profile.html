@@ -122,6 +122,7 @@
             </div>
             <h2 id="profileFullName">—</h2>
             <p class="profile-meta" id="profileMeta">—</p>
+            <p class="profile-meta" id="profileCourse">Course: —</p>
             <span class="badge badge-info" id="profileDeptBadge">—</span>
             <span class="badge badge-approved" id="profileSchoolYearBadge">—</span>
 
@@ -147,17 +148,23 @@
         <div class="profile-edit-card">
             <form id="profileEditForm">
                 <div class="info-edit-grid">
-                    <div class="form-field">
-                        <label for="editFullName">Full Name</label>
-                        <input type="text" id="editFullName" disabled>
+                    <div class="profile-primary-fields">
+                        <div class="form-field">
+                            <label for="editFullName">Full Name</label>
+                            <input type="text" id="editFullName" disabled>
+                        </div>
+                        <div class="form-field">
+                            <label for="editEducationLevel">Education Level</label>
+                            <input type="text" id="editEducationLevel" disabled>
+                        </div>
+                        <div class="form-field">
+                            <label for="editYearLevel">Year / Level</label>
+                            <input type="text" id="editYearLevel" disabled>
+                        </div>
                     </div>
-                    <div class="form-field">
-                        <label for="editEducationLevel">Education Level</label>
-                        <input type="text" id="editEducationLevel" disabled>
-                    </div>
-                    <div class="form-field">
-                        <label for="editYearLevel">Year / Level</label>
-                        <input type="text" id="editYearLevel" disabled>
+                    <div class="form-field course-field-wide">
+                        <label for="editCourse">Course</label>
+                        <input type="text" id="editCourse" disabled>
                     </div>
                     <div class="form-field">
                         <label for="editEmail">Email (Gmail)</label>
@@ -248,7 +255,7 @@
       const { data, error } = await supabaseClient
         .from("students")
         .select(
-          "student_id, student_number, first_name, middle_name, last_name, education_level, year_level, contact_number, parent_guardian, student_email"
+          "student_id, student_number, first_name, middle_name, last_name, education_level, year_level, course, contact_number, parent_guardian, student_email"
         )
         .eq("student_id", currentStudent.student_id)
         .single();
@@ -264,6 +271,7 @@
 
       document.getElementById("profileFullName").textContent = fullName;
       document.getElementById("profileMeta").textContent = `${data.year_level || "—"} · ${data.student_number}`;
+      document.getElementById("profileCourse").textContent = `Course: ${data.course || "—"}`;
       document.getElementById("profileDeptBadge").textContent = educationLevelLabel(data.education_level);
       document.getElementById("profileSchoolYearBadge").textContent = `S.Y. ${defaultSchoolYear()}`;
 
@@ -274,6 +282,7 @@
       document.getElementById("editFullName").value = fullName;
       document.getElementById("editEducationLevel").value = educationLevelLabel(data.education_level);
       document.getElementById("editYearLevel").value = data.year_level || "";
+      document.getElementById("editCourse").value = data.course || "";
       document.getElementById("editEmail").value = data.student_email || "";
       document.getElementById("editPhone").value = formatPhone(data.contact_number);
       document.getElementById("editGuardian").value = data.parent_guardian || "";
