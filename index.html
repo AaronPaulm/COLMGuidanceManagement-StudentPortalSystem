@@ -120,7 +120,8 @@
           required: "Please sign in to continue.",
           forbidden: "You don't have access to that page with your current role.",
           timeout: "You were signed out due to inactivity. Please sign in again.",
-          archived: "This account has been archived. Contact the guidance office if you believe this is a mistake."
+          archived: "This account has been archived. Contact the guidance office if you believe this is a mistake.",
+          deactivated: "This account has been deactivated. Contact the guidance office for assistance."
         };
         notice.textContent = messages[reason] || "Please sign in to continue.";
         notice.style.display = "flex";
@@ -157,9 +158,12 @@
 
       // Maps a typed username or email to the address Supabase accepts for
       // sign-in / password reset. Empty result => unknown identifier.
-      async function resolveEmailIdentifier(rawIdentifier) {
+      // Students resolve by username; personnel resolve by their own
+      // username (resolve_counselor_username); emails pass straight through.
+      async function resolveEmailIdentifier(rawIdentifier, role) {
         if (rawIdentifier.includes("@")) return rawIdentifier;
-        const { data } = await supabaseClient.rpc("resolve_username", { p_username: rawIdentifier });
+        const rpcName = role === "counselor" ? "resolve_counselor_username" : "resolve_username";
+        const { data } = await supabaseClient.rpc(rpcName, { p_username: rawIdentifier });
         return data || null;
       }
 
@@ -176,7 +180,7 @@
 
         try {
           // Resolve username -> auth email, or pass email straight through.
-          let email = await resolveEmailIdentifier(rawIdentifier);
+          let email = await resolveEmailIdentifier(rawIdentifier, selectedRole);
           if (!email) throw new Error("Invalid email or password.");
 
           const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
@@ -225,7 +229,9 @@
           // instead of leaving people thinking they mistyped their password.
           const isBanned = /banned/i.test(err.message || "");
           errorMsg.textContent = isBanned
-            ? "This account has been archived. Contact the guidance office if you believe this is a mistake."
+            ? selectedRole === "counselor"
+              ? "This account has been deactivated. Contact the guidance office for assistance."
+              : "This account has been archived. Contact the guidance office if you believe this is a mistake."
             : err.message || "Invalid email or password.";
           errorMsg.style.display = "block";
           submitBtn.disabled = false;

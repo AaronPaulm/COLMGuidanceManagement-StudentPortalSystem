@@ -211,14 +211,24 @@
             <div class="modal-body">
                 <p class="modal-meta" id="actionModalMeta"></p>
                 <form id="actionModalForm" data-submit-cooldown="8000">
-                    <div class="appt-form-row" id="actionRescheduleFields" style="display:none; grid-template-columns: 1fr 1fr; margin-top:0;">
-                        <div class="form-field">
+                    <div id="actionRescheduleFields" style="display:none;">
+                        <div class="form-field" style="margin-top:14px;">
                             <label for="actionDateInput">New date</label>
                             <input type="date" id="actionDateInput">
+                            <span class="hint">Reschedule to a different day — Monday to Saturday.</span>
                         </div>
                         <div class="form-field">
-                            <label for="actionTimeInput">New time</label>
-                            <input type="time" id="actionTimeInput" min="08:00" max="17:00">
+                            <div class="appt-time-heading">
+                                <label>New time</label>
+                                <div class="appt-slot-legend">
+                                    <span><span class="appt-legend-swatch appt-legend-free"></span>Available</span>
+                                    <span><span class="appt-legend-swatch appt-legend-booked"></span>Booked</span>
+                                </div>
+                            </div>
+                            <input type="hidden" id="actionTimeInput">
+                            <div id="actionSlotGrid" class="appt-slot-grid" aria-live="polite"></div>
+                            <div class="appt-slots-meta" id="actionSlotsMeta"></div>
+                            <span class="hint" id="actionSlotsHint" style="display:none;"></span>
                         </div>
                     </div>
                     <div class="form-field" id="actionReasonField" style="margin-top:14px;">
@@ -412,6 +422,97 @@
     let actionModalAppointment = null;
     let actionModalKey = null;
 
+    // ---------- Reschedule time-slot grid (mirrors the student booking form) ----------
+
+    const RS_SLOT_START_MIN = 8 * 60;       // 08:00
+    const RS_MORNING_END_MIN = 12 * 60;     // last morning slot 11:30 (lunch is 12-1)
+    const RS_AFTERNOON_START_MIN = 13 * 60; // first afternoon slot 13:00
+    const RS_SLOT_END_MIN = 17 * 60;        // last slot starts at 16:30
+    const RS_SLOT_STEP_MIN = 30;
+    let rsTakenSlots = new Set();
+
+    function rsSlotTimeString(min) {
+      return `${pad(Math.floor(min / 60))}:${pad(min % 60)}`;
+    }
+
+    function rsSlotButtonHtml(min, taken) {
+      const value = rsSlotTimeString(min);
+      const isTaken = taken.has(value);
+      return `<button type="button" class="appt-slot${isTaken ? " booked" : ""}" data-value="${value}"${isTaken ? " disabled" : ""} title="${isTaken ? "Already booked" : `Set ${formatTime(value)}`}">
+        <span class="appt-slot-time">${formatTime(value)}</span>
+        ${isTaken ? '<span class="appt-slot-state">Booked</span>' : '<span class="appt-slot-check"><i class="fa-solid fa-check"></i></span>'}
+      </button>`;
+    }
+
+    async function renderRescheduleSlots() {
+      const grid = document.getElementById("actionSlotGrid");
+      const meta = document.getElementById("actionSlotsMeta");
+      const hint = document.getElementById("actionSlotsHint");
+      const timeInput = document.getElementById("actionTimeInput");
+      const date = document.getElementById("actionDateInput").value;
+
+      timeInput.value = "";
+      grid.innerHTML = "";
+      hint.style.display = "none";
+      hint.textContent = "";
+      if (meta) meta.textContent = "";
+
+      if (!date) return;
+
+      const { data, error } = await supabaseClient.rpc("office_slot_times", { target_date: date });
+      if (error) {
+        console.error(error);
+        rsTakenSlots = new Set();
+      } else {
+        rsTakenSlots = new Set((data || []).map((r) => (typeof r === "string" ? r : r.taken_time)));
+      }
+
+      const morning = [];
+      for (let m = RS_SLOT_START_MIN; m < RS_MORNING_END_MIN; m += RS_SLOT_STEP_MIN) morning.push(m);
+      const afternoon = [];
+      for (let m = RS_AFTERNOON_START_MIN; m < RS_SLOT_END_MIN; m += RS_SLOT_STEP_MIN) afternoon.push(m);
+
+      grid.innerHTML = `
+        <div class="appt-slot-sections">
+          <div class="appt-slot-section">
+            <div class="appt-slot-section-title">Morning</div>
+            <div class="appt-slot-row">${morning.map((m) => rsSlotButtonHtml(m, rsTakenSlots)).join("")}</div>
+          </div>
+          <div class="appt-slot-section">
+            <div class="appt-slot-section-title">Afternoon</div>
+            <div class="appt-slot-row">${afternoon.map((m) => rsSlotButtonHtml(m, rsTakenSlots)).join("")}</div>
+          </div>
+        </div>
+      `;
+
+      const total = morning.length + afternoon.length;
+      const available = grid.querySelectorAll(".appt-slot:not(:disabled)").length;
+      const booked = total - available;
+
+      if (available === 0) {
+        hint.textContent = "No available times on this date — every slot is booked.";
+        hint.style.display = "";
+      } else if (booked > 0) {
+        if (meta) meta.textContent = `${available} of ${total} slots available · ${booked} already booked`;
+      }
+
+      grid.querySelectorAll(".appt-slot:not(:disabled)").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          grid.querySelectorAll(".appt-slot").forEach((b) => b.classList.remove("selected"));
+          btn.classList.add("selected");
+          timeInput.value = btn.dataset.value;
+        });
+      });
+    }
+
+    document.getElementById("actionDateInput").addEventListener("change", (e) => {
+      if (e.target.value && isSunday(e.target.value)) {
+        showToast("Guidance is closed on Sundays. Please choose a date from Monday to Saturday.", "error");
+        e.target.value = "";
+      }
+      renderRescheduleSlots();
+    });
+
     function openActionModal(actionKey, a) {
       const config = ACTION_CONFIG[actionKey];
       actionModalAppointment = a;
@@ -429,14 +530,14 @@
       reasonInput.value = actionKey === "note" ? a.counselor_note || "" : "";
 
       const rescheduleFields = document.getElementById("actionRescheduleFields");
-      rescheduleFields.style.display = config.showReschedule ? "grid" : "none";
+      rescheduleFields.style.display = config.showReschedule ? "block" : "none";
       document.getElementById("actionDateInput").required = !!config.showReschedule;
-      document.getElementById("actionTimeInput").required = !!config.showReschedule;
       if (config.showReschedule) {
         const dateInput = document.getElementById("actionDateInput");
         dateInput.min = todayStr();
         dateInput.value = a.appointment_date;
-        document.getElementById("actionTimeInput").value = a.appointment_time;
+        document.getElementById("actionTimeInput").value = "";
+        renderRescheduleSlots();
       }
 
       document.getElementById("actionEmailNote").style.display = config.showEmailNote ? "flex" : "none";
@@ -496,45 +597,50 @@
             confirmBtn.disabled = false;
             return;
           }
+          if (!newDate) {
+            showToast("Please choose a new date.", "error");
+            confirmBtn.disabled = false;
+            return;
+          }
           if (isSunday(newDate)) {
             showToast("Guidance is closed on Sundays. Please choose a date from Monday to Saturday.", "error");
             confirmBtn.disabled = false;
             return;
           }
-          if (newTime < "08:00" || newTime > "17:00") {
-            showToast("Guidance office hours are 8:00 AM-5:00 PM. Please choose a time within that range.", "error");
+          if (!newTime) {
+            showToast("Please choose a new time slot.", "error");
+            confirmBtn.disabled = false;
+            return;
+          }
+          if (rsTakenSlots.has(newTime)) {
+            showToast("That time slot is already booked for that date — please choose another.", "error");
+            renderRescheduleSlots();
             confirmBtn.disabled = false;
             return;
           }
 
-          const { data: clashing, error: clashError } = await supabaseClient
+          const { error } = await supabaseClient
             .from("appointments")
-            .select("appointment_id")
-            .eq("counselor_id", currentCounselor.counselor_id)
-            .eq("appointment_date", newDate)
-            .eq("appointment_time", newTime)
-            .not("status", "in", "(cancelled,declined)")
-            .neq("appointment_id", a.appointment_id)
-            .limit(1);
+            .update({
+              appointment_date: newDate,
+              appointment_time: newTime,
+              counselor_note: reason || a.counselor_note || null,
+              was_rescheduled: true,
+            })
+            .eq("appointment_id", a.appointment_id);
 
-          if (clashError) {
-            showToast("Couldn't check that time slot: " + clashError.message, "error");
+          if (error) {
+            const message =
+              error.code === "23505"
+                ? "That date and time was just taken by another booking — please pick another slot."
+                : "Couldn't reschedule appointment: " + error.message;
+            showToast(message, "error");
+            console.error(error);
             confirmBtn.disabled = false;
             return;
           }
-          if (clashing && clashing.length) {
-            showToast("You already have another appointment at that date and time.", "error");
-            confirmBtn.disabled = false;
-            return;
-          }
-
-          ok = await updateAppointment(a.appointment_id, {
-            appointment_date: newDate,
-            appointment_time: newTime,
-            counselor_note: reason || a.counselor_note || null,
-            was_rescheduled: true,
-          });
-          if (ok) await notifyStudentAboutAppointment(a, "Your appointment request was rescheduled", a.concern || null, reason || a.counselor_note || null);
+          ok = true;
+          await notifyStudentAboutAppointment(a, "Your appointment request was rescheduled", a.concern || null, reason || a.counselor_note || null);
           break;
         }
         case "note":

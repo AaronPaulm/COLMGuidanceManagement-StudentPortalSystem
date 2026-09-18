@@ -221,12 +221,22 @@
                         <input type="text" id="staffFirstNameInput" required maxlength="100">
                     </div>
                     <div class="form-field">
+                        <label for="staffMiddleNameInput">Middle Name <span style="color:#9ca3af; font-weight:400;">(optional)</span></label>
+                        <input type="text" id="staffMiddleNameInput" maxlength="100">
+                    </div>
+                    <div class="form-field">
                         <label for="staffLastNameInput">Last Name</label>
                         <input type="text" id="staffLastNameInput" required maxlength="100">
                     </div>
                     <div class="form-field">
                         <label for="staffEmailInput">Email</label>
                         <input type="email" id="staffEmailInput" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="staffUsernameInput">Username</label>
+                        <input type="text" id="staffUsernameInput" required maxlength="50" autocomplete="off">
+                        <small style="display:block; color:#6b7280; font-size:12px; margin-top:4px;">Auto-fills from the name. They can log in with this <b>or</b> their email.</small>
+                        <div id="staffUsernameError" style="display:none; color:#b3261e; font-size:12px; margin-top:4px;" class="error-inline"></div>
                     </div>
                 </div>
                 <div class="form-field" style="margin-top:14px;">
@@ -249,6 +259,17 @@
             </form>
         </div>
 
+        <div class="section-title" style="margin-top:30px;">
+            <h2>Guidance Personnel</h2>
+        </div>
+        <div id="staffDirectory"></div>
+
+        <div class="section-title" style="margin-top:30px;">
+            <h2>Account Activity</h2>
+        </div>
+        <div id="staffAuditLog"></div>
+        <div class="pagination-bar" id="staffAuditPagination"></div>
+
     </main>
 
     <!-- New account credentials -->
@@ -264,6 +285,10 @@
                 <p>Share these credentials with the new guidance personnel. This password won't be shown again.</p>
                 <div class="case-meta-grid" style="grid-template-columns:1fr;">
                     <div class="case-meta-item">
+                        <label>Username</label>
+                        <div id="staffCreatedUsername">—</div>
+                    </div>
+                    <div class="case-meta-item">
                         <label>Email</label>
                         <div id="staffCreatedEmail">—</div>
                     </div>
@@ -274,6 +299,26 @@
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-primary" id="staffCreatedOkBtn">Done</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+  <!-- Confirm account status change -->
+    <div class="modal-overlay" id="statusConfirmModalOverlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="statusConfirmTitle">Deactivate Account</h3>
+                <button type="button" class="modal-close" id="statusConfirmCloseBtn" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="statusConfirmMessage" style="color:#374151; line-height:1.6;"></div>
+                <div id="statusConfirmError" style="display:none; color:#b3261e; font-size:13px; margin-top:12px; line-height:1.5;" class="error-inline"></div>
+                <div class="form-actions" style="justify-content:flex-end; gap:10px; margin-top:18px;">
+                    <button type="button" class="btn btn-outline" id="statusConfirmCancelBtn">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="statusConfirmActionBtn">Deactivate</button>
                 </div>
             </div>
         </div>
@@ -612,13 +657,331 @@
 
     // ---------- Single counselor account creation ----------
 
+    let currentCounselorId = null;
+    let pendingStatusChange = null;
+    let auditLogItems = [];
+    let auditPage = 1;
+    const AUDIT_PAGE_SIZE = 10;
+
+    // Username helpers (mirror the server's slugify so the prefill
+    // matches what create-staff-account would generate).
+    function slugifyName(str) {
+      return String(str || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "");
+    }
+
+    let lastAutoUsername = "";
+
+    function prefillUsername() {
+      const input = document.getElementById("staffUsernameInput");
+      const fn = slugifyName(document.getElementById("staffFirstNameInput").value);
+      const ln = slugifyName(document.getElementById("staffLastNameInput").value);
+      const cand = fn || ln ? `${fn}${ln ? "." + ln : ""}` : "";
+      // Auto-fill only when the field is empty or still holding the value
+      // we last auto-filled. If the user typed something custom, leave it —
+      // but resume auto-filling once they wipe it back to empty.
+      if (input.value === "" || input.value === lastAutoUsername) {
+        input.value = cand;
+        lastAutoUsername = cand;
+      } else if (input.value !== cand) {
+        lastAutoUsername = "";
+      }
+    }
+
+    // Red-flag a username that's already taken (checked against BOTH
+    // student and staff accounts, matching the shared login resolver).
+    async function validateUsernameAvailability() {
+      const input = document.getElementById("staffUsernameInput");
+      const err = document.getElementById("staffUsernameError");
+      const val = input.value.trim();
+      if (!val) {
+        err.style.display = "none";
+        return true;
+      }
+      const { data: available } = await supabaseClient.rpc("check_username_available", {
+        p_username: val,
+      });
+      if (available === false) {
+        err.textContent = `"${val}" is already taken — try different spelling or add a number.`;
+        err.style.display = "block";
+        return false;
+      }
+      err.style.display = "none";
+      return true;
+    }
+
+    document.getElementById("staffFirstNameInput").addEventListener("input", prefillUsername);
+    document.getElementById("staffLastNameInput").addEventListener("input", prefillUsername);
+    document
+      .getElementById("staffUsernameInput")
+      .addEventListener("input", () => {
+        // A manual edit means the value is now the user's own — stop
+        // auto-overwriting it (autofill resumes if they clear it).
+        lastAutoUsername = "";
+        document.getElementById("staffUsernameError").style.display = "none";
+      });
+    document.getElementById("staffUsernameInput").addEventListener("blur", validateUsernameAvailability);
+
+    // ---------- Guidance personnel directory ----------
+
+    async function loadStaffDirectory() {
+      const container = document.getElementById("staffDirectory");
+      const { data, error } = await supabaseClient
+        .from("counselors")
+        .select("counselor_id, first_name, middle_name, last_name, username, auth_email, work_days, is_active, created_at")
+        .order("first_name");
+
+      if (error) {
+        container.innerHTML = `<div class="empty-state">Couldn't load personnel.</div>`;
+        console.error(error);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        container.innerHTML = `<div class="empty-state">No personnel accounts yet.</div>`;
+        return;
+      }
+
+      container.innerHTML = "";
+      data.forEach((c) => {
+        const isSelf = Number(c.counselor_id) === Number(currentCounselorId);
+        const isActive = c.is_active !== false;
+        const name = [c.first_name, c.middle_name, c.last_name].filter(Boolean).join(" ");
+        const details = [
+          c.username ? `@${c.username}` : "",
+          c.auth_email || "",
+        ]
+          .filter(Boolean)
+          .join(" · ");
+
+        const row = document.createElement("div");
+        row.className = "staff-list-item";
+        row.style.alignItems = "center";
+        row.innerHTML = `
+          <div style="flex:1 1 auto; min-width:0;">
+            <h3>${escapeHtml(name)}
+              <span class="badge ${isActive ? "badge-approved" : "badge-cancelled"}">${isActive ? "Active" : "Inactive"}</span>
+              ${isSelf ? '<span class="badge badge-info">You</span>' : ""}
+            </h3>
+            <small style="color:#6b7280;">${escapeHtml(details || "—")}</small>
+          </div>
+          <div class="staff-item-actions">
+            ${isSelf
+              ? ""
+              : `<button type="button" class="btn ${isActive ? "btn-outline" : "btn-primary"} btn-sm" data-toggle>${isActive ? "Deactivate" : "Reactivate"}</button>`}
+          </div>
+        `;
+
+        const toggleBtn = row.querySelector("[data-toggle]");
+        if (toggleBtn) {
+          toggleBtn.addEventListener("click", () => {
+            openStatusConfirm({
+              counselorId: c.counselor_id,
+              name,
+              goingInactive: isActive,
+            });
+          });
+        }
+
+        container.appendChild(row);
+      });
+    }
+
+    // Chronological feed of personnel account lifecycle events
+    // (created / activated / deactivated) for audit purposes.
+    async function loadAuditLog() {
+      const container = document.getElementById("staffAuditLog");
+      if (!container) return;
+
+      const [dirRes, logRes] = await Promise.all([
+        supabaseClient.from("counselors").select("counselor_id, first_name, middle_name, last_name"),
+        supabaseClient
+          .from("counselor_audit_log")
+          .select("counselor_id, actor_id, action, created_at")
+          .order("created_at", { ascending: false })
+          .limit(50),
+      ]);
+
+      if (logRes.error) {
+        container.innerHTML = `<div class="empty-state">Couldn't load activity.</div>`;
+        console.error(logRes.error);
+        return;
+      }
+
+      const makeName = (c) => (c ? [c.first_name, c.middle_name, c.last_name].filter(Boolean).join(" ") : null);
+      const byId =
+        (dirRes.data || []).reduce((map, c) => {
+          map[Number(c.counselor_id)] = makeName(c);
+          return map;
+        }, {}) || {};
+
+      if (!logRes.data || logRes.data.length === 0) {
+        container.innerHTML = `<div class="empty-state">No account activity yet.</div>`;
+        document.getElementById("staffAuditPagination").innerHTML = "";
+        return;
+      }
+
+      const actionMeta = {
+        created: { label: "created", cls: "badge-approved" },
+        activated: { label: "activated", cls: "badge-info" },
+        deactivated: { label: "deactivated", cls: "badge-cancelled" },
+      };
+
+      auditLogItems = logRes.data.map((e) => {
+        const target = byId[Number(e.counselor_id)] || "Removed account";
+        const actor = byId[Number(e.actor_id)] || (e.actor_id ? "Removed account" : "System");
+        const meta = actionMeta[e.action] || { label: e.action, cls: "badge-info" };
+        const when = new Date(e.created_at).toLocaleString(undefined, {
+          dateStyle: "medium",
+          timeStyle: "short",
+        });
+        return { label: meta.label, cls: meta.cls, target, actor, when };
+      });
+
+      auditPage = 1;
+      renderAuditLog();
+    }
+
+    function renderAuditLog() {
+      const container = document.getElementById("staffAuditLog");
+      const pager = document.getElementById("staffAuditPagination");
+
+      auditPage = renderPaginationControls(pager, {
+        totalItems: auditLogItems.length,
+        page: auditPage,
+        pageSize: AUDIT_PAGE_SIZE,
+        onPageChange: (p) => {
+          auditPage = p;
+          renderAuditLog();
+        },
+      });
+
+      const rows = paginateItems(auditLogItems, auditPage, AUDIT_PAGE_SIZE)
+        .map((e) => `
+          <tr>
+            <td><span class="badge ${e.cls}">${escapeHtml(e.label)}</span></td>
+            <td><strong>${escapeHtml(e.target)}</strong></td>
+            <td>${escapeHtml(e.actor)}</td>
+            <td style="white-space:nowrap;">${escapeHtml(e.when)}</td>
+          </tr>`);
+
+      container.innerHTML = `
+        <div style="overflow-x:auto;">
+          <table class="simple-table">
+            <thead>
+              <tr>
+                <th>Action</th>
+                <th>Account</th>
+                <th>Performed By</th>
+                <th>When</th>
+              </tr>
+            </thead>
+            <tbody>${rows.join("")}</tbody>
+          </table>
+        </div>`;
+    }
+
+    // ---------- Account status change (deactivate / reactivate) ----------
+
+    const statusConfirmOverlay = document.getElementById("statusConfirmModalOverlay");
+    const statusConfirmActionBtn = document.getElementById("statusConfirmActionBtn");
+    const statusConfirmCancelBtn = document.getElementById("statusConfirmCancelBtn");
+    const statusConfirmError = document.getElementById("statusConfirmError");
+
+    function openStatusConfirm(target) {
+      pendingStatusChange = target;
+      const deactivating = target.goingInactive;
+
+      document.getElementById("statusConfirmTitle").textContent = deactivating
+        ? "Deactivate Account"
+        : "Activate Account";
+      document.getElementById("statusConfirmMessage").innerHTML = deactivating
+        ? `<p><strong>${escapeHtml(target.name)}</strong> will be deactivated. They will:</p>
+           <ul style="margin:8px 0 0; padding-left:20px; color:#6b7280;">
+             <li>be signed out of their current session,</li>
+             <li>not be able to log in until reactivated,</li>
+             <li>stop appearing for student appointments and bookings.</li>
+           </ul>`
+        : `<p><strong>${escapeHtml(target.name)}</strong> will be reactivated. They will be able to log in again and appear for student appointments.</p>`;
+
+      statusConfirmActionBtn.textContent = deactivating ? "Deactivate" : "Reactivate";
+      statusConfirmActionBtn.className = `btn ${deactivating ? "btn-danger" : "btn-primary"}`;
+      statusConfirmError.style.display = "none";
+      statusConfirmError.textContent = "";
+      statusConfirmActionBtn.disabled = false;
+      statusConfirmOverlay.classList.add("show");
+    }
+
+    function closeStatusConfirm() {
+      pendingStatusChange = null;
+      statusConfirmActionBtn.disabled = false;
+      statusConfirmOverlay.classList.remove("show");
+    }
+
+    statusConfirmOverlay.addEventListener("click", (e) => {
+      if (e.target === statusConfirmOverlay) closeStatusConfirm();
+    });
+    statusConfirmCancelBtn.addEventListener("click", closeStatusConfirm);
+    document.getElementById("statusConfirmCloseBtn").addEventListener("click", closeStatusConfirm);
+
+    statusConfirmActionBtn.addEventListener("click", async () => {
+      if (!pendingStatusChange) return;
+      const { counselorId, goingInactive } = pendingStatusChange;
+
+      statusConfirmActionBtn.disabled = true;
+      statusConfirmActionBtn.textContent = goingInactive ? "Deactivating…" : "Reactivating…";
+      statusConfirmError.style.display = "none";
+
+      if (!(await attachSession())) {
+        closeStatusConfirm();
+        return;
+      }
+
+      const { data: res, error: fnError } = await supabaseClient.functions.invoke("set-staff-account-status", {
+        body: { counselorId, active: !goingInactive },
+      });
+
+      if (fnError || res?.error) {
+        const detail = res?.error || fnError?.context?.data?.error || "";
+        statusConfirmError.textContent = detail || fnError?.message || "Something went wrong.";
+        statusConfirmError.style.display = "block";
+        statusConfirmActionBtn.disabled = false;
+        statusConfirmActionBtn.textContent = goingInactive ? "Deactivate" : "Reactivate";
+        console.error(fnError || res?.error, fnError?.context?.data);
+        return;
+      }
+
+      closeStatusConfirm();
+      showToast(goingInactive ? "Account deactivated." : "Account reactivated.", "success");
+      await loadStaffDirectory();
+      await loadAuditLog();
+    });
+
     document.getElementById("createStaffForm").addEventListener("submit", async (e) => {
       e.preventDefault();
 
+      const usernameInput = document.getElementById("staffUsernameInput");
+      if (!usernameInput.value.trim()) {
+        usernameInput.value = (() => {
+          const fn = slugifyName(document.getElementById("staffFirstNameInput").value);
+          const ln = slugifyName(document.getElementById("staffLastNameInput").value);
+          return fn || ln ? `${fn}${ln ? "." + ln : ""}` : "";
+        })();
+      }
+      if (!(await validateUsernameAvailability())) {
+        usernameInput.focus();
+        return;
+      }
+
       const payload = {
         firstName: document.getElementById("staffFirstNameInput").value.trim(),
+        middleName: document.getElementById("staffMiddleNameInput").value.trim() || null,
         lastName: document.getElementById("staffLastNameInput").value.trim(),
         email: document.getElementById("staffEmailInput").value.trim(),
+        username: usernameInput.value.trim().toLowerCase(),
         workDays: getWorkDaysValue(),
       };
 
@@ -626,7 +989,11 @@
       saveBtn.disabled = true;
       saveBtn.textContent = "Creating…";
 
-      if (!(await attachSession())) return;
+      if (!(await attachSession())) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Create Account";
+        return;
+      }
 
       const { data, error } = await supabaseClient.functions.invoke("create-staff-account", { body: payload });
 
@@ -641,10 +1008,14 @@
         return;
       }
 
+      document.getElementById("staffCreatedUsername").textContent = data.username || "—";
       document.getElementById("staffCreatedEmail").textContent = data.email;
       document.getElementById("staffCreatedPassword").textContent = data.tempPassword;
       document.getElementById("staffCreatedModalOverlay").classList.add("show");
       document.getElementById("createStaffForm").reset();
+      lastAutoUsername = "";
+      await loadStaffDirectory();
+      await loadAuditLog();
     });
 
     function closeStaffCreatedModal() {
@@ -660,6 +1031,9 @@
     (async () => {
       const result = await requireCounselorAuth();
       if (!result) return;
+      currentCounselorId = result.counselor?.counselor_id ?? null;
+      await loadStaffDirectory();
+      await loadAuditLog();
       hidePageLoadOverlay();
     })();
   </script>

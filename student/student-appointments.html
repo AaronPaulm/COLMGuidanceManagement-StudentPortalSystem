@@ -152,10 +152,20 @@
                         <label for="apptDateInput">Date</label>
                         <input type="date" id="apptDateInput" required>
                     </div>
-                    <div class="form-field field-time">
-                        <label for="apptTimeInput">Time</label>
-                        <input type="time" id="apptTimeInput" min="08:00" max="17:00" required>
+                </div>
+                <div class="form-field field-time">
+                    <div class="appt-time-heading">
+                        <label>Time</label>
+                        <div class="appt-slot-legend" id="apptSlotLegend">
+                            <span><span class="appt-legend-swatch appt-legend-free"></span>Available</span>
+                            <span><span class="appt-legend-swatch appt-legend-booked"></span>Booked</span>
+                        </div>
                     </div>
+                    <input type="hidden" id="apptTimeInput">
+                    <div id="apptAvailabilityBanner" class="appt-unavailable-note" style="display:none;"></div>
+                    <div id="apptSlotGrid" class="appt-slot-grid" aria-live="polite"></div>
+                    <div class="appt-slots-meta" id="apptSlotsMeta"></div>
+                    <span class="hint" id="apptSlotsHint" style="display:none;"></span>
                 </div>
                 <div class="form-note-banner"><i class="fa-regular fa-clock"></i> Guidance office hours: Monday–Saturday, 8:00 AM–5:00 PM.</div>
                 <div class="form-actions">
@@ -247,6 +257,7 @@
     let currentStudent = null;
     let allCounselors = [];
     let allAppointments = [];
+    let takenSlots = new Set();
 
     // Caps how many unresolved requests one student can have queued up at
     // once, so a burst of submissions can't flood a counselor's pending
@@ -321,6 +332,184 @@
       });
     }
 
+    // ---------- Time slot picker ----------
+    // Instead of a free-form time input, students pick from a live grid
+    // of 30-minute slots. The whole guidance office shares one schedule,
+    // so slots already booked for the chosen date (office-wide, via the
+    // office_slot_times RPC) are disabled up front — regardless of which
+    // personnel holds the booking. Dates the counselor does not work are
+    // rejected the same way Sundays are, and the office-wide partial
+    // unique index (see migrations/appointments_office_slot_shared.sql)
+    // remains the backstop for students racing to book the same slot.
+
+    const SLOT_START_MIN = 8 * 60;      // 08:00
+    const MORNING_END_MIN = 12 * 60;    // last morning slot 11:30 (lunch is 12-1)
+    const AFTERNOON_START_MIN = 13 * 60; // first afternoon slot 13:00
+    const SLOT_END_MIN = 17 * 60;       // last slot starts at 16:30
+    const SLOT_STEP_MIN = 30;
+    const DAY_NUM = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+    function parseWorkDays(str) {
+      const days = new Set();
+      (str || "")
+        .split(/[\s,]+/)
+        .forEach((tok) => {
+          if (DAY_NUM[tok] !== undefined) days.add(DAY_NUM[tok]);
+        });
+      return days;
+    }
+
+    function dateToDayNum(dateStr) {
+      const [y, m, d] = dateStr.split("-").map(Number);
+      return new Date(y, m - 1, d).getDay();
+    }
+
+    function getSelectedCounselor() {
+      const id = Number(document.getElementById("counselorSelect").value);
+      return allCounselors.find((c) => c.counselor_id === id) || null;
+    }
+
+    function isWorkingDay(dateStr, counselor) {
+      if (isSunday(dateStr)) return false;
+      if (!counselor) return true;
+      const days = parseWorkDays(counselor.work_days);
+      if (days.size === 0) return true; // no schedule on file -> default Mon-Sat
+      return days.has(dateToDayNum(dateStr));
+    }
+
+    function slotTimeString(min) {
+      return `${pad(Math.floor(min / 60))}:${pad(min % 60)}`;
+    }
+
+    async function loadTakenSlots(date) {
+      const { data, error } = await supabaseClient.rpc("office_slot_times", { target_date: date });
+      if (error) {
+        console.error(error);
+        return new Set();
+      }
+      return new Set((data || []).map((r) => (typeof r === "string" ? r : r.taken_time)));
+    }
+
+    function clearSlotSelection() {
+      document.getElementById("apptTimeInput").value = "";
+      const grid = document.getElementById("apptSlotGrid");
+      if (grid) grid.innerHTML = "";
+      takenSlots = new Set();
+      const hint = document.getElementById("apptSlotsHint");
+      if (hint) {
+        hint.textContent = "";
+        hint.style.display = "none";
+      }
+      const meta = document.getElementById("apptSlotsMeta");
+      if (meta) meta.textContent = "";
+      const banner = document.getElementById("apptAvailabilityBanner");
+      if (banner) banner.style.display = "none";
+    }
+
+    function slotButtonHtml(min, taken) {
+      const value = slotTimeString(min);
+      const isTaken = taken.has(value);
+      return `<button type="button" class="appt-slot${isTaken ? " booked" : ""}" data-value="${value}"${isTaken ? " disabled" : ""} title="${isTaken ? "Already booked" : `Book ${formatTime(value)}`}">
+        <span class="appt-slot-time">${formatTime(value)}</span>
+        ${isTaken ? '<span class="appt-slot-state">Booked</span>' : '<span class="appt-slot-check"><i class="fa-solid fa-check"></i></span>'}
+      </button>`;
+    }
+
+    async function renderSlotGrid() {
+      const grid = document.getElementById("apptSlotGrid");
+      const hint = document.getElementById("apptSlotsHint");
+      const meta = document.getElementById("apptSlotsMeta");
+      const timeInput = document.getElementById("apptTimeInput");
+
+      timeInput.value = "";
+      grid.innerHTML = "";
+
+      const counselor = getSelectedCounselor();
+      const date = document.getElementById("apptDateInput").value;
+
+      const banner = document.getElementById("apptAvailabilityBanner");
+      if (!counselor) {
+        banner.style.display = "none";
+      } else {
+        const isUnavailable = (counselor.availability_status || "available").toLowerCase() !== "available";
+        if (isUnavailable) {
+          banner.textContent = `Note: ${counselor.first_name} ${counselor.last_name} is currently marked unavailable, so your request may take longer to be reviewed.`;
+          banner.style.display = "block";
+        } else {
+          banner.style.display = "none";
+        }
+      }
+
+      const morning = [];
+      for (let m = SLOT_START_MIN; m < MORNING_END_MIN; m += SLOT_STEP_MIN) morning.push(m);
+      const afternoon = [];
+      for (let m = AFTERNOON_START_MIN; m < SLOT_END_MIN; m += SLOT_STEP_MIN) afternoon.push(m);
+
+      const renderSections = (taken) => {
+        grid.innerHTML = `
+          <div class="appt-slot-sections">
+            <div class="appt-slot-section">
+              <div class="appt-slot-section-title">Morning</div>
+              <div class="appt-slot-row">${morning.map((m) => slotButtonHtml(m, taken)).join("")}</div>
+            </div>
+            <div class="appt-slot-section">
+              <div class="appt-slot-section-title">Afternoon</div>
+              <div class="appt-slot-row">${afternoon.map((m) => slotButtonHtml(m, taken)).join("")}</div>
+            </div>
+          </div>
+        `;
+      };
+
+      const total = morning.length + afternoon.length;
+
+      let taken = new Set();
+      if (date) {
+        taken = await loadTakenSlots(date);
+        takenSlots = taken;
+      } else {
+        takenSlots = new Set();
+      }
+
+      renderSections(taken);
+
+      hint.textContent = "";
+      hint.style.display = "none";
+
+      if (date && counselor && !isWorkingDay(date, counselor)) {
+        hint.textContent = `${counselor.first_name} ${counselor.last_name} does not work on ${DAY_NAMES[dateToDayNum(date)]}. Please pick another date.`;
+        hint.style.display = "";
+        if (meta) meta.textContent = "";
+        return;
+      }
+
+      if (!date) {
+        if (meta) meta.textContent = "";
+        return;
+      }
+
+      const available = grid.querySelectorAll(".appt-slot:not(:disabled)").length;
+      const bookedCount = total - available;
+
+      if (available === 0) {
+        hint.textContent = "No available times on this date — every slot is booked. Please choose another date.";
+        hint.style.display = "";
+        if (meta) meta.textContent = "";
+      } else if (bookedCount === 0) {
+        if (meta) meta.textContent = "";
+      } else if (meta) {
+        meta.textContent = `✓ ${available} of ${total} slots available · ${bookedCount} already booked`;
+      }
+
+      grid.querySelectorAll(".appt-slot:not(:disabled)").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          grid.querySelectorAll(".appt-slot").forEach((b) => b.classList.remove("selected"));
+          btn.classList.add("selected");
+          timeInput.value = btn.dataset.value;
+        });
+      });
+    }
+
     async function loadCounselors() {
       const select = document.getElementById("counselorSelect");
       const listCard = document.getElementById("counselorListCard");
@@ -328,6 +517,7 @@
       const { data, error } = await supabaseClient
         .from("counselors")
         .select("counselor_id, first_name, last_name, availability_status, work_days, user_id")
+        .eq("is_active", true)
         .order("first_name", { ascending: true });
 
       if (error) {
@@ -486,6 +676,22 @@
         showToast("Guidance is closed on Sundays. Please choose a date from Monday to Saturday.", "error");
         e.target.value = "";
       }
+      const counselor = getSelectedCounselor();
+      if (e.target.value && counselor && !isWorkingDay(e.target.value, counselor)) {
+        showToast(`${counselor.first_name} ${counselor.last_name} does not work on that day. Please choose another date.`, "error");
+        e.target.value = "";
+      }
+      renderSlotGrid();
+    });
+
+    document.getElementById("counselorSelect").addEventListener("change", () => {
+      const counselor = getSelectedCounselor();
+      const dateInput = document.getElementById("apptDateInput");
+      if (counselor && dateInput.value && !isWorkingDay(dateInput.value, counselor)) {
+        showToast(`${counselor.first_name} ${counselor.last_name} does not work on that day. Please choose another date.`, "error");
+        dateInput.value = "";
+      }
+      renderSlotGrid();
     });
 
     document.getElementById("appointmentForm").addEventListener("submit", async (e) => {
@@ -493,13 +699,23 @@
 
       const appointmentDate = document.getElementById("apptDateInput").value;
       const appointmentTime = document.getElementById("apptTimeInput").value;
+      const selectedCounselor = getSelectedCounselor();
 
       if (isSunday(appointmentDate)) {
         showToast("Guidance is closed on Sundays. Please choose a date from Monday to Saturday.", "error");
         return;
       }
-      if (appointmentTime < "08:00" || appointmentTime > "17:00") {
-        showToast("Guidance office hours are 8:00 AM–5:00 PM. Please choose a time within that range.", "error");
+      if (selectedCounselor && !isWorkingDay(appointmentDate, selectedCounselor)) {
+        showToast(`${selectedCounselor.first_name} ${selectedCounselor.last_name} does not work on that day. Please choose another date.`, "error");
+        return;
+      }
+      if (!appointmentTime) {
+        showToast("Please choose an available time slot.", "error");
+        return;
+      }
+      if (takenSlots.has(appointmentTime)) {
+        showToast("That time slot is already booked for that date — please choose another.", "error");
+        renderSlotGrid();
         return;
       }
 
@@ -532,31 +748,12 @@
         school_year: defaultSchoolYear(),
       };
 
-      // Two students booking the same counselor's slot happens often enough
-      // that it needs a check up front, not just a database error after
-      // the fact — a database-level unique index (see
-      // migrations/appointments_no_double_booking.sql) still catches the
-      // rare case where two requests race each other past this check.
-      const { data: clashing, error: clashError } = await supabaseClient
-        .from("appointments")
-        .select("appointment_id")
-        .eq("counselor_id", payload.counselor_id)
-        .eq("appointment_date", payload.appointment_date)
-        .eq("appointment_time", payload.appointment_time)
-        .not("status", "in", "(cancelled,declined)")
-        .limit(1);
+      // takenSlots (from the slot grid) already blocked a visible clash
+      // above. The office-wide unique index (migrations/
+      // appointments_office_slot_shared.sql) stays the backstop for two
+      // students racing to land the same date+time — the insert below
+      // surfaces a friendly 23505 message when that happens.
 
-      if (clashError) {
-        showToast("Couldn't check that time slot: " + clashError.message, "error");
-        console.error(clashError);
-        return;
-      }
-      if (clashing && clashing.length) {
-        showToast("That time slot is already booked with this guidance personnel — please choose another.", "error");
-        return;
-      }
-
-      const selectedCounselor = allCounselors.find((c) => c.counselor_id === payload.counselor_id);
       const isAvailable = !selectedCounselor || (selectedCounselor.availability_status || "available").toLowerCase() === "available";
       if (!isAvailable) {
         const proceed = await confirmDialog(
@@ -596,6 +793,7 @@
       }
 
       document.getElementById("appointmentForm").reset();
+      clearSlotSelection();
       showToast("Appointment request submitted.", "success");
       await loadAppointments();
     });
@@ -611,6 +809,7 @@
       currentStudent = result.student;
       document.getElementById("apptDateInput").min = todayStr();
       await Promise.all([loadCounselors(), loadAppointments()]);
+      renderSlotGrid();
       hidePageLoadOverlay();
     })();
   </script>

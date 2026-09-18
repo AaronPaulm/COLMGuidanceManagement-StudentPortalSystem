@@ -63,6 +63,39 @@ function generateTempPassword(): string {
   return pw;
 }
 
+// Username base for login, e.g. "maria.santos". Matches the student
+// import's slugify (lowercased, accents stripped, non-alphanumerics
+// removed), so names that collide with students still resolve cleanly.
+function slugify(str: string): string {
+  return (str || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function slugUsername(firstName: string, lastName: string): string {
+  const fn = slugify(firstName);
+  const ln = slugify(lastName);
+  return fn || ln ? `${fn}${ln ? "." + ln : ""}` : "";
+}
+
+// Usernames share a single login namespace with students, so a new
+// staff username must be free in BOTH tables.
+async function usernameIsFree(
+  adminClient: any,
+  username: string,
+  excludeUserId: string
+): Promise<boolean> {
+  const [counselorRows, studentRows] = await Promise.all([
+    adminClient.from("counselors").select("user_id").eq("username", username),
+    adminClient.from("students").select("user_id").eq("username", username),
+  ]);
+  const occupied = (rows: unknown[] | null, exId: string): boolean =>
+    (rows || []).some((r: any) => r.user_id !== exId);
+  return !occupied(counselorRows?.data, excludeUserId) && !occupied(studentRows?.data, excludeUserId);
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = corsHeadersFor(req);
 
@@ -94,14 +127,35 @@ Deno.serve(async (req) => {
 
     const { data: callerCounselor } = await adminClient
       .from("counselors")
-      .select("counselor_id")
+      .select("counselor_id, user_id, is_active")
       .eq("user_id", user.id)
       .maybeSingle();
 
     if (!callerCounselor) return json({ error: "Only counselors can create staff accounts" }, 403);
+    if (callerCounselor.is_active === false) {
+      return json({ error: "This account has been deactivated. Contact your office admin." }, 403);
+    }
 
-    const { firstName, lastName, email, workDays } = await req.json();
+    const { firstName, middleName, lastName, email, workDays, username: requestedUsername } = await req.json();
     if (!firstName || !lastName || !email) return json({ error: "Missing required fields" }, 400);
+
+    // Username: use the caller-provided one if present, otherwise
+    // derive slug(first).slug(last). Either way it must be unique in
+    // the shared login namespace (counselors + students).
+    let username = String(requestedUsername || "").trim().toLowerCase();
+    if (!username) username = slugUsername(firstName, lastName);
+    if (!username) return json({ error: "Couldn't derive a username — provide one manually" }, 400);
+
+    const MAX_USERNAME_ATTEMPTS = 20;
+    let baseUsername = username;
+    let suffix = 2;
+    while (!(await usernameIsFree(adminClient, username, ""))) {
+      username = `${baseUsername}${suffix}`;
+      suffix++;
+      if (suffix > MAX_USERNAME_ATTEMPTS) {
+        return json({ error: "Username is already taken" }, 409);
+      }
+    }
 
     const tempPassword = generateTempPassword();
 
@@ -129,20 +183,36 @@ Deno.serve(async (req) => {
       return json({ error: "Couldn't create user record: " + usersError.message }, 400);
     }
 
-    const { error: counselorError } = await adminClient.from("counselors").insert({
-      user_id: newUserId,
-      first_name: firstName,
-      last_name: lastName,
-      work_days: workDays || null,
-      availability_status: "available",
-    });
+    const { data: createdCounselor, error: counselorError } = await adminClient
+      .from("counselors")
+      .insert({
+        user_id: newUserId,
+        username,
+        auth_email: email,
+        first_name: firstName,
+        middle_name: middleName?.trim() || null,
+        last_name: lastName,
+        work_days: workDays || null,
+        availability_status: "available",
+        is_active: true,
+        created_by: callerCounselor.counselor_id,
+      })
+      .select("counselor_id")
+      .single();
 
     if (counselorError) {
       await adminClient.auth.admin.deleteUser(newUserId);
       return json({ error: "Couldn't create counselor record: " + counselorError.message }, 400);
     }
 
-    return json({ success: true, email, tempPassword });
+    // Append the audit trail (never allowed to block account creation).
+    await adminClient.from("counselor_audit_log").insert({
+      counselor_id: createdCounselor.counselor_id,
+      actor_id: callerCounselor.counselor_id,
+      action: "created",
+    });
+
+    return json({ success: true, username, email, tempPassword });
   } catch (err) {
     return json({ error: String(err) }, 500);
   }

@@ -603,116 +603,11 @@ function highlightActiveNav() {
 
 highlightActiveNav();
 
-const INACTIVITY_LIMIT_MS = 15 * 60 * 1000; // 15 minutes
-const WARNING_LEAD_MS = 60 * 1000; // warn during the final minute
-
-let sessionWarningEl = null;
-let sessionCountdownTimer = null;
-
-function formatCountdown(ms) {
-  const total = Math.max(0, Math.ceil(ms / 1000));
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
-// Builds (once) and returns the inactivity-warning overlay, appended to body.
-function getSessionWarningOverlay() {
-  if (sessionWarningEl) return sessionWarningEl;
-
-  sessionWarningEl = document.createElement("div");
-  sessionWarningEl.className = "modal-overlay";
-  sessionWarningEl.id = "sessionWarningOverlay";
-  sessionWarningEl.hidden = true;
-  sessionWarningEl.innerHTML = `
-    <div class="modal-box" style="max-width:420px; text-align:center;">
-      <div class="modal-body" style="padding:26px 24px;">
-        <i class="fa-solid fa-clock" style="font-size:28px; color:#d97706; margin-bottom:10px;"></i>
-        <h3 style="margin:0 0 6px;">You're about to be signed out</h3>
-        <p style="margin:0 0 4px; color:#6b7280;">Inactivity this long signs you out for security.</p>
-        <p style="margin:0 0 18px;"><strong style="font-size:22px; color:#111827;" id="sessionWarningCountdown">1:00</strong></p>
-        <div class="form-actions" style="justify-content:center;">
-          <button type="button" class="btn btn-outline" id="sessionWarningLogoutBtn">Sign Out Now</button>
-          <button type="button" class="btn btn-primary" id="sessionWarningStayBtn">Stay Signed In</button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  sessionWarningEl.querySelector("#sessionWarningStayBtn").addEventListener("click", () => {
-    dismissSessionWarning();
-    recordActivity();
-  });
-  sessionWarningEl.querySelector("#sessionWarningLogoutBtn").addEventListener("click", () => {
-    logoutCounselor("timeout");
-  });
-
-  document.body.appendChild(sessionWarningEl);
-  return sessionWarningEl;
-}
-
-function dismissSessionWarning() {
-  clearInterval(sessionCountdownTimer);
-  sessionCountdownTimer = null;
-  if (sessionWarningEl) {
-    sessionWarningEl.classList.remove("show");
-    sessionWarningEl.hidden = true;
-  }
-}
-
-function showSessionWarning() {
-  const overlay = getSessionWarningOverlay();
-  overlay.classList.add("show");
-  overlay.hidden = false;
-
-  clearInterval(sessionCountdownTimer);
-  sessionCountdownTimer = setInterval(() => {
-    const last = Number(sessionStorage.getItem("lastActivity"));
-    const remaining = last ? INACTIVITY_LIMIT_MS - (Date.now() - last) : 0;
-    const countEl = document.getElementById("sessionWarningCountdown");
-    if (countEl) countEl.textContent = formatCountdown(remaining);
-    if (remaining <= 0) {
-      clearInterval(sessionCountdownTimer);
-      sessionCountdownTimer = null;
-      logoutCounselor("timeout");
-    }
-  }, 1000);
-}
-
 async function logoutCounselor(reason) {
   sessionStorage.removeItem("counselorName");
-  sessionStorage.removeItem("lastActivity");
-  dismissSessionWarning();
   await supabaseClient.auth.signOut();
   window.location.href = reason ? `../index.html?reason=${reason}` : "../index.html";
 }
-
-function recordActivity() {
-  sessionStorage.setItem("lastActivity", Date.now().toString());
-  // Interacting again cancels the warning so an active user is never logged out.
-  if (sessionWarningEl && sessionWarningEl.classList.contains("show")) dismissSessionWarning();
-}
-
-function checkInactivity() {
-  const last = Number(sessionStorage.getItem("lastActivity"));
-  if (!last) return;
-  const remaining = INACTIVITY_LIMIT_MS - (Date.now() - last);
-
-  if (remaining <= 0) {
-    logoutCounselor("timeout");
-  } else if (remaining <= WARNING_LEAD_MS) {
-    showSessionWarning();
-  } else if (sessionWarningEl && sessionWarningEl.classList.contains("show")) {
-    dismissSessionWarning();
-  }
-}
-
-["click", "mousemove", "keydown", "scroll", "touchstart"].forEach((evt) => {
-  window.addEventListener(evt, recordActivity, { passive: true });
-});
-
-recordActivity();
-setInterval(checkInactivity, 30 * 1000);
 
 // Fills every .avatar-initials element (the sidebar header + profile page)
 // with the user's initials, e.g. "Aaron Punsalan" -> "AP". Named avatars use
@@ -792,7 +687,7 @@ async function requireCounselorAuth() {
   // there's no need to wait on one before starting the other.
   const [{ data: userRow }, { data: counselor }] = await Promise.all([
     supabaseClient.from("users").select("role").eq("user_id", session.user.id).single(),
-    supabaseClient.from("counselors").select("counselor_id, first_name, last_name").eq("user_id", session.user.id).single(),
+    supabaseClient.from("counselors").select("counselor_id, first_name, last_name, is_active").eq("user_id", session.user.id).eq("is_active", true).maybeSingle(),
   ]);
 
   const role = userRow?.role?.toLowerCase();
@@ -806,6 +701,14 @@ async function requireCounselorAuth() {
     default:
       window.location.href = "../index.html";
       return null;
+  }
+
+  // Role says counselor but the row is missing/deactivated -> the
+  // account was soft-disabled (is_active=false). Send them back to
+  // the login page; the auth ban also blocks fresh sign-ins.
+  if (!counselor) {
+    window.location.href = "../index.html?reason=deactivated";
+    return null;
   }
 
   const fullName = `${counselor.first_name} ${counselor.last_name}`;

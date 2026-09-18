@@ -242,7 +242,7 @@
           .select("appointment_id", { count: "exact", head: true })
           .eq("student_id", studentId)
           .eq("status", "conducted"),
-        supabaseClient.from("counselors").select("counselor_id").eq("availability_status", "available").limit(1),
+        supabaseClient.from("counselors").select("counselor_id").eq("availability_status", "available").eq("is_active", true).limit(1),
         supabaseClient
           .from("appointments")
           .select("appointment_id, concern_category, appointment_date, appointment_time, counselors(first_name, last_name)")

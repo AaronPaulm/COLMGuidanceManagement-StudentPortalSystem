@@ -231,16 +231,20 @@
                         <textarea id="caseDetailsInput" rows="3"></textarea>
                     </div>
                     <div class="form-field" style="margin-top:14px;">
-                        <label for="caseActionInput">Action Taken</label>
-                        <textarea id="caseActionInput" rows="2"></textarea>
+                        <label>Action Taken &amp; Recommendation <span style="font-weight:400; color:#6b7280;">(up to 3 entries)</span></label>
+                        <div class="action-row-table">
+                            <div class="action-row-head">
+                                <span>Action Taken</span>
+                                <span>Recommendation</span>
+                                <span></span>
+                            </div>
+                            <div class="action-rows" id="caseActionRows"></div>
+                        </div>
+                        <button type="button" class="btn btn-outline btn-sm" data-add-row="caseActionRows" style="margin-top:8px;"><i class="fa-solid fa-plus"></i> Add entry</button>
                     </div>
                     <div class="form-field" style="margin-top:14px;">
                         <label for="caseNoteInput">Session Note</label>
                         <textarea id="caseNoteInput" rows="2"></textarea>
-                    </div>
-                    <div class="form-field" style="margin-top:14px;">
-                        <label for="caseRecommendationInput">Recommendation</label>
-                        <textarea id="caseRecommendationInput" rows="2"></textarea>
                     </div>
 
                     <div class="capture-card-grid">
@@ -369,16 +373,20 @@
                             <textarea id="sessionDetailsInput" rows="3"></textarea>
                         </div>
                         <div class="form-field" style="margin-top:14px;">
-                            <label for="sessionActionInput">Action Taken</label>
-                            <textarea id="sessionActionInput" rows="2"></textarea>
+                            <label>Action Taken &amp; Recommendation <span style="font-weight:400; color:#6b7280;">(up to 3 entries)</span></label>
+                            <div class="action-row-table">
+                                <div class="action-row-head">
+                                    <span>Action Taken</span>
+                                    <span>Recommendation</span>
+                                    <span></span>
+                                </div>
+                                <div class="action-rows" id="sessionActionRows"></div>
+                            </div>
+                            <button type="button" class="btn btn-outline btn-sm" data-add-row="sessionActionRows" style="margin-top:8px;"><i class="fa-solid fa-plus"></i> Add entry</button>
                         </div>
                         <div class="form-field" style="margin-top:14px;">
                             <label for="sessionNoteInput">Session Note</label>
                             <textarea id="sessionNoteInput" rows="2"></textarea>
-                        </div>
-                        <div class="form-field" style="margin-top:14px;">
-                            <label for="sessionRecommendationInput">Recommendation</label>
-                            <textarea id="sessionRecommendationInput" rows="2"></textarea>
                         </div>
                         <div class="capture-card-grid">
                         <div class="capture-card" style="margin-top:14px;">
@@ -479,6 +487,67 @@
       div.textContent = str ?? "";
       return div.innerHTML;
     }
+
+    // ---------- Action Taken & Recommendation entry table (max 3) ----------
+    // Each row holds one action + one recommendation; the columns are joined
+    // with newlines into case_sessions.action_taken / recommendation so the
+    // intake sheet can split them back into its numbered 1-3 slots.
+
+    const ACTION_ROW_LIMIT = 3;
+
+    function createActionRow(action = "", recommendation = "") {
+      const row = document.createElement("div");
+      row.className = "action-row";
+      row.innerHTML = `
+        <textarea class="action-row-action" rows="1" placeholder="Action taken…">${escapeHtml(action)}</textarea>
+        <textarea class="action-row-recommendation" rows="1" placeholder="Recommendation…">${escapeHtml(recommendation)}</textarea>
+        <button type="button" class="icon-btn sm" title="Remove entry"><i class="fa-solid fa-xmark"></i></button>`;
+      row.querySelector("button").addEventListener("click", () => {
+        row.remove();
+        refreshActionRowButtons();
+      });
+      return row;
+    }
+
+    function setActionRows(containerId, entries) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      container.innerHTML = "";
+      (entries.length ? entries : [{}]).forEach((e) =>
+        container.appendChild(createActionRow(e.action, e.recommendation))
+      );
+      refreshActionRowButtons();
+    }
+
+    // Reads the entry-table for a container and joins one column's values
+    // with newlines (null when empty)- this is what's stored on the session.
+    function joinedActionColumn(containerId, selector) {
+      const lines = [...document.getElementById(containerId).querySelectorAll(selector)]
+        .map((t) => t.value.trim())
+        .filter(Boolean);
+      return lines.length ? lines.join("\n") : null;
+    }
+
+    function refreshActionRowButtons() {
+      document.querySelectorAll("[data-add-row]").forEach((btn) => {
+        const container = document.getElementById(btn.dataset.addRow);
+        const count = container ? container.querySelectorAll(".action-row").length : 0;
+        btn.disabled = count >= ACTION_ROW_LIMIT;
+        btn.style.opacity = count >= ACTION_ROW_LIMIT ? 0.5 : "";
+      });
+    }
+
+    document.querySelectorAll("[data-add-row]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const container = document.getElementById(btn.dataset.addRow);
+        if (!container || container.querySelectorAll(".action-row").length >= ACTION_ROW_LIMIT) return;
+        container.appendChild(createActionRow());
+        refreshActionRowButtons();
+      });
+    });
+
+    setActionRows("caseActionRows", []);
+    setActionRows("sessionActionRows", []);
 
     function formatDate(dateStr) {
       if (!dateStr) return "—";
@@ -676,6 +745,7 @@
 
     function openNewCaseModal() {
       document.getElementById("newCaseForm").reset();
+      setActionRows("caseActionRows", []);
       document.getElementById("newCaseModalOverlay").classList.add("show");
     }
 
@@ -695,9 +765,9 @@
       const studentId = Number(document.getElementById("caseStudentSelect").value);
       const nature = document.getElementById("caseNatureInput").value.trim();
       const details = document.getElementById("caseDetailsInput").value.trim();
-      const action = document.getElementById("caseActionInput").value.trim();
+      const action = joinedActionColumn("caseActionRows", ".action-row-action");
       const note = document.getElementById("caseNoteInput").value.trim();
-      const recommendation = document.getElementById("caseRecommendationInput").value.trim();
+      const recommendation = joinedActionColumn("caseActionRows", ".action-row-recommendation");
 
       const caseProofInput = document.getElementById("caseProofInput");
       const caseProofCameraInput = document.getElementById("caseProofCameraInput");
@@ -864,9 +934,9 @@
         <div class="case-timeline-item">
           <div class="case-timeline-date">${formatDate(s.session_date || s.created_at)}${s.updated_by ? ` <span class="timeline-author">· logged by ${escapeHtml(counselorNameById[s.updated_by] || "—")}</span>` : ""}</div>
           ${s.details ? `<div class="case-timeline-row"><strong>Details of the Case:</strong> ${escapeHtml(s.details)}</div>` : ""}
-          ${s.action_taken ? `<div class="case-timeline-row"><strong>Action:</strong> ${escapeHtml(s.action_taken)}</div>` : ""}
+          ${s.action_taken ? `<div class="case-timeline-row"><strong>Action:</strong> <span style="white-space:pre-wrap;">${escapeHtml(s.action_taken)}</span></div>` : ""}
           ${s.session_note ? `<div class="case-timeline-row"><strong>Note:</strong> ${escapeHtml(s.session_note)}</div>` : ""}
-          ${s.recommendation ? `<div class="case-timeline-row"><strong>Recommendation:</strong> ${escapeHtml(s.recommendation)}</div>` : ""}
+          ${s.recommendation ? `<div class="case-timeline-row"><strong>Recommendation:</strong> <span style="white-space:pre-wrap;">${escapeHtml(s.recommendation)}</span></div>` : ""}
           ${attachmentsHtml}
           ${signedHtml}
           ${!s.details && !s.action_taken && !s.session_note && !s.recommendation && !attachments.length && !signedDocs.length ? `<div class="case-timeline-row">Case opened.</div>` : ""}
@@ -1164,6 +1234,7 @@
       currentCaseId = caseId;
       renderCaseDetail(c);
       document.getElementById("addSessionForm").reset();
+      setActionRows("sessionActionRows", []);
       document.getElementById("addInterventionForm").reset();
       document.getElementById("caseDetailModalOverlay").classList.add("show");
     }
@@ -1430,9 +1501,9 @@
       if (!currentCaseId) return;
 
       const details = document.getElementById("sessionDetailsInput").value.trim();
-      const action = document.getElementById("sessionActionInput").value.trim();
+      const action = joinedActionColumn("sessionActionRows", ".action-row-action");
       const note = document.getElementById("sessionNoteInput").value.trim();
-      const recommendation = document.getElementById("sessionRecommendationInput").value.trim();
+      const recommendation = joinedActionColumn("sessionActionRows", ".action-row-recommendation");
       const proofInput = document.getElementById("sessionProofInput");
       const proofCameraInput = document.getElementById("sessionProofCameraInput");
       const signedInput = document.getElementById("sessionSignedInput");

@@ -233,6 +233,10 @@
       return div.innerHTML;
     }
 
+    function categoryLabel(a) {
+      return a && a.category === "event" ? "Event" : "Announcement";
+    }
+
     function counselorName(a) {
       return a.counselors
         ? `${a.counselors.first_name} ${a.counselors.last_name}`
@@ -243,7 +247,7 @@
       const { data, error } = await supabaseClient
         .from("announcements")
         .select(
-          "announcement_id, title, announcement_content, announcement_date, created_at, counselors(first_name, last_name)"
+          "announcement_id, title, announcement_content, announcement_date, created_at, category, counselors(first_name, last_name)"
         )
         .order("announcement_date", { ascending: false });
 
@@ -292,7 +296,15 @@
         cell.textContent = d;
 
         if (dateStr === today) cell.classList.add("today");
-        if (announcementsByDate[dateStr]) cell.classList.add("has-event");
+        if (announcementsByDate[dateStr]) {
+          cell.classList.add("has-event");
+          if (dateStr >= today) {
+            const badge = document.createElement("span");
+            badge.className = "cal-count";
+            badge.textContent = announcementsByDate[dateStr].length;
+            cell.appendChild(badge);
+          }
+        }
         if (dateStr === selectedDateStr) cell.classList.add("selected");
 
         cell.addEventListener("click", () => {
@@ -312,9 +324,12 @@
         (a) => a.announcement_date.startsWith(monthPrefix) && a.announcement_date >= today
       );
       const summaryLabel = document.getElementById("monthSummaryLabel");
-      summaryLabel.textContent = monthItems.length
-        ? `${monthItems.length} Upcoming Announcement${monthItems.length === 1 ? "" : "s"}`
-        : "No upcoming announcements this month";
+      const upcomingEvents = monthItems.filter((a) => a.category === "event").length;
+      const upcomingAnns = monthItems.length - upcomingEvents;
+      const summaryParts = [];
+      if (upcomingAnns) summaryParts.push(`${upcomingAnns} Upcoming Announcement${upcomingAnns === 1 ? "" : "s"}`);
+      if (upcomingEvents) summaryParts.push(`${upcomingEvents} Upcoming Event${upcomingEvents === 1 ? "" : "s"}`);
+      summaryLabel.textContent = summaryParts.join(" · ") || "No upcoming announcements this month";
     }
 
     function renderDayList(dateStr) {
@@ -351,7 +366,7 @@
         row.style.cursor = "pointer";
         row.innerHTML = `
           <div>
-            <h3>${escapeHtml(a.title)}</h3>
+            <h3>${escapeHtml(a.title)} <span class="ann-cat${a.category === "event" ? " event" : ""}">${escapeHtml(categoryLabel(a))}</span></h3>
             <p>${escapeHtml(a.announcement_content)}</p>
             <small>Posted by ${escapeHtml(posted)}</small>
           </div>
@@ -364,7 +379,7 @@
     function openAnnouncementModal(a) {
       document.getElementById("modalTitle").textContent = a.title;
       document.getElementById("modalBody").innerHTML = `
-        <p class="modal-meta">${formatLong(a.announcement_date)} · Posted by ${escapeHtml(counselorName(a))}</p>
+        <p class="modal-meta"><span class="ann-cat${a.category === "event" ? " event" : ""}">${escapeHtml(categoryLabel(a))}</span> ${formatLong(a.announcement_date)} · Posted by ${escapeHtml(counselorName(a))}</p>
         <p class="modal-content-text">${escapeHtml(a.announcement_content)}</p>
       `;
       document.getElementById("announcementModalOverlay").classList.add("show");
@@ -384,7 +399,7 @@
         .map(
           (a) => `
         <div class="modal-day-item">
-          <h4>${escapeHtml(a.title)}</h4>
+          <h4>${escapeHtml(a.title)} <span class="ann-cat${a.category === "event" ? " event" : ""}">${escapeHtml(categoryLabel(a))}</span></h4>
           <p class="modal-meta">Posted by ${escapeHtml(counselorName(a))}</p>
           <p class="modal-content-text">${escapeHtml(a.announcement_content)}</p>
         </div>

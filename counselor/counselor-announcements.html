@@ -174,6 +174,7 @@
 
                 <div class="CalendarLegend">
                     <span><i class="legend-dot event"></i> Has announcement</span>
+                    <span class="month-summary" id="monthSummaryLabel"></span>
                 </div>
 
                 <button type="button" class="btn btn-outline btn-block" id="todayBtn" style="margin-top:14px;">
@@ -184,6 +185,7 @@
             <div>
                 <div class="CalendarFilterBar">
                     <span class="filter-label" id="selectedDateLabel">Today's Announcements</span>
+                    <span class="filter-count" id="selectedDayCount"></span>
                     <button type="button" class="icon-btn primary" id="addForSelectedDateBtn" title="Add announcement for this day">
                         <i class="fa-solid fa-plus"></i>
                     </button>
@@ -272,13 +274,17 @@
       return div.innerHTML;
     }
 
+    function categoryLabel(a) {
+      return a && a.category === "event" ? "Event" : "Announcement";
+    }
+
     
 
     async function loadAnnouncements() {
       const { data, error } = await supabaseClient
         .from("announcements")
         .select(
-          "announcement_id, title, announcement_content, announcement_date, counselors(first_name, last_name)"      
+          "announcement_id, title, announcement_content, announcement_date, category, counselors(first_name, last_name)"      
           )
         .order("announcement_date", { ascending: false });
 
@@ -327,7 +333,15 @@
         cell.textContent = d;
 
         if (dateStr === today) cell.classList.add("today");
-        if (announcementsByDate[dateStr]) cell.classList.add("has-event");
+        if (announcementsByDate[dateStr]) {
+          cell.classList.add("has-event");
+          if (dateStr >= today) {
+            const badge = document.createElement("span");
+            badge.className = "cal-count";
+            badge.textContent = announcementsByDate[dateStr].length;
+            cell.appendChild(badge);
+          }
+        }
         if (dateStr === selectedDateStr) cell.classList.add("selected");
 
         cell.addEventListener("click", () => {
@@ -341,6 +355,18 @@
 
         grid.appendChild(cell);
       }
+
+      const monthPrefix = `${viewYear}-${pad(viewMonth + 1)}`;
+      const monthItems = allAnnouncements.filter(
+        (a) => a.announcement_date.startsWith(monthPrefix) && a.announcement_date >= today
+      );
+      const summaryLabel = document.getElementById("monthSummaryLabel");
+      const upcomingEvents = monthItems.filter((a) => a.category === "event").length;
+      const upcomingAnns = monthItems.length - upcomingEvents;
+      const summaryParts = [];
+      if (upcomingAnns) summaryParts.push(`${upcomingAnns} Upcoming Announcement${upcomingAnns === 1 ? "" : "s"}`);
+      if (upcomingEvents) summaryParts.push(`${upcomingEvents} Upcoming Event${upcomingEvents === 1 ? "" : "s"}`);
+      summaryLabel.textContent = summaryParts.join(" · ") || "No upcoming announcements this month";
     }
 
     function renderDayList(dateStr) {
@@ -352,6 +378,11 @@
         dateStr === todayStr()
           ? `Today's Announcements — ${formatLong(dateStr)}`
           : formatLong(dateStr);
+
+      const countBadge = document.getElementById("selectedDayCount");
+      countBadge.textContent = items.length
+        ? `${items.length} announcement${items.length === 1 ? "" : "s"}`
+        : "";
 
       if (items.length === 0) {
         list.innerHTML = `<div class="empty-state">No announcements for this day. Click the + above to add one.</div>`;
@@ -368,7 +399,7 @@
         row.className = "staff-list-item";
         row.innerHTML = `
           <div>
-<h3>${escapeHtml(a.title)}</h3>
+<h3>${escapeHtml(a.title)} <span class="ann-cat${a.category === "event" ? " event" : ""}">${escapeHtml(categoryLabel(a))}</span></h3>
             <p>${escapeHtml(a.announcement_content)}</p>
             <small>Posted by ${escapeHtml(posted)}</small>
           </div>
@@ -393,6 +424,7 @@
         ? "Edit Announcement"
         : "New Announcement";
       document.getElementById("titleInput").value = announcement ? announcement.title : "";
+      document.getElementById("categoryInput").value = announcement ? announcement.category || "announcement" : "announcement";
       document.getElementById("dateInput").value = announcement ? announcement.announcement_date : selectedDateStr;
       document.getElementById("contentInput").value = announcement ? announcement.announcement_content : "";
       document.getElementById("formModalOverlay").classList.add("show");
@@ -446,6 +478,7 @@
 
       const payload = {
         title: document.getElementById("titleInput").value.trim(),
+        category: document.getElementById("categoryInput").value,
         announcement_content: document.getElementById("contentInput").value.trim(),
         announcement_date: document.getElementById("dateInput").value,
       };

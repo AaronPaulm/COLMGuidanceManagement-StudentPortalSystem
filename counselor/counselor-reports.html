@@ -204,13 +204,8 @@
             <select id="reportSchoolYearSelect" class="table-search" style="width:auto;">
                 <option value="">All time</option>
             </select>
-            <select id="reportSortSelect" class="table-search" style="width:auto;">
-                <option value="date-desc">Date (newest first)</option>
-                <option value="date-asc">Date (oldest first)</option>
-                <option value="student">Student name</option>
-            </select>
         </div>
-        <span class="hint" style="display:block; margin-bottom:16px;">School Year and Sort by apply to Incident Reports and Case Notes when generated. Leave school year on "All time" for no date filtering.</span>
+        <span class="hint" style="display:block; margin-bottom:16px;">School Year applies to Incident Reports and Case Notes when generated. Leave school year on "All time" for no date filtering.</span>
 
         <div class="report-grid">
             <div class="report-card">
@@ -653,7 +648,7 @@
 
     // Opens a clean, print-styled page in a new tab. No PDF library needed —
     // the counselor uses the browser's own Print -> Save as PDF.
-    function openPrintableReport(title, columns, rows) {
+    function openPrintableReport(title, columns, rows, sortable = false) {
       const win = window.open("", "_blank");
       if (!win) {
         showToast("Please allow pop-ups to generate this report.", "error");
@@ -664,6 +659,19 @@
         ? rows.map((r) => `<tr>${columns.map((c) => `<td>${escapeHtml(r[c.key] ?? "—")}</td>`).join("")}</tr>`).join("")
         : `<tr><td colspan="${columns.length}" style="text-align:center; color:#9ca3af; padding:24px;">No records found.</td></tr>`;
 
+      // For sortable previews (incidents / case notes) we ship the rows to
+      // the window with their cells pre-escaped so the sort control can
+      // re-render the body without re-querying the database.
+      const sortPayload = sortable
+        ? JSON.stringify(
+            rows.map((r) => ({
+              html: columns.map((c) => `<td>${escapeHtml(r[c.key] ?? "—")}</td>`).join(""),
+              _sortDate: r._sortDate ?? 0,
+              student: r.student ?? "",
+            }))
+          )
+        : "[]";
+
       win.document.write(`
         <!DOCTYPE html>
         <html>
@@ -673,13 +681,15 @@
         <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
           <style>
             html { background:#eef1f5; margin:0; padding:0; }
-            body { font-family: Arial, sans-serif; color:#111827; width:8.5in; min-height:11in; margin:24px auto; box-sizing:border-box; position:relative; background:#fff; box-shadow:0 2px 18px rgba(0,0,0,.28); padding:140px 40px 130px; }
+            body { font-family: Arial, sans-serif; color:#111827; width:8.5in; min-height:11in; margin:24px auto; box-sizing:border-box; position:relative; background:#fff; box-shadow:0 2px 18px rgba(0,0,0,.28); padding:165px 40px 130px; }
             .print-school-header, .print-school-footer { background:#fff; }
             .print-school-header img, .print-school-footer img { width:100%; height:auto; display:block; }
             .print-school-header { position:absolute; top:0; left:0; right:0; }
             .print-school-footer { position:absolute; bottom:0; left:0; right:0; }
             h1 { font-size:20px; margin:0 0 4px; }
             .meta { color:#6b7280; font-size:12px; margin-bottom:20px; }
+            .report-sort { margin-bottom:14px; font-size:12px; color:#6b7280; display:flex; align-items:center; gap:8px; }
+            .report-sort select { padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:12px; }
             table { width:100%; border-collapse:collapse; }
             th, td { text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; font-size:12.5px; }
             th { background:#f9fafb; text-transform:uppercase; font-size:10.5px; letter-spacing:.03em; color:#6b7280; }
@@ -707,6 +717,7 @@
               .print-letterhead > tbody { display:table-row-group; }
               .print-letterhead > tbody > tr { display:table-row; }
               .print-letterhead > tbody > tr > td { display:table-cell; vertical-align:top; padding:4px 40px 10px; border:none; font-size:13px; }
+              .report-sort { display:none; }
             }
           </style>
         </head>
@@ -720,14 +731,33 @@
                 <td>
                   <h1>${escapeHtml(title)}</h1>
                   <div class="meta">Generated ${new Date().toLocaleString("en-US")} · ${rows.length} record${rows.length === 1 ? "" : "s"}</div>
+                  ${sortable ? `
+                  <div class="report-sort">
+                    Sort by:
+                    <select onchange="reSort(this.value)">
+                      <option value="date-desc">Date (newest first)</option>
+                      <option value="date-asc">Date (oldest first)</option>
+                      <option value="student">Student name</option>
+                    </select>
+                  </div>` : ""}
                   <table>
                     <thead><tr>${columns.map((c) => `<th>${escapeHtml(c.label)}</th>`).join("")}</tr></thead>
-                    <tbody>${tableRows}</tbody>
+                    <tbody id="printReportBody">${tableRows}</tbody>
                   </table>
                 </td>
               </tr>
             </tbody>
           </table>
+          ${sortable ? `
+          <script>
+            var ROWS = ${sortPayload};
+            function renderRows(){ document.getElementById('printReportBody').innerHTML = ROWS.map(function(r){ return '<tr>'+r.html+'</tr>'; }).join(''); }
+            function reSort(mode){
+              if (mode === 'student') { ROWS.sort(function(a,b){ return String(a.student||'').localeCompare(String(b.student||'')); }); }
+              else { var asc = mode === 'date-asc'; ROWS.sort(function(a,b){ return asc ? a._sortDate - b._sortDate : b._sortDate - a._sortDate; }); }
+              renderRows();
+            }
+          <\/script>` : ""}
       `);
       // The closing body/html tags are deliberately left out above. A dev-server
       // auto-reload tool (e.g. VS Code Live Server) does a naive text search
@@ -760,29 +790,17 @@
       return { from, toEndOfDay: `${to}T23:59:59`, to };
     }
 
-    // The "Sort by" dropdown applies when a report is generated, so the
-    // printed document itself stays a plain report. Incidents and case notes
-    // both carry _sortDate (ms epoch) and student name, so one sorter covers
-    // both generators.
-    function getReportSort() {
-      return document.getElementById("reportSortSelect").value;
-    }
-
+    // Generated reports default to newest-first by date; re-sorting happens
+    // inside the generated preview window (the "Sort by" dropdown there).
+    // Incidents and case notes both carry _sortDate (ms epoch) and student
+    // name, so one sorter covers both generators.
     function sortReportRows(rows) {
-      const sort = getReportSort();
       const sorted = [...rows];
 
-      if (sort === "student") {
-        return sorted.sort((a, b) =>
-          String(a.student || "").localeCompare(String(b.student || ""))
-        );
-      }
-
-      const asc = sort === "date-asc";
       return sorted.sort((a, b) => {
         const da = a._sortDate || 0;
         const db = b._sortDate || 0;
-        return asc ? da - db : db - da;
+        return db - da;
       });
     }
 
@@ -851,7 +869,8 @@
           { key: "status", label: "Status" },
           { key: "date", label: "Date Opened" },
         ],
-        rows
+        rows,
+        true
       );
     }
 
@@ -911,7 +930,8 @@
           { key: "note", label: "Session Note" },
           { key: "recommendation", label: "Recommendation" },
         ],
-        rows
+        rows,
+        true
       );
     }
 
@@ -1142,7 +1162,7 @@
             .print-school-header img, .print-school-footer img { width:100%; height:auto; display:block; }
             .print-school-header { position:absolute; top:0; left:0; right:0; }
             .print-school-footer { position:absolute; bottom:0; left:0; right:0; }
-            h1 { font-size:20px; text-align:center; text-transform:uppercase; letter-spacing:.05em; margin:0 0 6px; }
+            h1 { font-size:17px; text-align:center; text-transform:uppercase; letter-spacing:.05em; margin:0 0 4px; }
             .row { display:flex; align-items:flex-end; gap:10px; font-size:13px; margin-bottom:15px; }
             .row label { white-space:nowrap; font-weight:600; }
             .fill { flex:1; min-height:18px; border-bottom:1px solid #111827; padding:0 2px; }
@@ -1734,8 +1754,20 @@
 
       document.getElementById("intakeDetailsInput").value =
         session.details || session.session_note || (theCase ? theCase.nature_of_incident : "");
-      document.getElementById("intakeAction1").value = session.action_taken || "";
-      document.getElementById("intakeRecommendation1").value = session.recommendation || "";
+
+      // Action Taken / Recommendation were entered in the case as an up-to-3
+      // entry table, stored newline-separated — split them back into the
+      // intake sheet's numbered 1-3 slots.
+      const splitIntoSlots = (idPrefix, value) => {
+        const lines = (value || "").split("\n").map((l) => l.trim()).filter(Boolean);
+        for (let i = 1; i <= 3; i++) {
+          const slot = document.getElementById(`${idPrefix}${i}`);
+          if (slot) slot.value = lines[i - 1] || "";
+        }
+      };
+      splitIntoSlots("intakeAction", session.action_taken || "");
+      splitIntoSlots("intakeRecommendation", session.recommendation || "");
+
       hint.classList.add("show");
     }
 
@@ -1798,7 +1830,7 @@
             .print-school-header img, .print-school-footer img { width:100%; height:auto; display:block; }
             .print-school-header { position:absolute; top:0; left:0; right:0; }
             .print-school-footer { position:absolute; bottom:0; left:0; right:0; }
-            h1 { font-size:16px; text-align:center; text-transform:uppercase; letter-spacing:.03em; margin:0 0 8px; }
+            h1 { font-size:14px; text-align:center; text-transform:uppercase; letter-spacing:.03em; margin:0 0 4px; }
             h2 { font-size:13px; text-transform:uppercase; border-bottom:1px solid #111827; margin:13px 0 6px; padding-bottom:2px; }
             .row { display:flex; align-items:flex-end; gap:10px; font-size:13px; margin-bottom:13px; }
             .row label { white-space:nowrap; font-weight:600; }
