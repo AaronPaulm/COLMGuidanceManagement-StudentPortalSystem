@@ -453,17 +453,37 @@ function hideContentLoading() {
   if (overlay) overlay.classList.remove("show");
 }
 
-// Any sidebar or mobile-menu link that navigates to another in-portal
-// page gets the content-only overlay. Skipped for "#" logout anchors,
-// javascript: links, and modified clicks (new tab/window), which don't
-// navigate this page.
+// Sidebar/mobile navigation goes to a real HTML page (MPA), so a click
+// normally causes a full page load. To keep that transition feeling
+// instant, the destination document is prefetched as soon as the cursor
+// lands on a nav link (or the link is focused/tapped): the click then
+// typically resolves from the browser's cache instead of the network.
+// Skipped for "#" logout anchors, javascript: links, and off-domain
+// targets. Each page shows its own content-scoped loader while it loads,
+// so no pre-navigation spinner on the outgoing page is needed.
+const prefetchedPages = new Set();
+function prefetchPage(href) {
+  if (!href || href === "#" || href.startsWith("javascript:")) return;
+  let url;
+  try {
+    url = new URL(href, location.href);
+  } catch {
+    return;
+  }
+  if (url.origin !== location.origin || prefetchedPages.has(url.href)) return;
+  prefetchedPages.add(url.href);
+  const link = document.createElement("link");
+  link.rel = "prefetch";
+  link.href = url.href;
+  document.head.appendChild(link);
+}
+
 document.querySelectorAll(".sidebar nav a[href], .mobile-menu a[href]").forEach((link) => {
   const href = link.getAttribute("href") || "";
   if (href === "#" || href.startsWith("javascript:")) return;
-  link.addEventListener("click", (e) => {
-    if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
-    showContentLoading();
-  });
+  link.addEventListener("mouseenter", () => prefetchPage(href), { passive: true });
+  link.addEventListener("focus", () => prefetchPage(href), { passive: true });
+  link.addEventListener("touchstart", () => prefetchPage(href), { passive: true });
 });
 
 function highlightActiveNav() {
@@ -676,6 +696,18 @@ function openDocFile(signedUrl, fileName) {
 // pageshow fires on every restore (before the browser repaints the cached
 // snapshot), so cover the page synchronously first, then re-check the
 // session and kick out to the student sign-in when it's gone.
+// Leaving the page (nav click, close, forward/back) — strip the transient
+// overlay elements from the DOM at the last moment. If the browser saves this
+// page into the back/forward cache, the snapshot would otherwise still contain
+// whatever spinner was up, and restoring it would show a dead loading overlay.
+// The destination page renders its own fresh overlay anyway.
+window.addEventListener("pagehide", () => {
+  ["contentLoadingOverlay", "pageLoadOverlay"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  });
+});
+
 window.addEventListener("pageshow", (e) => {
   if (!e.persisted) return;
 
