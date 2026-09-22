@@ -678,6 +678,15 @@ function openDocFile(signedUrl, fileName) {
 // session and kick out to the student sign-in when it's gone.
 window.addEventListener("pageshow", (e) => {
   if (!e.persisted) return;
+
+  // A page pulled from the back/forward cache keeps the exact DOM it had
+  // when it was paused — including a load overlay if one was still up when
+  // the user navigated away (covers back/forward from another page and the
+  // content overlay added by the nav-click handler). Clear them so the
+  // restored page is never stuck underneath one.
+  hidePageLoadOverlay();
+  hideContentLoading();
+
   scShowAuthSplash();
   supabaseClient.auth.getSession().then(({ data: { session } }) => {
     if (session) {

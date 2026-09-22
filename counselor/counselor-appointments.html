@@ -1342,18 +1342,14 @@
             link: "student-appointments.html",
           });
 
-          supabaseClient
-            .functions.invoke("notify-student-email", {
-              body: {
-                recipient_user_id: student.user_id,
-                subject: "You have an appointment at the guidance office",
-                concern: reason,
-                note: null,
-                details: `${formatDate(date)} at ${formatTime(time)}`,
-                portal_url: location.origin + "/student/student-appointments.html",
-              },
-            })
-            .catch((err) => console.warn("notify-student-email failed:", err?.message ?? err));
+          invokeEdge("notify-student-email", {
+            recipient_user_id: student.user_id,
+            subject: "You have an appointment at the guidance office",
+            concern: reason,
+            note: null,
+            details: `${formatDate(date)} at ${formatTime(time)}`,
+            portal_url: location.origin + "/student/student-appointments.html",
+          }).catch((err) => console.warn("notify-student-email failed:", err?.message ?? err));
         }
       }
 

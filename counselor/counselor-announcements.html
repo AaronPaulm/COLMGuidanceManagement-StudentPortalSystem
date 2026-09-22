@@ -550,15 +550,11 @@ renderCalendar();
       // truth, emailing just adds delivery outside the portal. Failures are
       // logged so a silent no-email is never hidden again.
       if (announcementId) {
-        supabaseClient
-          .functions.invoke("notify-announcement-email", {
-            body: {
-              announcement_id: announcementId,
-              is_update: !isNew,
-              portal_url: `${location.origin}/student/student-announcements.html?date=${payload.announcement_date}${announcementId ? `&id=${announcementId}` : ""}`,
-            },
-          })
-          .catch((err) => console.warn("notify-announcement-email failed:", err?.message ?? err));
+        invokeEdge("notify-announcement-email", {
+          announcement_id: announcementId,
+          is_update: !isNew,
+          portal_url: `${location.origin}/student/student-announcements.html?date=${payload.announcement_date}${announcementId ? `&id=${announcementId}` : ""}`,
+        }).catch((err) => console.warn("notify-announcement-email failed:", err?.message ?? err));
       }
 
       const [y, m, d] = payload.announcement_date.split("-").map(Number);

@@ -678,16 +678,19 @@ function setUserAvatar(firstName, lastName) {
   });
 }
 
-// Force the current user's access token onto the Edge Function client
-// before any function call. supabase-js can otherwise fall back to the
-// anon key as the Authorization header, which edge functions reject
-// (auth.getUser() returns 401 "Not authenticated"). Returns true when a
-// fresh token is attached, false when the user should be sent to login.
+// Returns the current user's access token, refreshing it first when it's
+// within ~60s of expiry, or null (with a redirect to login) when there's no
+// usable session. The Authorization header on every function call is exactly
+// this token, passed on the invoke itself (see invokeEdge): supabaseClient
+// .functions is a getter that builds a fresh FunctionsClient on EVERY property
+// access, so functions.setAuth() only mutates a throwaway instance and never
+// reaches the request underneath — and the real header must not be left to
+// chance.
 async function attachSession() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) {
     window.location.href = "../personnel-login.html?reason=required";
-    return false;
+    return null;
   }
 
   let accessToken = session.access_token;
@@ -695,13 +698,12 @@ async function attachSession() {
     const { data: refreshed, error } = await supabaseClient.auth.refreshSession();
     if (error || !refreshed?.session) {
       window.location.href = "../personnel-login.html?reason=timeout";
-      return false;
+      return null;
     }
     accessToken = refreshed.session.access_token;
   }
 
-  supabaseClient.functions.setAuth(accessToken);
-  return true;
+  return accessToken;
 }
 
 // Invokes an Edge Function with a guaranteed-fresh access token. attachSession
@@ -712,17 +714,30 @@ async function attachSession() {
 // shaped exactly like supabaseClient.functions.invoke — error.context.status and
 // error.context.data stay available for the existing toasts.
 async function invokeEdge(fnName, body = {}, options = {}) {
-  if (!(await attachSession())) return { data: null, error: new Error("Not authenticated") };
+  const token = await attachSession();
+  if (!token) return { data: null, error: new Error("Not authenticated") };
 
-  const first = await supabaseClient.functions.invoke(fnName, { body, ...options });
+  return invokeEdgeWithToken(fnName, body, options, token);
+}
+
+// Shared by invokeEdge for the initial call and its 401 retry. The token rides
+// in the request headers (invoke merges options.headers into the outgoing
+// request, and supabase-js only auto-fills Authorization when one isn't already
+// present), so the user's session token always reaches the gateway — the
+// anon-key fallback can never be used and the FunctionsClient getter quirk
+// above can't strip it.
+async function invokeEdgeWithToken(fnName, body, options, token) {
+  const headers = Object.assign({}, options.headers, { Authorization: `Bearer ${token}` });
+
+  const first = await supabaseClient.functions.invoke(fnName, { body, ...options, headers });
   if (!first.error || first.error.context?.status !== 401) return first;
 
   // The token was rejected — force a fresh one and try once more.
   const { data: refreshed, error: refreshError } = await supabaseClient.auth.refreshSession();
   if (refreshError || !refreshed?.session) return first;
 
-  supabaseClient.functions.setAuth(refreshed.session.access_token);
-  return supabaseClient.functions.invoke(fnName, { body, ...options });
+  const retryHeaders = Object.assign({}, options.headers, { Authorization: `Bearer ${refreshed.session.access_token}` });
+  return supabaseClient.functions.invoke(fnName, { body, ...options, headers: retryHeaders });
 }
 
 async function requireCounselorAuth() {
@@ -948,6 +963,16 @@ function openDocFile(signedUrl, fileName) {
 // session and kick out to the personnel sign-in when it's gone.
 window.addEventListener("pageshow", (e) => {
   if (!e.persisted) return;
+
+  // A page pulled from the back/forward cache keeps the exact DOM it had
+  // when it was paused — including a load/blocking overlay if one was still
+  // up when the user navigated away (covers back/forward from another page
+  // and the content overlay added by the nav-click handler). Clear them so
+  // the restored page is never stuck underneath one.
+  hidePageLoadOverlay();
+  hideBlockingLoading();
+  hideContentLoading();
+
   ccShowAuthSplash();
   supabaseClient.auth.getSession().then(({ data: { session } }) => {
     if (session) {
