@@ -68,32 +68,48 @@
         return;
       }
 
-      // Already logged in? Skip straight to the right place instead of
-      // showing the form again. Skip when a ?reason= is present so the
-      // intentional message (timeout, deactivated) actually shows.
-      if (!reason) {
+      // Already logged in (e.g. pressed Back, or opened a new tab while
+      // signed in elsewhere)? Skip straight to the right place instead of
+      // showing the form again. Skips when a ?reason= is present — that
+      // means something intentionally sent the user back here (timeout,
+      // forbidden, archived) and the message must actually show.
+      // location.replace drops this page out of history, so a later Back
+      // press can't return to the login form. Also used by the pageshow
+      // handler below for back/forward-cache restores, where scripts don't
+      // re-run and the normal bounce would never happen.
+      async function bounceIfSignedIn() {
+        if (reason) return false;
         const {
           data: { session },
         } = await supabaseClient.auth.getSession();
 
-        if (session) {
-          const { data: userRow } = await supabaseClient
-            .from("users")
-            .select("role")
-            .eq("user_id", session.user.id)
-            .maybeSingle();
+        if (!session) return false;
 
-          const role = userRow?.role?.toLowerCase();
-          if (role === "counselor") {
-            window.location.href = "counselor/counselor-dashboard.html";
-            return;
-          }
-          if (role === "student") {
-            window.location.href = "index.html";
-            return;
-          }
+        const { data: userRow } = await supabaseClient
+          .from("users")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+
+        const role = userRow?.role?.toLowerCase();
+        if (role === "counselor") {
+          window.location.replace("counselor/counselor-dashboard.html");
+          return true;
         }
+        if (role === "student") {
+          window.location.replace("index.html");
+          return true;
+        }
+        return false;
       }
+
+      // A Back/Forward press can restore this page from the browser cache
+      // without re-running its scripts; kick a signed-in user forward again.
+      window.addEventListener("pageshow", (e) => {
+        if (e.persisted) bounceIfSignedIn();
+      });
+
+      if (await bounceIfSignedIn()) return;
 
       const notice = document.getElementById("sessionNotice");
 
@@ -154,7 +170,7 @@
             throw new Error("Invalid username or password.");
           }
 
-          window.location.href = "counselor/counselor-dashboard.html";
+          window.location.replace("counselor/counselor-dashboard.html");
         } catch (err) {
           // A banned auth account (set when an account is disabled) fails
           // right here at sign-in, before a session ever exists.

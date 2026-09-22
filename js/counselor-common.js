@@ -1,25 +1,3 @@
-// Auth splash helpers — see style.css .auth-splash. Shown immediately
-// (before first paint, since this script blocks parsing) so a portal
-// page never flashes on screen while the session is being checked,
-// like when a logged-out user presses Back into a cached page.
-let ccAuthSplashEl = null;
-function ccShowAuthSplash() {
-  if (ccAuthSplashEl) return;
-  const el = document.createElement("div");
-  el.className = "auth-splash";
-  el.innerHTML = '<div class="auth-splash-spinner"></div>';
-  el.setAttribute("aria-hidden", "true");
-  (document.body || document.documentElement).appendChild(el);
-  ccAuthSplashEl = el;
-}
-function ccHideAuthSplash() {
-  if (ccAuthSplashEl) {
-    ccAuthSplashEl.remove();
-    ccAuthSplashEl = null;
-  }
-}
-ccShowAuthSplash();
-
 function toggleMenu() {
   document.getElementById("mobileMenu").classList.toggle("show");
 }
@@ -711,8 +689,8 @@ async function attachSession() {
 // can STILL answer 401 with a token that PostgREST accepted a moment earlier
 // (rotation race, silently-expired JWT, clock skew...). On HTTP 401 this forces
 // one refreshSession and retries the call once. Callers receive { data, error }
-// shaped exactly like supabaseClient.functions.invoke — error.context.status and
-// error.context.data stay available for the existing toasts.
+// shaped exactly like supabaseClient.functions.invoke; see normalizeInvokeResult
+// for why the error is rewritten so the existing toasts can show the real cause.
 async function invokeEdge(fnName, body = {}, options = {}) {
   const token = await attachSession();
   if (!token) return { data: null, error: new Error("Not authenticated") };
@@ -729,15 +707,54 @@ async function invokeEdge(fnName, body = {}, options = {}) {
 async function invokeEdgeWithToken(fnName, body, options, token) {
   const headers = Object.assign({}, options.headers, { Authorization: `Bearer ${token}` });
 
-  const first = await supabaseClient.functions.invoke(fnName, { body, ...options, headers });
-  if (!first.error || first.error.context?.status !== 401) return first;
+  const first = await normalizeInvokeResult(
+    await supabaseClient.functions.invoke(fnName, { body, ...options, headers })
+  );
+  if (first.error?.status !== 401) return first;
 
   // The token was rejected — force a fresh one and try once more.
   const { data: refreshed, error: refreshError } = await supabaseClient.auth.refreshSession();
   if (refreshError || !refreshed?.session) return first;
 
   const retryHeaders = Object.assign({}, options.headers, { Authorization: `Bearer ${refreshed.session.access_token}` });
-  return supabaseClient.functions.invoke(fnName, { body, ...options, headers: retryHeaders });
+  return normalizeInvokeResult(
+    await supabaseClient.functions.invoke(fnName, { body, ...options, headers: retryHeaders })
+  );
+}
+
+// supabase-js v2 reports failed invocations as "Edge Function returned a non-2xx
+// status code" with error.context being a raw Response (in older builds a
+// { status, data } pair) — so the gateway's real code/message (e.g.
+// UNAUTHORIZED_INVALID_JWT_FORMAT) and the function's own { error } body were
+// hidden and call sites reading error.context.data always saw an empty detail.
+// Rewrite the error to carry that detail in both error.message and
+// error.context.data so the existing toasts show the actual cause.
+async function normalizeInvokeResult(result) {
+  if (!result.error) return result;
+
+  const ctx = result.error.context;
+  let status = typeof ctx?.status === "number" ? ctx.status : result.error.status;
+  if (typeof result.response?.status === "number") status = result.response.status;
+
+  let detail = "";
+  if (ctx && typeof ctx.json === "function") {
+    try {
+      const body = await ctx.json();
+      if (body && typeof body === "object") detail = body.message || body.error || body.code || "";
+    } catch {
+      // Body already consumed or not JSON — keep the generic message.
+    }
+  } else if (ctx?.data) {
+    detail = ctx.data.error || ctx.data.message || "";
+  }
+
+  const message = detail
+    ? `${detail}${typeof status === "number" ? ` (HTTP ${status})` : ""}`
+    : result.error.message;
+  const err = new Error(message);
+  err.status = status;
+  err.context = { status, data: { error: detail, message } };
+  return { data: null, error: err, response: result.response };
 }
 
 async function requireCounselorAuth() {
@@ -800,9 +817,6 @@ async function requireCounselorAuth() {
   if (initialsEl) sessionStorage.setItem("counselorInitials", initialsEl.textContent);
   sessionStorage.setItem("counselorName", fullName);
 
-  // Session confirmed — lift the auth splash before anything renders.
-  ccHideAuthSplash();
-
   initNotifications(session.user.id);
 
   return { session, counselor };
@@ -861,39 +875,6 @@ function hideBlockingLoading() {
   if (overlay) overlay.classList.add("hide");
   document.documentElement.style.overflow = "";
   document.body.style.overflow = "";
-}
-
-// Content-only "loading" overlay for tab navigation. When a sidebar /
-// mobile-nav link is clicked we switch to another page, so this gives
-// immediate feedback inside the main content area while the next page
-// loads — WITHOUT covering the sidebar/bottom-nav, which stay visible
-// and clickable. Deliberately different from showBlockingLoading():
-// that one is the full-site, dark, click-blocking overlay reserved for
-// mutating actions (reset password, imports, form assignment, etc.)
-// where navigation must be prevented while the write finishes.
-function showContentLoading(message) {
-  const target = document.querySelector("main.content");
-  if (!target) return;
-  let overlay = document.getElementById("contentLoadingOverlay");
-  if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.id = "contentLoadingOverlay";
-    overlay.className = "content-loading-overlay";
-    overlay.innerHTML =
-      '<div style="display:flex;flex-direction:column;align-items:center;gap:12px;">' +
-      '<div class="page-load-spinner"></div>' +
-      '<p id="contentLoadingMsg" style="font-weight:600;color:#374151;">Loading…</p>' +
-      "</div>";
-    target.prepend(overlay);
-  }
-  overlay.classList.add("show");
-  const msg = overlay.querySelector("#contentLoadingMsg");
-  if (msg && message) msg.textContent = message;
-}
-
-function hideContentLoading() {
-  const overlay = document.getElementById("contentLoadingOverlay");
-  if (overlay) overlay.classList.remove("show");
 }
 
 // Sidebar/mobile navigation goes to a real HTML page (MPA), so a click
@@ -975,42 +956,30 @@ function openDocFile(signedUrl, fileName) {
   window.open(signedUrl, "_blank");
 }
 
+// Leaving the page (nav click, close, forward/back) — strip any leftover
+// transient overlay element from the DOM at the last moment. If the browser
+// saves this page into the back/forward cache, a snapshot made by an older
+// version could still contain an injected spinner; removing it prevents a
+// dead loading overlay from appearing when the page is restored.
+window.addEventListener("pagehide", () => {
+  const el = document.getElementById("pageLoadOverlay") || document.getElementById("contentLoadingOverlay");
+  if (el) el.remove();
+});
+
 // A logged-out user pressing the browser Back button can be served the
 // portal page from the back/forward cache — scripts don't re-run, so the
 // normal auth guard never fires and account data would still be shown.
 // pageshow fires on every restore (before the browser repaints the cached
-// snapshot), so cover the page synchronously first, then re-check the
-// session and kick out to the personnel sign-in when it's gone.
-// Leaving the page (nav click, close, forward/back) — strip the transient
-// overlay elements from the DOM at the last moment. If the browser saves this
-// page into the back/forward cache, the snapshot would otherwise still contain
-// whatever spinner was up, and restoring it would show a dead loading overlay.
-// The destination page renders its own fresh overlay anyway.
-window.addEventListener("pagehide", () => {
-  ["contentLoadingOverlay", "pageLoadOverlay"].forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.remove();
-  });
-});
-
+// snapshot); if the session is gone, redirect to the personnel sign-in
+// immediately. Leftover overlays from a cached snapshot are cleared too.
 window.addEventListener("pageshow", (e) => {
   if (!e.persisted) return;
 
-  // A page pulled from the back/forward cache keeps the exact DOM it had
-  // when it was paused — including a load/blocking overlay if one was still
-  // up when the user navigated away (covers back/forward from another page
-  // and the content overlay added by the nav-click handler). Clear them so
-  // the restored page is never stuck underneath one.
   hidePageLoadOverlay();
   hideBlockingLoading();
-  hideContentLoading();
 
-  ccShowAuthSplash();
   supabaseClient.auth.getSession().then(({ data: { session } }) => {
-    if (session) {
-      ccHideAuthSplash();
-      return;
-    }
+    if (session) return;
     window.location.replace("../personnel-login.html?reason=required");
   });
 });

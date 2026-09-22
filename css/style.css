@@ -3142,30 +3142,6 @@ body.table-resizing * {
     animation: page-load-spin .7s linear infinite;
 }
 
-/* Auth splash — a full-screen cover shown from the moment the page's
-   common script runs until the session check resolves. It blocks the
-   brief flash of a portal page when a logged-out user presses the Back
-   button (bfcache restore, or a cached reload) before the redirect
-   kicks in: the dashboard is never seen, just the cover. */
-.auth-splash {
-    position: fixed;
-    inset: 0;
-    z-index: 2147483647;
-    background: #f3f4f6;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.auth-splash-spinner {
-    width: 44px;
-    height: 44px;
-    border: 4px solid #dbeafe;
-    border-top-color: #2563eb;
-    border-radius: 50%;
-    animation: page-load-spin .7s linear infinite;
-}
-
 /* Dark translucent variant of the page overlay used for slow
    account-status actions (activating/deactivating accounts): the UI
    stays visible behind it while clicks are blocked and the spinner runs. */

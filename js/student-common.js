@@ -1,25 +1,3 @@
-// Auth splash helpers — see style.css .auth-splash. Shown immediately
-// (before first paint, since this script blocks parsing) so a portal
-// page never flashes on screen while the session is being checked,
-// like when a logged-out user presses Back into a cached page.
-let scAuthSplashEl = null;
-function scShowAuthSplash() {
-  if (scAuthSplashEl) return;
-  const el = document.createElement("div");
-  el.className = "auth-splash";
-  el.innerHTML = '<div class="auth-splash-spinner"></div>';
-  el.setAttribute("aria-hidden", "true");
-  (document.body || document.documentElement).appendChild(el);
-  scAuthSplashEl = el;
-}
-function scHideAuthSplash() {
-  if (scAuthSplashEl) {
-    scAuthSplashEl.remove();
-    scAuthSplashEl = null;
-  }
-}
-scShowAuthSplash();
-
 function toggleMenu() {
   document.getElementById("mobileMenu").classList.toggle("show");
 }
@@ -422,37 +400,6 @@ function hidePageLoadOverlay() {
   setTimeout(() => overlay.remove(), 250);
 }
 
-// Content-only "loading" overlay for tab navigation (see also the
-// counselor-side helper). Shown inside main.content when a sidebar /
-// mobile-nav link is clicked so the student gets immediate feedback
-// while the next page loads — the sidebar and bottom nav stay visible
-// and clickable. Distinct from any full-site blocking overlay used for
-// mutating actions, which stays a separate concern.
-function showContentLoading(message) {
-  const target = document.querySelector("main.content");
-  if (!target) return;
-  let overlay = document.getElementById("contentLoadingOverlay");
-  if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.id = "contentLoadingOverlay";
-    overlay.className = "content-loading-overlay";
-    overlay.innerHTML =
-      '<div style="display:flex;flex-direction:column;align-items:center;gap:12px;">' +
-      '<div class="page-load-spinner"></div>' +
-      '<p id="contentLoadingMsg" style="font-weight:600;color:#374151;">Loading…</p>' +
-      "</div>";
-    target.prepend(overlay);
-  }
-  overlay.classList.add("show");
-  const msg = overlay.querySelector("#contentLoadingMsg");
-  if (msg && message) msg.textContent = message;
-}
-
-function hideContentLoading() {
-  const overlay = document.getElementById("contentLoadingOverlay");
-  if (overlay) overlay.classList.remove("show");
-}
-
 // Sidebar/mobile navigation goes to a real HTML page (MPA), so a click
 // normally causes a full page load. To keep that transition feeling
 // instant, the destination document is prefetched as soon as the cursor
@@ -590,9 +537,6 @@ async function requireStudentAuth() {
   if (initialsEl) sessionStorage.setItem("studentInitials", initialsEl.textContent);
   sessionStorage.setItem("studentName", fullName);
 
-  // Session confirmed — lift the auth splash before anything renders.
-  scHideAuthSplash();
-
   initNotifications(session.user.id);
 
   maybeShowEmailVerifyBanner(session.user.id);
@@ -690,41 +634,29 @@ function openDocFile(signedUrl, fileName) {
   window.open(signedUrl, "_blank");
 }
 
+// Leaving the page (nav click, close, forward/back) — strip any leftover
+// transient overlay element from the DOM at the last moment. If the browser
+// saves this page into the back/forward cache, a snapshot made by an older
+// version could still contain an injected spinner; removing it prevents a
+// dead loading overlay from appearing when the page is restored.
+window.addEventListener("pagehide", () => {
+  const el = document.getElementById("pageLoadOverlay") || document.getElementById("contentLoadingOverlay");
+  if (el) el.remove();
+});
+
 // A logged-out user pressing the browser Back button can be served the
 // portal page from the back/forward cache — scripts don't re-run, so the
 // normal auth guard never fires and account data would still be shown.
 // pageshow fires on every restore (before the browser repaints the cached
-// snapshot), so cover the page synchronously first, then re-check the
-// session and kick out to the student sign-in when it's gone.
-// Leaving the page (nav click, close, forward/back) — strip the transient
-// overlay elements from the DOM at the last moment. If the browser saves this
-// page into the back/forward cache, the snapshot would otherwise still contain
-// whatever spinner was up, and restoring it would show a dead loading overlay.
-// The destination page renders its own fresh overlay anyway.
-window.addEventListener("pagehide", () => {
-  ["contentLoadingOverlay", "pageLoadOverlay"].forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.remove();
-  });
-});
-
+// snapshot); if the session is gone, redirect to the student sign-in
+// immediately. Leftover overlays from a cached snapshot are cleared too.
 window.addEventListener("pageshow", (e) => {
   if (!e.persisted) return;
 
-  // A page pulled from the back/forward cache keeps the exact DOM it had
-  // when it was paused — including a load overlay if one was still up when
-  // the user navigated away (covers back/forward from another page and the
-  // content overlay added by the nav-click handler). Clear them so the
-  // restored page is never stuck underneath one.
   hidePageLoadOverlay();
-  hideContentLoading();
 
-  scShowAuthSplash();
   supabaseClient.auth.getSession().then(({ data: { session } }) => {
-    if (session) {
-      scHideAuthSplash();
-      return;
-    }
+    if (session) return;
     window.location.replace("../index.html?reason=required");
   });
 });

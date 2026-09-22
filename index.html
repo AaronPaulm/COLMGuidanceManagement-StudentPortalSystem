@@ -70,43 +70,57 @@
         return;
       }
 
-      // Already logged in (e.g. opened a new tab while signed in
-      // elsewhere)? Skip straight to the right dashboard instead of
-      // showing the login form again. Skip this when a ?reason= is
-      // present, though — that means something intentionally sent the
-      // user back here (timeout, forbidden, archived) and that message
-      // needs to actually be seen, not silently bounced past.
-      if (!reason) {
+      // Already logged in (e.g. pressed Back, or opened a new tab while
+      // signed in elsewhere)? Skip straight to the right dashboard instead
+      // of showing the login form again. Skips when a ?reason= is present —
+      // that means something intentionally sent the user back here
+      // (timeout, forbidden, archived) and the message must actually show.
+      // location.replace drops this page out of history, so a later Back
+      // press can't return to the login form. Also used by the pageshow
+      // handler below for back/forward-cache restores, where scripts don't
+      // re-run and the normal bounce would never happen.
+      async function bounceIfSignedIn() {
+        if (reason) return false;
         const {
           data: { session },
         } = await supabaseClient.auth.getSession();
 
-        if (session) {
-          const { data: userRow } = await supabaseClient
-            .from("users")
-            .select("role")
+        if (!session) return false;
+
+        const { data: userRow } = await supabaseClient
+          .from("users")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+
+        const role = userRow?.role?.toLowerCase();
+        if (role === "counselor") {
+          window.location.replace("counselor/counselor-dashboard.html");
+          return true;
+        }
+        if (role === "student") {
+          const { data: studentRow } = await supabaseClient
+            .from("students")
+            .select("email_verified")
             .eq("user_id", session.user.id)
             .maybeSingle();
-
-          const role = userRow?.role?.toLowerCase();
-          if (role === "counselor") {
-            window.location.href = "counselor/counselor-dashboard.html";
-            return;
-          }
-          if (role === "student") {
-            const { data: studentRow } = await supabaseClient
-              .from("students")
-              .select("email_verified")
-              .eq("user_id", session.user.id)
-              .maybeSingle();
-            window.location.href =
-              studentRow?.email_verified === false
-                ? "verify-email.html"
-                : "student/student-dashboard.html";
-            return;
-          }
+          window.location.replace(
+            studentRow?.email_verified === false
+              ? "verify-email.html"
+              : "student/student-dashboard.html"
+          );
+          return true;
         }
+        return false;
       }
+
+      // A Back/Forward press can restore this page from the browser cache
+      // without re-running its scripts; kick a signed-in user forward again.
+      window.addEventListener("pageshow", (e) => {
+        if (e.persisted) bounceIfSignedIn();
+      });
+
+      if (await bounceIfSignedIn()) return;
 
       const notice = document.getElementById("sessionNotice");
 
@@ -184,9 +198,9 @@
             .eq("user_id", data.user.id)
             .maybeSingle();
           if (studentRow?.email_verified === false) {
-            window.location.href = "verify-email.html";
+            window.location.replace("verify-email.html");
           } else {
-            window.location.href = "student/student-dashboard.html";
+            window.location.replace("student/student-dashboard.html");
           }
         } catch (err) {
           // A banned auth account (set when a counselor deactivates a student)
