@@ -3174,6 +3174,26 @@ body.table-resizing * {
     backdrop-filter: blur(2px);
 }
 
+/* Content-only loading overlay for tab navigation (see
+   showContentLoading in js/counselor-common.js). Positioned absolute so
+   it lives inside the scrollable main content column only — the fixed
+   sidebar (desktop) and fixed bottom nav (mobile) stay above and
+   clickable while the next page loads. Hidden by default; only shown
+   while a navigation click is in flight. */
+.content-loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+    z-index: 500;
+}
+
+.content-loading-overlay.show {
+    display: flex;
+}
+
 .blocking-overlay #actionLoadingMsg {
     color: #f9fafb;
 }

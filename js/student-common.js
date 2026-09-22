@@ -422,6 +422,50 @@ function hidePageLoadOverlay() {
   setTimeout(() => overlay.remove(), 250);
 }
 
+// Content-only "loading" overlay for tab navigation (see also the
+// counselor-side helper). Shown inside main.content when a sidebar /
+// mobile-nav link is clicked so the student gets immediate feedback
+// while the next page loads — the sidebar and bottom nav stay visible
+// and clickable. Distinct from any full-site blocking overlay used for
+// mutating actions, which stays a separate concern.
+function showContentLoading(message) {
+  const target = document.querySelector("main.content");
+  if (!target) return;
+  let overlay = document.getElementById("contentLoadingOverlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "contentLoadingOverlay";
+    overlay.className = "content-loading-overlay";
+    overlay.innerHTML =
+      '<div style="display:flex;flex-direction:column;align-items:center;gap:12px;">' +
+      '<div class="page-load-spinner"></div>' +
+      '<p id="contentLoadingMsg" style="font-weight:600;color:#374151;">Loading…</p>' +
+      "</div>";
+    target.prepend(overlay);
+  }
+  overlay.classList.add("show");
+  const msg = overlay.querySelector("#contentLoadingMsg");
+  if (msg && message) msg.textContent = message;
+}
+
+function hideContentLoading() {
+  const overlay = document.getElementById("contentLoadingOverlay");
+  if (overlay) overlay.classList.remove("show");
+}
+
+// Any sidebar or mobile-menu link that navigates to another in-portal
+// page gets the content-only overlay. Skipped for "#" logout anchors,
+// javascript: links, and modified clicks (new tab/window), which don't
+// navigate this page.
+document.querySelectorAll(".sidebar nav a[href], .mobile-menu a[href]").forEach((link) => {
+  const href = link.getAttribute("href") || "";
+  if (href === "#" || href.startsWith("javascript:")) return;
+  link.addEventListener("click", (e) => {
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    showContentLoading();
+  });
+});
+
 function highlightActiveNav() {
   const currentPage = window.location.pathname.split("/").pop();
   document.querySelectorAll(".sidebar nav a, .mobile-menu a").forEach((link) => {

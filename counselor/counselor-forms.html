@@ -1381,6 +1381,19 @@
         .filter(Boolean);
       if (notifRows.length) await supabaseClient.from("notifications").insert(notifRows);
 
+      // Best-effort email to each notified student with a verified personal
+      // email — the notify-student-email Edge Function skips unverified users
+      // and placeholder @colm.edu.ph addresses itself. Errors are logged, not
+      // shown: the in-app notification above is the source of truth.
+      notifRows.forEach((n) => {
+        invokeEdge("notify-student-email", {
+          recipient_user_id: n.recipient_user_id,
+          subject: n.title,
+          concern: assigningForm.form_name,
+          portal_url: location.origin + "/student/student-forms.html",
+        }).catch((err) => console.error("form-assign email failed:", err));
+      });
+
       const summaryParts = [];
       if (newStudentIds.length) summaryParts.push(`${newStudentIds.length} assigned`);
       if (reassignRows.length) summaryParts.push(`${reassignRows.length} re-opened for editing`);

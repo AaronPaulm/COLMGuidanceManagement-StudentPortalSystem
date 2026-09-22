@@ -182,10 +182,11 @@
             <div class="simple-table-wrap">
                 <table class="simple-table">
                     <thead>
-                        <tr><th>First Name</th><th>Middle Name</th><th>Last Name</th><th>Level</th><th>Section</th><th>Contact Number</th><th></th></tr>
+                        <tr><th>First Name</th><th>Middle Name</th><th>Last Name</th><th>Level</th><th>Section</th><th>Contact Number</th><th>Login Username</th><th></th></tr>
                     </thead>
                     <tbody id="importPreviewBody"></tbody>
                 </table>
+                <span class="hint" style="display:block; margin-top:6px;">Usernames follow the <code>colm_</code> format (e.g. <code>colm_juan.delacruz</code>) and temp passwords are <code>colmstudent</code> + 5 digits — generated automatically per student on import.</span>
             </div>
             <div class="pagination-bar" id="importPreviewPagination"></div>
             <div class="account-actions-row" style="margin-top:16px;">
@@ -416,6 +417,25 @@
       return [r.firstName, r.middleName, r.lastName].map((s) => (s || "").trim().toLowerCase()).join("|");
     }
 
+    // Mirrors the slug used by create-student-accounts for the colm_
+    // username so the preview can show the counselor exactly what login
+    // each row will get. Missing names can't produce a colm_ username —
+    // the row flag tells the counselor to fix the cell before importing.
+    function importSlug(str) {
+      return (str || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "");
+    }
+
+    function expectedImportUsername(r) {
+      const first = importSlug(r.firstName);
+      if (!first) return "";
+      const last = importSlug(r.lastName) || "student";
+      return `colm_${first}.${last}`;
+    }
+
     function renderImportPreview() {
       const section = document.getElementById("importPreviewSection");
       const body = document.getElementById("importPreviewBody");
@@ -423,7 +443,7 @@
       document.getElementById("importPreviewCount").textContent = parsedStudents.length;
 
       if (!parsedStudents.length) {
-        body.innerHTML = `<tr class="table-empty"><td colspan="7">No valid rows found — make sure the sheet has a First Name column.</td></tr>`;
+        body.innerHTML = `<tr class="table-empty"><td colspan="8">No valid rows found — make sure the sheet has a First Name column.</td></tr>`;
         pager.innerHTML = "";
       } else {
         importPreviewPage = renderPaginationControls(pager, {
@@ -449,6 +469,8 @@
         body.innerHTML = pageRows
           .map((r, i) => {
             const isDup = nameCounts[duplicateRowKey(r)] > 1;
+            const username = expectedImportUsername(r);
+            const usernameMissing = !username;
             return `
           <tr class="${isDup ? "row-warning" : ""}" data-idx="${start + i}">
             <td>${
@@ -465,6 +487,9 @@
                 ? "Use +63 9XX XXX XXXX or 09XXXXXXXXX"
                 : ""
             }">${escapeHtml(r.contactNumber) || "—"}</td>
+            <td class="${usernameMissing ? "cell-error" : ""}" title="${
+              usernameMissing ? "Missing first name — can't build the colm_ username. Fix the cell then re-upload." : ""
+            }">${usernameMissing ? "—" : `<code>${escapeHtml(username)}</code>`}</td>
             <td><button type="button" class="icon-btn sm danger" data-action="remove" title="Remove row"><i class="fa-solid fa-trash"></i></button></td>
           </tr>
         `;
@@ -636,6 +661,7 @@
           <td style="font-family:monospace;">${r.success ? escapeHtml(r.tempPassword) : "—"}</td>
           <td>
             <span class="badge badge-${r.success ? "approved" : "cancelled"}">${r.success ? "Created" : "Failed"}</span>
+            ${r.formatWarning ? `<div style="font-size:11px; color:#d97706; margin-top:2px;">Doesn't follow colm_/colmstudent format — check before printing.</div>` : ""}
             ${r.error ? `<div style="font-size:11px; color:#9ca3af; margin-top:2px;">${escapeHtml(r.error)}</div>` : ""}
           </td>
         </tr>
@@ -684,7 +710,28 @@
       }
 
       importResultsPage = 1;
-      renderImportResults(data.results || []);
+      const importResults = data.results || [];
+      // Safety check: flag any created account whose username/temp password
+      // doesn't follow the colm_ / colmstudent<digits> convention so the
+      // counselor notices before printing/reading credentials out.
+      let formatWarning = 0;
+      importResults.forEach((r) => {
+        r.formatWarning = false;
+        if (!r.success) return;
+        const userOk = String(r.username || "").startsWith("colm_");
+        const pwOk = /^colmstudent\d{5}$/.test(String(r.tempPassword || ""));
+        if (!userOk || !pwOk) {
+          r.formatWarning = true;
+          formatWarning++;
+        }
+      });
+      if (formatWarning) {
+        showToast(
+          `${formatWarning} account${formatWarning === 1 ? "" : "s"} didn't follow the colm_/colmstudent format — check the results.`,
+          "error"
+        );
+      }
+      renderImportResults(importResults);
       document.getElementById("importPreviewSection").style.display = "none";
       document.getElementById("xlsxFileName").style.display = "none";
       document.getElementById("xlsxFileInput").value = "";

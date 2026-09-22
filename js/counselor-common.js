@@ -848,6 +848,52 @@ function hideBlockingLoading() {
   document.body.style.overflow = "";
 }
 
+// Content-only "loading" overlay for tab navigation. When a sidebar /
+// mobile-nav link is clicked we switch to another page, so this gives
+// immediate feedback inside the main content area while the next page
+// loads — WITHOUT covering the sidebar/bottom-nav, which stay visible
+// and clickable. Deliberately different from showBlockingLoading():
+// that one is the full-site, dark, click-blocking overlay reserved for
+// mutating actions (reset password, imports, form assignment, etc.)
+// where navigation must be prevented while the write finishes.
+function showContentLoading(message) {
+  const target = document.querySelector("main.content");
+  if (!target) return;
+  let overlay = document.getElementById("contentLoadingOverlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "contentLoadingOverlay";
+    overlay.className = "content-loading-overlay";
+    overlay.innerHTML =
+      '<div style="display:flex;flex-direction:column;align-items:center;gap:12px;">' +
+      '<div class="page-load-spinner"></div>' +
+      '<p id="contentLoadingMsg" style="font-weight:600;color:#374151;">Loading…</p>' +
+      "</div>";
+    target.prepend(overlay);
+  }
+  overlay.classList.add("show");
+  const msg = overlay.querySelector("#contentLoadingMsg");
+  if (msg && message) msg.textContent = message;
+}
+
+function hideContentLoading() {
+  const overlay = document.getElementById("contentLoadingOverlay");
+  if (overlay) overlay.classList.remove("show");
+}
+
+// Any sidebar or mobile-menu link that navigates to another in-portal
+// page gets the content-only overlay. Skipped for "#" logout anchors,
+// javascript: links, and modified clicks (new tab/window), which don't
+// navigate this page.
+document.querySelectorAll(".sidebar nav a[href], .mobile-menu a[href]").forEach((link) => {
+  const href = link.getAttribute("href") || "";
+  if (href === "#" || href.startsWith("javascript:")) return;
+  link.addEventListener("click", (e) => {
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    showContentLoading();
+  });
+});
+
 function setUploadProgress(el, percent) {
   if (!el) return;
   const pct = Math.max(0, Math.min(100, Math.round(percent)));

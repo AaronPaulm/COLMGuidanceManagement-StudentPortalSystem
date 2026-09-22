@@ -329,7 +329,7 @@
                 <div class="builder-section-label" style="margin-top:20px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
                     <span>Student Information Sheet</span>
                     <span style="display:flex; align-items:center; gap:8px;">
-                        <button type="button" class="btn btn-outline btn-sm" id="sisDownloadBtn" style="display:none;"><i class="fa-solid fa-download"></i> Download</button>
+                        <button type="button" class="btn btn-outline btn-sm" id="sisDownloadBtn" style="display:none; padding:4px 10px; font-size:12px; gap:6px;"><i class="fa-solid fa-download"></i> Download</button>
                         <select id="detailSisYearSelect" class="table-search" style="width:auto; padding:4px 10px; font-size:12px;"></select>
                     </span>
                 </div>
@@ -385,11 +385,14 @@
                 </button>
             </div>
             <div class="modal-body">
-                <p>Their password has been reset to the school's standard student login password.</p>
+                <p>Their password has been reset to a unique temporary password (shown below). Give this to the student — it stops working once they set a new one.</p>
                 <div class="case-meta-grid" style="grid-template-columns:1fr;">
                     <div class="case-meta-item">
                         <label>Temporary Password</label>
-                        <div id="passwordResetValue" style="font-family: monospace; font-size:16px;">—</div>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <div id="passwordResetValue" style="font-family: monospace; font-size:16px; flex:1;">—</div>
+                            <button type="button" class="btn btn-outline" id="passwordResetCopyBtn"><i class="fa-regular fa-copy"></i> Copy</button>
+                        </div>
                     </div>
                 </div>
                 <div class="form-actions">
@@ -1481,9 +1484,11 @@
         return;
       }
 
+      showBlockingLoading("Resetting password…");
       const { data, error } = await invokeEdge("reset-student-password", {
         userId: currentDetailStudent.user_id,
       });
+      hideBlockingLoading();
 
       if (error || data?.error) {
         const status = error?.context?.status ? ` (HTTP ${error.context.status})` : "";
@@ -1504,6 +1509,28 @@
     });
     document.getElementById("passwordResetOkBtn").addEventListener("click", () => {
       document.getElementById("passwordResetModalOverlay").classList.remove("show");
+    });
+    document.getElementById("passwordResetCopyBtn").addEventListener("click", async () => {
+      const value = document.getElementById("passwordResetValue").textContent.trim();
+      if (!value || value === "—") return;
+      try {
+        await navigator.clipboard.writeText(value);
+        showToast("Temporary password copied.", "success");
+      } catch {
+        const ta = document.createElement("textarea");
+        ta.value = value;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand("copy");
+          showToast("Temporary password copied.", "success");
+        } catch {
+          showToast("Copy failed — select the password manually.", "error");
+        }
+        ta.remove();
+      }
     });
     document.getElementById("passwordResetModalOverlay").addEventListener("click", (e) => {
       if (e.target.id === "passwordResetModalOverlay") {

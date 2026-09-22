@@ -23,6 +23,41 @@
     .camera-preview-wrap video { width:100%; max-height:420px; display:block; }
     .capture-card-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 14px; align-items:start; }
     @media (max-width:640px){ .capture-card-grid { grid-template-columns:1fr; } }
+    .student-picker-list {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #fff;
+      margin-top: 8px;
+    }
+    .student-picker-list label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid #f0f2f5;
+      cursor: pointer;
+      font-weight: 400;
+    }
+    .student-picker-list label:last-child { border-bottom: none; }
+    .student-picker-list label:hover { background: #f9fafb; }
+    .student-picker-list input[type="radio"] {
+      width: auto;
+      accent-color: #2d6cdf;
+    }
+    .student-picker-meta {
+      margin-left: auto;
+      color: #6b7280;
+      font-size: 12px;
+      font-weight: 400;
+    }
+    .student-picker-empty {
+      padding: 14px;
+      text-align: center;
+      color: #9ca3af;
+      font-size: 13px;
+    }
   </style>
 </head>
 <body>
@@ -216,8 +251,10 @@
             <div class="modal-body">
                 <form id="newCaseForm">
                     <div class="form-field">
-                        <label for="caseStudentSelect">Student</label>
-                        <select id="caseStudentSelect" required></select>
+                        <label for="caseStudentSearch">Student</label>
+                        <input type="text" id="caseStudentSearch" class="table-search" placeholder="Search by name or student #..." style="width:100%;">
+                        <div class="student-picker-list" id="caseStudentList"></div>
+                        <span class="hint" id="caseStudentHint">No student selected.</span>
                     </div>
                     <div class="form-field" style="margin-top:14px;">
                         <label for="caseNatureInput">Nature of Incident</label>
@@ -572,11 +609,64 @@
       return c.students ? `${c.students.first_name} ${c.students.last_name}` : "Unknown student";
     }
 
+    let casePickerStudents = [];        // all active students, loaded once
+    let caseSelectedStudentId = null;   // chosen student_id for the new case
+
+    function caseStudentDisplayName(s) {
+      return [s.first_name, s.middle_name, s.last_name].filter(Boolean).join(" ");
+    }
+
+    function renderCaseStudentPicker() {
+      const box = document.getElementById("caseStudentList");
+      const hint = document.getElementById("caseStudentHint");
+
+      if (!casePickerStudents.length) {
+        box.innerHTML = `<div class="student-picker-empty">No active students on record.</div>`;
+        hint.textContent = "No student selected.";
+        return;
+      }
+
+      const query = document.getElementById("caseStudentSearch").value.trim().toLowerCase();
+      const matches = query
+        ? casePickerStudents.filter(
+            (s) =>
+              caseStudentDisplayName(s).toLowerCase().includes(query) ||
+              String(s.student_number || "").toLowerCase().includes(query)
+          )
+        : casePickerStudents;
+
+      if (!matches.length) {
+        box.innerHTML = `<div class="student-picker-empty">No students match "${escapeHtml(query)}".</div>`;
+        hint.textContent = "No student selected.";
+        return;
+      }
+
+      box.innerHTML = matches
+        .map(
+          (s) => `
+        <label>
+          <input type="radio" name="caseStudentPick" value="${s.student_id}" ${caseSelectedStudentId === s.student_id ? "checked" : ""}>
+          <span>${escapeHtml(caseStudentDisplayName(s))}</span>
+          ${s.student_number ? `<span class="student-picker-meta">#${escapeHtml(s.student_number)}</span>` : ""}
+        </label>`
+        )
+        .join("");
+
+      box.querySelectorAll('input[type="radio"]').forEach((r) => {
+        r.addEventListener("change", () => {
+          caseSelectedStudentId = Number(r.value);
+          const student = casePickerStudents.find((s) => s.student_id === caseSelectedStudentId);
+          hint.textContent = student
+            ? `Selected: ${caseStudentDisplayName(student)}${student.student_number ? ` (#${student.student_number})` : ""}`
+            : "No student selected.";
+        });
+      });
+    }
+
     async function loadStudentsForSelect() {
-      const select = document.getElementById("caseStudentSelect");
       const { data, error } = await supabaseClient
         .from("students")
-        .select("student_id, first_name, last_name, student_number")
+        .select("student_id, first_name, middle_name, last_name, student_number")
         .eq("is_archived", false)
         .order("first_name", { ascending: true });
 
@@ -585,14 +675,8 @@
         return;
       }
 
-      select.innerHTML = (data || [])
-        .map(
-          (s) =>
-            `<option value="${s.student_id}">${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}${
-              s.student_number ? ` (${escapeHtml(s.student_number)})` : ""
-            }</option>`
-        )
-        .join("");
+      casePickerStudents = data || [];
+      renderCaseStudentPicker();
     }
 
     async function loadInterventionTemplates() {
@@ -745,6 +829,9 @@
 
     function openNewCaseModal() {
       document.getElementById("newCaseForm").reset();
+      document.getElementById("caseStudentSearch").value = "";
+      caseSelectedStudentId = null;
+      renderCaseStudentPicker();
       setActionRows("caseActionRows", []);
       document.getElementById("newCaseModalOverlay").classList.add("show");
     }
@@ -758,11 +845,16 @@
     document.getElementById("newCaseModalOverlay").addEventListener("click", (e) => {
       if (e.target.id === "newCaseModalOverlay") closeNewCaseModal();
     });
+    document.getElementById("caseStudentSearch").addEventListener("input", renderCaseStudentPicker);
 
     document.getElementById("newCaseForm").addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const studentId = Number(document.getElementById("caseStudentSelect").value);
+      const studentId = caseSelectedStudentId;
+      if (!studentId) {
+        showToast("Select a student for this case.", "error");
+        return;
+      }
       const nature = document.getElementById("caseNatureInput").value.trim();
       const details = document.getElementById("caseDetailsInput").value.trim();
       const action = joinedActionColumn("caseActionRows", ".action-row-action");
@@ -1649,6 +1741,17 @@
           message: template.title,
           link: "student-forms.html",
         });
+
+        // Best-effort email to the student if they're a verified user — the
+        // notify-student-email Edge Function skips unverified students and
+        // placeholder @colm.edu.ph addresses itself. Logged, not shown; the
+        // in-app notification above is the source of truth.
+        invokeEdge("notify-student-email", {
+          recipient_user_id: c.students.user_id,
+          subject: "A new intervention was shared with you",
+          concern: template.title,
+          portal_url: location.origin + "/student/student-forms.html",
+        }).catch((err) => console.error("intervention email failed:", err));
       }
 
       document.getElementById("addInterventionForm").reset();

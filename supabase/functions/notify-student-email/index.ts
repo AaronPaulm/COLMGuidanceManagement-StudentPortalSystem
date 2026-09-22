@@ -8,14 +8,14 @@
 // Emails are ONLY sent to students with a real, verified personal email:
 //   * email_verified must be true (set after the verify-email OTP flow), and
 //   * auth_email must not be the fake "username@colm.edu.ph" placeholder.
-// Unverified students still get the in-app notification â€” they just don't get
+// Unverified students still get the in-app notification — they just don't get
 // the email, since it couldn't be delivered to a nonexistent address anyway.
 //
 // Optional `note` is rendered as a "Note from the guidance office" line in the
 // email body (used for approve/decline/reschedule notes to the student).
 //
 // Optional `slip` ({ date, time, rescheduled }) attaches the student's
-// Parent/Guardian Visitation Slip as a PDF alongside the email â€” used when a
+// Parent/Guardian Visitation Slip as a PDF alongside the email — used when a
 // visit is being scheduled/confirmed (summon/approve/reschedule). The slip is
 // generated right here with pdf-lib (no browser involved) and carries a
 // RESCHEDULED stamp when rescheduled is true.
@@ -23,7 +23,7 @@
 // Uses the service-role key only to READ the student's own row (their email +
 // slip fields), plus the Resend API for delivery. Deliberately does not accept
 // a target email or slip data from the caller beyond the date/time/rescheduled
-// triple â€” names come from the database, so the function can't be tricked into
+// triple — names come from the database, so the function can't be tricked into
 // mailing or forging arbitrary addresses.
 //
 // Deploy with the Supabase CLI (set RESEND_API_KEY first):
@@ -170,7 +170,7 @@ function buildEmail(
     ${noteBlock}
     ${detailBlock}
     ${link}
-    <p>â€” <em>COLM Guidance Office</em></p>
+    <p>&mdash; <em>COLM Guidance Office</em></p>
   `.trim();
 }
 
@@ -179,7 +179,7 @@ function buildEmail(
 // Mirrors the on-screen printable slip (counselor-common.js
 // openVisitationSlip): school letterhead bands top + bottom, the same
 // form fields in the same order, the Action Taken checkbox grid, and the
-// Data Privacy Act footer â€” so the emailed attachment looks like the
+// Data Privacy Act footer — so the emailed attachment looks like the
 // printed Parent/Guardian's Visitation Slip, not a plain list.
 //
 // Images are embedded from the base64 copies in ./letterhead.ts because
@@ -515,7 +515,7 @@ Deno.serve(async (req) => {
       return json({ ok: true, skipped: "placeholder email" }, 200, headers);
     }
 
-    // Attach the visitation slip PDF when a visit is being scheduled â€”
+    // Attach the visitation slip PDF when a visit is being scheduled —
     // best-effort: if the PDF can't be generated the email still goes out,
     // but the skip reason is reported back so the counselor knows the slip
     // was NOT attached (a silent no-attachment is how this feature broke).
