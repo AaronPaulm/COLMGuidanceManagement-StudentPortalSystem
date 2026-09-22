@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>COLM Guidance</title>
+  <title>Student Dashboard · COLM Guidance Portal</title>
   
         <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
    <link rel="stylesheet"
@@ -247,7 +247,7 @@
           .from("appointments")
           .select("appointment_id, concern_category, appointment_date, appointment_time, counselors(first_name, last_name)")
           .eq("student_id", studentId)
-          .eq("status", "approved")
+          .in("status", ["approved", "rescheduled"])
           .gte("appointment_date", todayStr())
           .order("appointment_date", { ascending: true })
           .order("appointment_time", { ascending: true })

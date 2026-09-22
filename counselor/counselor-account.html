@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>COLM Guidance</title>
+    <title>My Account · COLM Guidance Portal</title>
     
         <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
       <link rel="stylesheet"
@@ -216,7 +216,11 @@
         </div>
         <div class="profile-edit-card">
             <form id="changePasswordForm">
-                <div class="info-edit-grid">
+                <div class="info-edit-grid grid-3">
+                    <div class="form-field">
+                        <label for="oldPasswordInput">Current Password</label>
+                        <input type="password" id="oldPasswordInput" autocomplete="current-password" required>
+                    </div>
                     <div class="form-field">
                         <label for="newPasswordInput">New Password</label>
                         <input type="password" id="newPasswordInput" autocomplete="new-password" required minlength="6">
@@ -226,7 +230,7 @@
                         <input type="password" id="confirmPasswordInput" autocomplete="new-password" required minlength="6">
                     </div>
                 </div>
-                <span class="hint">Must be at least 6 characters. This changes your own login password.</span>
+                <span class="hint">Enter your current password to confirm identity, then set a new one (at least 6 characters). This changes your own login password.</span>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary" id="changePasswordBtn">Update Password</button>
                 </div>
@@ -248,11 +252,19 @@
       return div.innerHTML;
     }
 
+    let sessionEmail = null;
+
     document.getElementById("changePasswordForm").addEventListener("submit", async (e) => {
       e.preventDefault();
 
+      const oldPassword = document.getElementById("oldPasswordInput").value;
       const newPassword = document.getElementById("newPasswordInput").value;
       const confirmPassword = document.getElementById("confirmPasswordInput").value;
+
+      if (!oldPassword) {
+        showToast("Please enter your current password.", "error");
+        return;
+      }
 
       if (newPassword !== confirmPassword) {
         showToast("Passwords don't match.", "error");
@@ -267,6 +279,20 @@
       const btn = document.getElementById("changePasswordBtn");
       btn.disabled = true;
       btn.textContent = "Updating…";
+
+      // Validate the current password before allowing a change — the only
+      // server-side way to confirm it is to sign in with it (hashes are
+      // one-way). sessionEmail is the address this account logs in with.
+      const { error: oldError } = await supabaseClient.auth.signInWithPassword({
+        email: sessionEmail,
+        password: oldPassword,
+      });
+      if (oldError) {
+        btn.disabled = false;
+        btn.textContent = "Update Password";
+        showToast("Current password is incorrect.", "error");
+        return;
+      }
 
       const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
 
@@ -362,7 +388,7 @@
 
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session) {
-        window.location.href = "../index.html?reason=required";
+        window.location.href = "../personnel-login.html?reason=required";
         return;
       }
 
@@ -418,6 +444,7 @@
       hidePageLoadOverlay();
 
       const { session, counselor } = result;
+      sessionEmail = session.user.email;
 
       const { data, error } = await supabaseClient
         .from("counselors")

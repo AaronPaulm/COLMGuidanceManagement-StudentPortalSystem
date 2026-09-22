@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>COLM Guidance</title>
+    <title>Forms & Intervention Library · COLM Guidance Portal</title>
     
         <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
        <link rel="stylesheet"
@@ -150,9 +150,9 @@
             <p>Create and assign guidance forms, and maintain a reusable library of intervention documents.</p>
         </header>
 
-        <div class="section-title" style="margin-top:30px;">
+        <div class="section-title section-title-inline" style="margin-top:30px;">
             <h2>Form Library</h2>
-            <button type="button" class="icon-btn primary" id="newFormBtn" title="New Form">
+            <button type="button" class="icon-btn primary" id="newFormBtn" data-tooltip="Create a new form" aria-label="Create a new form">
                 <i class="fa-solid fa-plus"></i>
             </button>
         </div>
@@ -161,9 +161,9 @@
             <div id="formsListStaff" class="form-library-grid"></div>
         </div>
 
-        <div class="section-title" style="margin-top:30px;">
+        <div class="section-title section-title-inline" style="margin-top:30px;">
             <h2>Intervention Library</h2>
-            <button type="button" class="icon-btn primary" id="newInterventionTemplateBtn" title="Upload Intervention Template">
+            <button type="button" class="icon-btn primary" id="newInterventionTemplateBtn" data-tooltip="Upload intervention template" aria-label="Upload intervention template">
                 <i class="fa-solid fa-plus"></i>
             </button>
         </div>
@@ -216,7 +216,6 @@
                             <label for="sectionDescInput">Section Description (optional)</label>
                             <textarea id="sectionDescInput" rows="2"></textarea>
                         </div>
-
                         <div class="builder-section-label">Questions in this section</div>
                         <div id="fieldsContainer"></div>
                         <button type="button" class="add-field-btn" id="addFieldBtn">
@@ -347,6 +346,29 @@
                     <div class="upload-progress" id="templateUploadProgress"><div class="upload-progress-fill"></div></div>
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary" id="saveInterventionTemplateBtn">Save to Library</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="interventionTemplateNoteModalOverlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Intervention Note</h3>
+                <button type="button" class="modal-close" id="interventionTemplateNoteModalCloseBtn" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="interventionTemplateNoteForm">
+                    <div class="form-field">
+                        <label for="templateNoteInput">Note</label>
+                        <textarea id="templateNoteInput" maxlength="500" rows="4" placeholder="Add a note about this intervention template — when to use it, what it covers, etc."></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" id="interventionTemplateNoteCancelBtn">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="saveInterventionTemplateNoteBtn">Save Note</button>
                     </div>
                 </form>
             </div>
@@ -527,13 +549,13 @@
               Required
             </label>
             <div class="staff-item-actions">
-              <button type="button" class="icon-btn" data-action="move-up" title="Move up" ${i === 0 ? "disabled" : ""}>
+              <button type="button" class="icon-btn" data-action="move-up" data-tooltip="Move up" aria-label="Move up" ${i === 0 ? "disabled" : ""}>
                 <i class="fa-solid fa-arrow-up"></i>
               </button>
-              <button type="button" class="icon-btn" data-action="move-down" title="Move down" ${i === questions.length - 1 ? "disabled" : ""}>
+              <button type="button" class="icon-btn" data-action="move-down" data-tooltip="Move down" aria-label="Move down" ${i === questions.length - 1 ? "disabled" : ""}>
                 <i class="fa-solid fa-arrow-down"></i>
               </button>
-              <button type="button" class="icon-btn danger" data-action="remove" title="Remove question">
+              <button type="button" class="icon-btn danger" data-action="remove" data-tooltip="Remove question" aria-label="Remove question">
                 <i class="fa-solid fa-trash"></i>
               </button>
             </div>
@@ -660,14 +682,16 @@
           <p>${escapeHtml(f.description || "No description.")}</p>
           <div class="form-library-meta">${questionCount} question${questionCount === 1 ? "" : "s"} · Created ${formatDate(f.created_at)}</div>
           <div class="form-library-actions">
-            <button type="button" class="icon-btn" data-action="assign" title="Assign to students"><i class="fa-solid fa-user-plus"></i></button>
-            <button type="button" class="icon-btn" data-action="submissions" title="View submissions"><i class="fa-solid fa-inbox"></i></button>
-            <button type="button" class="icon-btn" data-action="edit" title="Edit"><i class="fa-solid fa-pen"></i></button>
-            <button type="button" class="icon-btn danger" data-action="delete" title="Delete"><i class="fa-solid fa-trash"></i></button>
+            <button type="button" class="icon-btn" data-action="assign" data-tooltip="Assign to students" aria-label="Assign to students"><i class="fa-solid fa-user-plus"></i></button>
+            <button type="button" class="icon-btn" data-action="submissions" data-tooltip="View submissions" aria-label="View submissions"><i class="fa-solid fa-inbox"></i></button>
+            <button type="button" class="icon-btn" data-action="print-blank" data-tooltip="Download blank form (PDF)" aria-label="Download blank form (PDF)"><i class="fa-solid fa-file-export"></i></button>
+            <button type="button" class="icon-btn" data-action="edit" data-tooltip="Edit form" aria-label="Edit form"><i class="fa-solid fa-pen"></i></button>
+            <button type="button" class="icon-btn danger" data-action="delete" data-tooltip="Delete form" aria-label="Delete form"><i class="fa-solid fa-trash"></i></button>
           </div>
         `;
         card.querySelector('[data-action="assign"]').addEventListener("click", () => openAssignModal(f));
         card.querySelector('[data-action="submissions"]').addEventListener("click", () => openSubmissionsModal(f));
+        card.querySelector('[data-action="print-blank"]').addEventListener("click", () => openBlankFormPrint(f));
         card.querySelector('[data-action="edit"]').addEventListener("click", () => openForm(f));
         card.querySelector('[data-action="delete"]').addEventListener("click", () => deleteForm(f));
         list.appendChild(card);
@@ -691,6 +715,131 @@
       }
       btn.disabled = false;
       btn.textContent = "Load More";
+    }
+
+    async function openBlankFormPrint(form) {
+      if (!form) return;
+      const [{ data: sectionRows, error: secErr }, { data: questionRows, error: qErr }] = await Promise.all([
+        supabaseClient
+          .from("form_sections")
+          .select("section_id, section_title, section_description, order_no")
+          .eq("form_id", form.form_id)
+          .order("order_no", { ascending: true }),
+        supabaseClient
+          .from("form_questions")
+          .select("section_id, question_text, question_type, options, is_required, order_no")
+          .eq("form_id", form.form_id)
+          .order("order_no", { ascending: true }),
+      ]);
+
+      if (secErr || qErr) {
+        showToast("Couldn't load form: " + (secErr || qErr).message, "error");
+        console.error(secErr || qErr);
+        return;
+      }
+
+      const sections = (sectionRows || []).map((s) => ({
+        title: s.section_title || "Section",
+        description: s.section_description || "",
+        questions: (questionRows || []).filter((q) => q.section_id === s.section_id),
+      }));
+
+      const blankQuestionHtml = (q) => {
+        const options = String(q.options || "").split(",").map((o) => o.trim()).filter(Boolean);
+        const required = q.is_required ? ' <span class="b-req">*</span>' : "";
+        if ((q.question_type === "select" || q.question_type === "radio" || q.question_type === "checkbox") && options.length) {
+          const marker = q.question_type === "checkbox" ? "&#9744;" : q.question_type === "radio" ? "&#9675;" : "&#9633;";
+          return `
+            <div class="b-q">${escapeHtml(q.question_text)}${required}</div>
+            <div class="b-opts">${options.map((o) => `<span class="b-opt"><span class="b-cb">${marker}</span> ${escapeHtml(o)}</span>`).join("")}</div>`;
+        }
+        if (q.question_type === "textarea") {
+          return `<div class="b-q">${escapeHtml(q.question_text)}${required}</div><div class="b-lines">&nbsp;</div>`;
+        }
+        return `<div class="b-q">${escapeHtml(q.question_text)}${required}</div><div class="b-fill"></div>`;
+      };
+
+      const win = window.open("", "_blank");
+      if (!win) {
+        showToast("Please allow pop-ups to download this form.", "error");
+        return;
+      }
+
+      win.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>${ccEscapeHtml(form.form_name)} — Blank Form</title>
+          <style>
+            html { background:#eef1f5; margin:0; padding:0; }
+            body { font-family: Arial, sans-serif; color:#111827; width:8.5in; min-height:11in; margin:24px auto; box-sizing:border-box; position:relative; background:#fff; box-shadow:0 2px 18px rgba(0,0,0,.28); padding:140px 40px 130px; }
+            .print-school-header, .print-school-footer { background:#fff; }
+            .print-school-header img, .print-school-footer img { width:100%; height:auto; display:block; }
+            .print-school-header { position:absolute; top:0; left:0; right:0; }
+            .print-school-footer { position:absolute; bottom:0; left:0; right:0; }
+            h1 { font-size:19px; margin:0 0 6px; text-align:center; }
+            .b-desc { font-size:12.5px; color:#374151; text-align:center; margin:0 0 22px; }
+            .b-section-title { font-size:14px; font-weight:700; margin:18px 0 4px; border-bottom:1px solid #d1d5db; padding-bottom:4px; }
+            .b-section-desc { font-size:12px; color:#374151; margin:2px 0 8px; }
+            .b-q { font-size:13px; margin:10px 0 2px; font-weight:600; }
+            .b-req { color:#b91c1c; }
+            .b-fill { border-bottom:1px solid #111827; min-height:22px; margin-bottom:8px; }
+            .b-lines { border:1px solid #111827; min-height:60px; margin-bottom:8px; }
+            .b-opts { display:grid; grid-template-columns:1fr 1fr; gap:4px 24px; font-size:13px; margin-bottom:6px; }
+            .b-opt { display:flex; align-items:center; gap:6px; }
+            .b-cb { font-size:12px; }
+            .print-btn { position:fixed; top:12px; right:12px; z-index:20; padding:8px 16px; border-radius:8px; border:none; background:#2563eb; color:#fff; font-weight:600; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.25); }
+            .print-letterhead { display:contents; border-collapse:collapse; }
+            .print-letterhead > thead, .print-letterhead > tfoot { display:none; }
+            .print-letterhead > tbody { display:contents; }
+            .print-letterhead > tbody > tr { display:contents; }
+            .print-letterhead > tbody > tr > td { display:contents; }
+            @media screen and (max-width: 900px) { body { width:100%; min-height:auto; margin:0; box-shadow:none; } }
+            @page { size:8.5in 11in; margin:0; }
+            @media print {
+              .print-btn { display:none; }
+              html { background:#fff; }
+              body { width:auto; min-height:auto; margin:0; padding:0; box-shadow:none; position:static; }
+              .print-school-header { position:fixed; top:0; left:0; right:0; z-index:10; height:135px; overflow:hidden; }
+              .print-school-footer { position:fixed; bottom:0; left:0; right:0; z-index:10; height:100px; overflow:hidden; }
+              .print-letterhead { display:table; width:8.5in; border-collapse:collapse; }
+              .print-letterhead > thead { display:table-header-group; }
+              .print-letterhead > thead > tr { display:table-row; }
+              .print-letterhead > thead > tr > td { display:table-cell; height:135px; padding:0; border:none; }
+              .print-letterhead > tfoot { display:table-footer-group; }
+              .print-letterhead > tfoot > tr { display:table-row; }
+              .print-letterhead > tfoot > tr > td { display:table-cell; height:100px; padding:0; border:none; }
+              .print-letterhead > tbody { display:table-row-group; }
+              .print-letterhead > tbody > tr { display:table-row; }
+              .print-letterhead > tbody > tr > td { display:table-cell; vertical-align:top; padding:4px 40px 10px; border:none; }
+            }
+          </style>
+        </head>
+        <body>
+          ${schoolPrintHeaderFooterHtml()}
+          <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+          <table class="print-letterhead">
+            ${schoolPrintLetterhead()}
+            <tbody>
+              <tr>
+                <td>
+                  <h1>${ccEscapeHtml(form.form_name)}</h1>
+                  ${form.description ? `<p class="b-desc">${ccEscapeHtml(form.description)}</p>` : ""}
+                  ${sections.length
+                    ? sections.map((s) => `
+                      <div class="b-section-title">${ccEscapeHtml(s.title)}</div>
+                      ${s.description ? `<div class="b-section-desc">${ccEscapeHtml(s.description)}</div>` : ""}
+                      ${s.questions.map(blankQuestionHtml).join("")}
+                    `).join("")
+                    : `<div class="b-section-title">No questions yet.</div>`}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        `);
+      win.document.write("</" + "body></" + "html>");
+      win.document.close();
     }
 
     async function loadForms() {
@@ -1262,7 +1411,7 @@
           <td>${a.submitted_at ? formatDate(a.submitted_at) : "—"}</td>
           <td>${
             isSubmitted
-              ? `<button type="button" class="icon-btn sm" data-action="view" title="View answers"><i class="fa-solid fa-eye"></i></button>`
+              ? `<button type="button" class="icon-btn sm" data-action="view" data-tooltip="View answers" aria-label="View answers"><i class="fa-solid fa-eye"></i></button>`
               : "—"
           }</td>
         </tr>
@@ -1460,7 +1609,7 @@
 
       const { data, error } = await supabaseClient
         .from("intervention_templates")
-        .select("intervention_template_id, title, file_path, file_name, created_at")
+        .select("intervention_template_id, title, note, file_path, file_name, created_at")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -1488,15 +1637,20 @@
           ${iconHtml}
           <h3>${escapeHtml(t.title)}</h3>
           <p>${escapeHtml(t.file_name)}</p>
+          ${t.note ? `<p class="intervention-note">${escapeHtml(t.note)}</p>` : ""}
           <div class="form-library-meta">Uploaded ${formatDate(t.created_at)}</div>
           <div class="form-library-actions">
-            <button type="button" class="icon-btn" data-action="view" title="View file"><i class="fa-solid fa-eye"></i></button>
-            <button type="button" class="icon-btn danger" data-action="delete" title="Delete"><i class="fa-solid fa-trash"></i></button>
+            <button type="button" class="icon-btn" data-action="view" data-tooltip="Open file" aria-label="Open file"><i class="fa-solid fa-eye"></i></button>
+            <button type="button" class="icon-btn" data-action="download" data-tooltip="Download file" aria-label="Download file"><i class="fa-solid fa-download"></i></button>
+            <button type="button" class="icon-btn" data-action="note" data-tooltip="Add/Edit note" aria-label="Add/Edit note"><i class="fa-regular fa-note-sticky"></i></button>
+            <button type="button" class="icon-btn danger" data-action="delete" data-tooltip="Delete template" aria-label="Delete template"><i class="fa-solid fa-trash"></i></button>
           </div>
         `;
         hydrateTemplateThumb(card);
         card.querySelector(".form-library-thumb img")?.addEventListener("click", () => openInterventionFile(t.file_path, t.file_name));
         card.querySelector('[data-action="view"]').addEventListener("click", () => openInterventionFile(t.file_path, t.file_name));
+        card.querySelector('[data-action="download"]').addEventListener("click", () => downloadInterventionDocument(t.file_path, t.file_name));
+        card.querySelector('[data-action="note"]').addEventListener("click", () => openInterventionNoteModal(t));
         card.querySelector('[data-action="delete"]').addEventListener("click", () => deleteInterventionTemplate(t));
         list.appendChild(card);
       });
@@ -1527,8 +1681,66 @@
         openImageLightbox(data.signedUrl);
         return;
       }
-      window.open(data.signedUrl, "_blank");
+      openDocFile(data.signedUrl, fileName);
     }
+
+    async function downloadInterventionDocument(path, fileName) {
+      const { data, error } = await supabaseClient.storage.from("case-attachments").createSignedUrl(path, 60);
+      if (error) {
+        showToast("Couldn't download file: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+      const a = document.createElement("a");
+      a.href = data.signedUrl;
+      a.download = fileName || "intervention-document";
+      a.target = "_blank";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
+    let noteTemplateBeingEdited = null;
+
+    function openInterventionNoteModal(t) {
+      noteTemplateBeingEdited = t;
+      document.getElementById("templateNoteInput").value = t.note || "";
+      document.getElementById("interventionTemplateNoteModalOverlay").classList.add("show");
+      document.getElementById("templateNoteInput").focus();
+    }
+
+    function closeInterventionTemplateNoteModal() {
+      document.getElementById("interventionTemplateNoteModalOverlay").classList.remove("show");
+      noteTemplateBeingEdited = null;
+    }
+
+    document.getElementById("interventionTemplateNoteModalCloseBtn").addEventListener("click", closeInterventionTemplateNoteModal);
+    document.getElementById("interventionTemplateNoteCancelBtn").addEventListener("click", closeInterventionTemplateNoteModal);
+    document.getElementById("interventionTemplateNoteModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "interventionTemplateNoteModalOverlay") closeInterventionTemplateNoteModal();
+    });
+
+    document.getElementById("interventionTemplateNoteForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!noteTemplateBeingEdited) return;
+      const note = document.getElementById("templateNoteInput").value.trim();
+      const btn = document.getElementById("saveInterventionTemplateNoteBtn");
+      startBtnLoading(btn, "Saving…");
+      const { error } = await supabaseClient
+        .from("intervention_templates")
+        .update({ note: note || null })
+        .eq("intervention_template_id", noteTemplateBeingEdited.intervention_template_id);
+      stopBtnLoading(btn, "Save Note");
+      if (error) {
+        showToast("Couldn't save note: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+      closeInterventionTemplateNoteModal();
+      await loadInterventionTemplates();
+      showToast(note ? "Note saved." : "Note removed.", "success");
+    });
 
     async function deleteInterventionTemplate(t) {
       // Deleting a template only removes it from the library going

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>COLM Guidance</title>
+    <title>My Profile · COLM Guidance Portal</title>
     
         <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
       <link rel="stylesheet"
@@ -168,7 +168,8 @@
                     </div>
                     <div class="form-field">
                         <label for="editEmail">Email (Gmail)</label>
-                        <input type="email" id="editEmail" placeholder="e.g. juandelacruz@gmail.com">
+                        <input type="email" id="editEmail" disabled placeholder="e.g. juandelacruz@gmail.com">
+                        <span class="hint">Email is only changed when you verify your Gmail address (top of the portal).</span>
                     </div>
                     <div class="form-field">
                         <label for="editPhone">Phone Number</label>
@@ -191,7 +192,11 @@
         </div>
         <div class="profile-edit-card">
             <form id="changePasswordForm">
-                <div class="info-edit-grid">
+                <div class="info-edit-grid grid-3">
+                    <div class="form-field">
+                        <label for="oldPasswordInput">Current Password</label>
+                        <input type="password" id="oldPasswordInput" autocomplete="current-password" required>
+                    </div>
                     <div class="form-field">
                         <label for="newPasswordInput">New Password</label>
                         <input type="password" id="newPasswordInput" autocomplete="new-password" required minlength="6">
@@ -201,7 +206,7 @@
                         <input type="password" id="confirmPasswordInput" autocomplete="new-password" required minlength="6">
                     </div>
                 </div>
-                <span class="hint">Must be at least 6 characters.</span>
+                <span class="hint">Enter your current password to confirm identity, then set a new one (at least 6 characters).</span>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary" id="changePasswordBtn">Update Password</button>
                 </div>
@@ -232,6 +237,7 @@
   <script src="../js/student-common.js"></script>
   <script>
     let currentStudent = null;
+    let sessionEmail = null;
 
     function educationLevelLabel(value) {
       return { college: "College", junior_high: "Junior High School", senior_high: "Senior High School" }[value] || "—";
@@ -296,15 +302,7 @@
     document.getElementById("profileEditForm").addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const email = document.getElementById("editEmail").value.trim();
-      if (email && !/^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?)*\.[A-Z]{2,}$/i.test(email)) {
-        showToast("Please enter a valid email address (name@domain.com).", "error");
-        document.getElementById("editEmail").focus();
-        return;
-      }
-
       const payload = {
-        student_email: email || null,
         contact_number: document.getElementById("editPhone").value.trim() || null,
         parent_guardian: document.getElementById("editGuardian").value.trim() || null,
       };
@@ -334,8 +332,14 @@
     document.getElementById("changePasswordForm").addEventListener("submit", async (e) => {
       e.preventDefault();
 
+      const oldPassword = document.getElementById("oldPasswordInput").value;
       const newPassword = document.getElementById("newPasswordInput").value;
       const confirmPassword = document.getElementById("confirmPasswordInput").value;
+
+      if (!oldPassword) {
+        showToast("Please enter your current password.", "error");
+        return;
+      }
 
       if (newPassword !== confirmPassword) {
         showToast("Passwords don't match.", "error");
@@ -350,6 +354,20 @@
       const btn = document.getElementById("changePasswordBtn");
       btn.disabled = true;
       btn.textContent = "Updating…";
+
+      // Validate the current password before allowing a change — the only
+      // server-side way to confirm it is to sign in with it (hashes are
+      // one-way). sessionEmail is the address this account logs in with.
+      const { error: oldError } = await supabaseClient.auth.signInWithPassword({
+        email: sessionEmail,
+        password: oldPassword,
+      });
+      if (oldError) {
+        btn.disabled = false;
+        btn.textContent = "Update Password";
+        showToast("Current password is incorrect.", "error");
+        return;
+      }
 
       const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
 
@@ -371,6 +389,7 @@
       if (!result) return;
 
       currentStudent = result.student;
+      sessionEmail = result.session.user.email;
       await loadProfile();
       hidePageLoadOverlay();
     })();

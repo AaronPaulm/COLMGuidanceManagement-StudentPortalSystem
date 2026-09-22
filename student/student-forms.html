@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>COLM Guidance</title>
+    <title>Forms & Interventions · COLM Guidance Portal</title>
     
         <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
       <link rel="stylesheet"
@@ -398,7 +398,7 @@
              <img data-signed-path="${escapeHtml(iv.file_path)}" alt="${escapeHtml(iv.file_name)}">
              <span class="attachment-thumb-name">${escapeHtml(iv.file_name)}</span>
            </div>`
-        : `<button type="button" class="btn btn-outline" data-action="view" data-path="${escapeHtml(iv.file_path)}"><i class="fa-solid fa-file-lines"></i> View</button>`;
+        : `<button type="button" class="btn btn-outline" data-action="view" data-path="${escapeHtml(iv.file_path)}" data-name="${escapeHtml(iv.file_name)}"><i class="fa-solid fa-file-lines"></i> View</button>`;
       return `
         <div class="assigned-form-tile">
           <span class="badge badge-info">Intervention</span>
@@ -439,14 +439,14 @@
       }
     });
 
-    async function openIntervention(path) {
+    async function openIntervention(path, fileName) {
       const { data, error } = await supabaseClient.storage.from("case-attachments").createSignedUrl(path, 60);
       if (error) {
         showToast("Couldn't open file: " + error.message, "error");
         console.error(error);
         return;
       }
-      window.open(data.signedUrl, "_blank");
+      openDocFile(data.signedUrl, fileName);
     }
 
     async function loadInterventions() {
@@ -476,7 +476,7 @@
 
       grid.innerHTML = interventions.map(interventionTileHtml).join("");
       grid.querySelectorAll('[data-action="view"]').forEach((btn) => {
-        btn.addEventListener("click", () => openIntervention(btn.dataset.path));
+        btn.addEventListener("click", () => openIntervention(btn.dataset.path, btn.dataset.name));
       });
       grid.querySelectorAll(".attachment-thumb img[data-signed-path]").forEach((img) => {
         supabaseClient.storage
@@ -909,7 +909,7 @@
     async function loadStudentRecord() {
       const { data, error } = await supabaseClient
         .from("students")
-        .select("first_name, last_name, middle_name, year_level, section, student_email, contact_number, parent_guardian")
+        .select("first_name, last_name, middle_name, year_level, education_level, section, student_email, contact_number, parent_guardian")
         .eq("student_id", currentStudent.student_id)
         .single();
       if (error) {
@@ -977,6 +977,7 @@
       a.first_name = p.first_name || "";
       a.middle_name = p.middle_name || "";
       a.year_level = p.year_level || "";
+      a.education_level = p.education_level || a.education_level || "";
       a.section = p.section || "";
       if (!a.email) a.email = p.student_email || "";
       if (!a.contact) a.contact = p.contact_number || "";
@@ -1034,35 +1035,32 @@
     }
 
     function certStepHtml() {
-      const signedDate = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-
       if (sisReadOnly) {
         return `
           <div class="form-field">
-            <label>Signature</label>
             <div class="sis-sign-preview">
               ${sisSheet?.signature ? `<img src="${sisSheet.signature}" alt="Student signature">` : `<p class="submission-answer-empty">No signature captured.</p>`}
             </div>
-            <div class="sis-sign-meta">
-              <span class="sis-sign-name">${escapeHtml(certName())}</span><br>
-              Signature over printed name — submitted ${sisSheet?.submitted_at ? formatDate(sisSheet.submitted_at) : "—"}
-            </div>
+            <span class="sis-sign-name">${escapeHtml(certName())}</span>
+            <div class="sis-sign-line"></div>
+            <div class="sis-sign-caption">Signature over printed name of student.</div>
+            <span class="hint">${sisSheet?.submitted_at ? `Submitted ${formatDate(sisSheet.submitted_at)}` : ""}</span>
           </div>
         `;
       }
 
       return `
         <div class="form-field">
-          <label>Signature</label>
           <div class="sis-sign-wrap">
             <canvas id="sisSignCanvas" class="sis-sign-canvas"></canvas>
             <button type="button" class="btn btn-outline btn-sm" id="sisClearSignBtn"><i class="fa-solid fa-eraser"></i> Clear</button>
           </div>
-          <span class="hint">Draw your signature above using your mouse or finger.</span>
+          <span class="hint">Draw your signature in the box, then sign your printed name below.</span>
         </div>
-        <div class="sis-sign-meta">
-          <span class="sis-sign-name">${escapeHtml(certName())}</span><br>
-          Signature over printed name — ${signedDate}
+        <div class="form-field">
+          <span class="sis-sign-name">${escapeHtml(certName())}</span>
+          <div class="sis-sign-line"></div>
+          <div class="sis-sign-caption">Signature over printed name of student.</div>
         </div>
       `;
     }
@@ -1131,12 +1129,13 @@
       const container = document.getElementById("sisFieldsContainer");
       container.innerHTML = isCert
         ? certStepHtml()
-        : `<div class="sis-grid ${s.id === "personal" ? "sis-grid-personal" : ""}">${s.fields.map((f) => STUDENT_INFO_SCHEMA.fieldHtml(f, sisAnswers[f.key], sisReadOnly)).join("")}</div>`;
+        : `<div class="sis-grid ${s.id === "personal" ? "sis-grid-personal" : ""}">${s.fields.map((f) => STUDENT_INFO_SCHEMA.fieldHtml(f, sisAnswers[f.key], sisReadOnly, sisAnswers)).join("")}</div>`;
 
       document.getElementById("sisNextBtn").style.display = sisStep === n - 1 ? "none" : "";
       document.getElementById("sisSubmitBtn").style.display = isCert && !sisReadOnly ? "" : "none";
 
       if (!isCert) STUDENT_INFO_SCHEMA.applyFieldStates(container, sisAnswers, sisReadOnly);
+      if (!isCert) applySisCascades();
       // Re-derive Age whenever a DOB is already on file so it can never
       // go stale mid-school-year (birthdays happen).
       if (!isCert && !sisReadOnly && sisAnswers.dob) {
@@ -1145,6 +1144,36 @@
       }
       if (isCert && !sisReadOnly) initSignCanvas();
     }
+
+    // Cascade selects (Year Level follows Education Level) re-resolve their
+    // option lists against the live value of their source field. Done in
+    // place so editing one field never wipes the student's other in-progress
+    // answers on the current step.
+    function applySisCascades() {
+      const container = document.getElementById("sisFieldsContainer");
+      if (!container) return;
+      sisSteps().forEach((step) => {
+        if (step.id === "cert") return;
+        step.fields.forEach((f) => {
+          if (!f.optionsFor) return;
+          const source = container.querySelector(`[data-field="${f.optionsFor.field}"]`);
+          const select = container.querySelector(`[data-field="${f.key}"]`);
+          if (!source || !select) return;
+          const list = (f.optionsFor.options || {})[String(source.value ?? "")] || [];
+          const current = select.value;
+          select.innerHTML =
+            `<option value="">\u2014 Select \u2014</option>` +
+            list.map((o) => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join("");
+          if (list.includes(current)) select.value = current;
+        });
+      });
+    }
+
+    // Keep cascade selects in step with their source field as the student
+    // edits them (Education Level change re-filters the Year Level options).
+    document.getElementById("sisFieldsContainer").addEventListener("change", () => {
+      if (!sisReadOnly) applySisCascades();
+    });
 
     function renumberRows(wrap) {
       wrap.querySelectorAll("tbody tr").forEach((tr, i) => {
@@ -1162,6 +1191,14 @@
       if (addBtn) {
         const wrap = addBtn.closest("[data-table-field]");
         const tbody = wrap.querySelector("tbody");
+        const lastRow = tbody.querySelector("tr:last-child");
+        const lastFilled = Array.from(lastRow?.querySelectorAll("input") || []).some(
+          (i) => (i.value || "").trim() !== ""
+        );
+        if (!lastFilled) {
+          showToast("Fill out the current row before adding another one.", "error");
+          return;
+        }
         const clone = tbody.querySelector("tr").cloneNode(true);
         clone.querySelectorAll("input").forEach((i) => (i.value = ""));
         tbody.appendChild(clone);

@@ -1,3 +1,25 @@
+// Auth splash helpers — see style.css .auth-splash. Shown immediately
+// (before first paint, since this script blocks parsing) so a portal
+// page never flashes on screen while the session is being checked,
+// like when a logged-out user presses Back into a cached page.
+let scAuthSplashEl = null;
+function scShowAuthSplash() {
+  if (scAuthSplashEl) return;
+  const el = document.createElement("div");
+  el.className = "auth-splash";
+  el.innerHTML = '<div class="auth-splash-spinner"></div>';
+  el.setAttribute("aria-hidden", "true");
+  (document.body || document.documentElement).appendChild(el);
+  scAuthSplashEl = el;
+}
+function scHideAuthSplash() {
+  if (scAuthSplashEl) {
+    scAuthSplashEl.remove();
+    scAuthSplashEl = null;
+  }
+}
+scShowAuthSplash();
+
 function toggleMenu() {
   document.getElementById("mobileMenu").classList.toggle("show");
 }
@@ -493,7 +515,7 @@ async function requireStudentAuth() {
   // own state.
   if (student.is_archived) {
     await supabaseClient.auth.signOut();
-    window.location.href = "../index.html?reason=archived";
+    window.location.href = "../account-deactivated.html";
     return null;
   }
 
@@ -503,6 +525,9 @@ async function requireStudentAuth() {
   const initialsEl = document.querySelector(".avatar-initials");
   if (initialsEl) sessionStorage.setItem("studentInitials", initialsEl.textContent);
   sessionStorage.setItem("studentName", fullName);
+
+  // Session confirmed — lift the auth splash before anything renders.
+  scHideAuthSplash();
 
   initNotifications(session.user.id);
 
@@ -584,3 +609,37 @@ function makeImgLazy(img) {
     { once: true }
   );
 }
+
+// Office documents served from storage don't render in a browser tab —
+// navigating straight there makes the browser download the file and leaves
+// the new tab blank. Route those through Google's online viewer instead so
+// the user gets a real preview; everything else opens as it did before.
+function openDocFile(signedUrl, fileName) {
+  const name = fileName || signedUrl || "";
+  const ext = String(name).split(".").pop().toLowerCase();
+  const officeExts = ["doc", "docx", "xls", "xlsx", "ppt", "pptx", "rtf", "odt", "ods", "odp", "csv"];
+  if (officeExts.includes(ext)) {
+    const viewerUrl = "https://docs.google.com/viewer?url=" + encodeURIComponent(signedUrl);
+    window.open(viewerUrl, "_blank", "noopener");
+    return;
+  }
+  window.open(signedUrl, "_blank");
+}
+
+// A logged-out user pressing the browser Back button can be served the
+// portal page from the back/forward cache — scripts don't re-run, so the
+// normal auth guard never fires and account data would still be shown.
+// pageshow fires on every restore (before the browser repaints the cached
+// snapshot), so cover the page synchronously first, then re-check the
+// session and kick out to the student sign-in when it's gone.
+window.addEventListener("pageshow", (e) => {
+  if (!e.persisted) return;
+  scShowAuthSplash();
+  supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      scHideAuthSplash();
+      return;
+    }
+    window.location.replace("../index.html?reason=required");
+  });
+});

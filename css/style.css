@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    COLM Guidance Portal — Global Stylesheet
    Sections: Reset, Typography, Layout, Sidebar, Mobile Nav,
              Buttons/Forms, Dashboard, Announcements,
@@ -51,8 +51,13 @@ img {
 
 h1 { font-size: clamp(24px, 4vw, 36px); margin: 0 0 .4em; }
 h2 { font-size: clamp(18px, 3vw, 28px); margin: 0 0 .4em; }
-h3 { font-size: clamp(16px, 2.2vw, 22px); margin: 0 0 .3em; }
-p  { font-size: clamp(14px, 2vw, 16px); margin: 0 0 .5em; }
+h3 { font-size: clamp(16px, 2vw, 19px); margin: 0 0 .3em; }
+p  { font-size: clamp(13.5px, 1.8vw, 15px); margin: 0 0 .5em; }
+
+/* Sub-detail tier (dates, "posted by", emails, timestamps, units): the
+   browser's default small (~13px) sat between the supporting (14px) and meta
+   (12px) tiers — pin it to the meta tier used by table headers/hints badges. */
+small { font-size: 12px; }
 
 /* ---------- Layout ---------- */
 
@@ -799,13 +804,13 @@ padding-right: 4.5rem;
     table-layout: fixed;
 }
 
-.appointments-table th:nth-child(1) { width: 16%; }
-.appointments-table th:nth-child(2) { width: 10%; }
+.appointments-table th:nth-child(1) { width: 14%; }
+.appointments-table th:nth-child(2) { width: 13%; }
 .appointments-table th:nth-child(3) { width: 8%; }
-.appointments-table th:nth-child(4) { width: 14%; }
-.appointments-table th:nth-child(5) { width: 28%; }
-.appointments-table th:nth-child(6) { width: 10%; }
-.appointments-table th:nth-child(7) { width: 14%; }
+.appointments-table th:nth-child(4) { width: 17%; }
+.appointments-table th:nth-child(5) { width: 24%; }
+.appointments-table th:nth-child(6) { width: 9%; }
+.appointments-table th:nth-child(7) { width: 15%; }
 
 .student-appointments-table {
     table-layout: fixed;
@@ -848,6 +853,20 @@ padding-right: 4.5rem;
 
 .col-concern-details {
     max-width: 320px;
+}
+
+/* Concern text grows its row with the content — no fixed height, so a
+   long concern simply wraps to more lines and the row gets taller. */
+.appointments-table td.col-concern-details {
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    height: auto;
+}
+
+/* Date + batch pill share one line instead of stacking. */
+.appointments-table td:nth-child(2) {
+    white-space: nowrap;
 }
 
 .cases-table {
@@ -1157,7 +1176,7 @@ padding-right: 4.5rem;
     padding: 44px 20px;
     text-align: center;
     color: #6b7280;
-    font-size: 13.5px;
+    font-size: 14px;
     grid-column: 1 / -1;
     width: 100%;
 }
@@ -1569,6 +1588,66 @@ padding-right: 4.5rem;
     }
 }
 
+/* Desktop ≥1025px: compact calendar column tucked beside the month's
+   announcements so they're visible immediately without scrolling. The
+   announcement summary matches the calendar's height and scrolls within. */
+@media (min-width: 1025px) {
+    .CalendarLayout {
+        grid-template-columns: minmax(320px, 400px) 1fr;
+        align-items: stretch;
+    }
+
+    .CalendarWrap {
+        max-width: none;
+        padding: 16px;
+    }
+
+    .CalendarLayout > div:not(.CalendarWrap) {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .CalendarLayout #announcementsList,
+    .CalendarLayout #announcementsListStaff {
+        flex: 1 1 0;
+        min-height: 0;
+        overflow-y: auto;
+    }
+
+    .CalendarLayout #announcementsList .empty-state,
+    .CalendarLayout #announcementsListStaff .empty-state {
+        min-height: 100%;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-radius: 14px;
+    }
+
+    .CalendarHeader {
+        margin-bottom: 10px;
+    }
+
+    .CalendarWrap .CalendarHeader h3 {
+        font-size: 16px;
+    }
+
+    .CalendarWrap .cal-day {
+        aspect-ratio: 1.2;
+        font-size: 12px;
+    }
+
+    .CalendarWrap .cal-day.has-event::after {
+        bottom: 3px;
+    }
+
+    .CalendarLegend {
+        margin-top: 10px;
+    }
+}
+
 .CalendarFilterBar {
     display: flex;
     align-items: center;
@@ -1602,6 +1681,14 @@ padding-right: 4.5rem;
 
 .CalendarLayout > div {
     min-width: 0;
+}
+
+/* Show roughly the first three guidance personnel cards, then scroll
+   vertically for the rest. */
+#staffDirectory {
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 4px;
 }
 
 .staff-list-item {
@@ -1715,6 +1802,60 @@ padding-right: 4.5rem;
     font-size: 13px;
 }
 
+/* Icon-button tooltips (data-tooltip). Replaces the slow, unstyled native
+   `title` bubble with a small dark label that appears above the button on
+   hover/focus. Needs the button itself to be positioned so the bubble can
+   anchor to it. */
+.icon-btn[data-tooltip] {
+    position: relative;
+}
+
+.icon-btn[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    transform: translateX(-50%) translateY(2px);
+    background: #111827;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    padding: 6px 9px;
+    border-radius: 6px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s ease, transform .15s ease;
+    z-index: 40;
+}
+
+.icon-btn[data-tooltip]::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 4px);
+    transform: translateX(-50%) rotate(45deg);
+    width: 6px;
+    height: 6px;
+    background: #111827;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s ease;
+    z-index: 40;
+}
+
+.icon-btn[data-tooltip]:hover::after,
+.icon-btn[data-tooltip]:hover::before,
+.icon-btn[data-tooltip]:focus-visible::after,
+.icon-btn[data-tooltip]:focus-visible::before {
+    opacity: 1;
+}
+
+.icon-btn[data-tooltip]:hover::after {
+    transform: translateX(-50%) translateY(0);
+}
+
 /* =========================================================
    Generic Modal (e.g. Announcement Detail)
    ========================================================= */
@@ -1782,7 +1923,7 @@ padding-right: 4.5rem;
 
 .modal-meta {
     color: #9ca3af;
-    font-size: 13px;
+    font-size: 12px;
     margin-bottom: 14px;
 }
 
@@ -2829,6 +2970,31 @@ body.table-resizing * {
     background: #fef3c7;
 }
 
+/* Summoned-batch block: rows of the same summon (same day+time) render
+   as one shared session — a soft tinted block with a single left rail.
+   The rail lives on the first cell only so it reads as one continuous
+   line running down the group, not a bar at every column edge.
+   A lone summon (1 student) never gets grouped. */
+.batch-meta {
+    margin-top: 4px;
+}
+
+.batch-chip i {
+    margin-right: 4px;
+}
+
+.appointments-table tbody tr.batch-row td {
+    background: #f4f5ff;
+}
+
+.appointments-table tbody tr.batch-row:hover td {
+    background: #eef0ff;
+}
+
+.appointments-table tbody tr.batch-row td:first-child {
+    border-left: 3px solid #6366f1;
+}
+
 /* ---------- Pagination bar (long tables: history, student/case/
    appointment/account/form lists) ---------- */
 
@@ -2974,6 +3140,47 @@ body.table-resizing * {
     border-top-color: #2563eb;
     border-radius: 50%;
     animation: page-load-spin .7s linear infinite;
+}
+
+/* Auth splash — a full-screen cover shown from the moment the page's
+   common script runs until the session check resolves. It blocks the
+   brief flash of a portal page when a logged-out user presses the Back
+   button (bfcache restore, or a cached reload) before the redirect
+   kicks in: the dashboard is never seen, just the cover. */
+.auth-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483647;
+    background: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-splash-spinner {
+    width: 44px;
+    height: 44px;
+    border: 4px solid #dbeafe;
+    border-top-color: #2563eb;
+    border-radius: 50%;
+    animation: page-load-spin .7s linear infinite;
+}
+
+/* Dark translucent variant of the page overlay used for slow
+   account-status actions (activating/deactivating accounts): the UI
+   stays visible behind it while clicks are blocked and the spinner runs. */
+.blocking-overlay {
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(2px);
+}
+
+.blocking-overlay #actionLoadingMsg {
+    color: #f9fafb;
+}
+
+.blocking-overlay .page-load-spinner {
+    border-color: rgba(255, 255, 255, 0.25);
+    border-top-color: #ffffff;
 }
 
 @keyframes page-load-spin {
@@ -3646,6 +3853,11 @@ body.table-resizing * {
     margin-bottom: 10px;
 }
 
+/* Three fields side by side (e.g. Current / New / Confirm password). */
+.info-edit-grid.grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
 .profile-primary-fields {
     display: grid;
     grid-template-columns: 2fr 1.4fr 1fr;
@@ -3719,7 +3931,8 @@ body.table-resizing * {
         grid-template-columns: 1fr;
     }
 
-    .info-edit-grid {
+    .info-edit-grid,
+    .info-edit-grid.grid-3 {
         grid-template-columns: 1fr;
     }
 }
@@ -4322,12 +4535,16 @@ body.table-resizing * {
 }
 
 .appointments-table .table-actions {
-    display: grid;
-    grid-template-columns: repeat(2, auto);
+    display: flex;
+    flex-wrap: wrap;
     justify-content: center;
-    justify-items: center;
+    align-content: center;
     align-items: center;
-    gap: 6px;
+    gap: 5px 4px;
+}
+
+.appointments-table td {
+    vertical-align: middle;
 }
 
 @media (max-width: 768px) {
@@ -4567,9 +4784,20 @@ img.img-lazy.is-loaded {
 }
 
 .form-library-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 18px;
+    /* Horizontal rail: compact cards that scroll/swipe side-to-side instead
+       of a tall stacked grid eating the whole page. */
+    display: flex;
+    align-items: stretch;
+    gap: 14px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+}
+
+.form-library-grid > .form-library-card {
+    flex: 0 0 220px;
+    scroll-snap-align: start;
 }
 
 .form-library-card {
@@ -4579,10 +4807,10 @@ img.img-lazy.is-loaded {
     background: #f9fafb;
     border-radius: 12px;
     border: 1px solid #f1f5f9;
-    padding: 18px;
+    padding: 14px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 
 .form-library-icon {
@@ -4613,11 +4841,59 @@ img.img-lazy.is-loaded {
     font-size: 12px;
 }
 
+.form-library-card .intervention-note {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: #eef2ff;
+    border: 1px solid #e0e7ff;
+    border-radius: 8px;
+    color: #3730a3;
+    font-size: 12px;
+    line-height: 1.5;
+    flex: none;
+    max-height: 90px;
+    overflow: auto;
+}
+
 .form-library-actions {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
-    margin-top: 4px;
+    margin-top: auto;
+    padding-top: 8px;
+    justify-content: flex-end;
+}
+
+/* Cards are 220px wide (≈192px content) — a row of five full-size 36px
+   icon buttons (5×36 + 4×8 = 212px) overflows and wraps. Shrink the card
+   buttons so the whole action row stays on one line. */
+.form-library-actions .icon-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+}
+
+.form-library-actions .icon-btn.danger {
+    color: #ef4444;
+}
+
+.guidance-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 14px 0 0;
+    padding: 10px 14px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    color: #1e40af;
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+
+.guidance-note i {
+    margin-top: 2px;
+    flex-shrink: 0;
 }
 
 /* =========================================================
@@ -4731,6 +5007,7 @@ img.img-lazy.is-loaded {
 .toast-success { background: #15803d; }
 .toast-error { background: #b91c1c; }
 .toast-info { background: #1d4ed8; }
+.toast-warning { background: #b45309; }
 
 .confirm-modal-box {
     max-width: 380px;
@@ -5069,7 +5346,6 @@ img.img-lazy.is-loaded {
 .sis-sign-preview img {
     max-width: 260px;
     max-height: 110px;
-    border-bottom: 1px solid #111827;
     padding: 0 8px 4px;
 }
 
@@ -5096,9 +5372,29 @@ img.img-lazy.is-loaded {
 }
 
 .sis-sign-name {
-    font-family: "Brush Script MT", "Segoe Script", cursive;
-    font-size: 20px;
+    display: block;
+    font-family: "Times New Roman", Georgia, serif;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
     color: #111827;
+    margin-top: 4px;
+}
+
+.sis-sign-line {
+    border-bottom: 1.5px solid #111827;
+    margin-top: 2px;
+    max-width: 220px;
+}
+
+.sis-sign-caption {
+    font-size: 12px;
+    color: #374151;
+    margin-top: 3px;
+}
+
+.sis-sign-preview + .sis-sign-name {
+    margin-top: 4px;
 }
 
 @media (max-width: 720px) {
@@ -5124,4 +5420,128 @@ img.img-lazy.is-loaded {
 .sis-choices .radio-option,
 .sis-choices .checkbox-option {
     padding: 3px 0;
+}
+
+/* Read-only student info sheet preview (counselor's student detail view):
+   radio/checkbox inputs must not inherit the .form-field box styling, the
+   selected combo value should render flat without a dropdown caret, and
+   the Download button sits on the same baseline as the school-year filter. */
+#studentDetailSis .sis-choice-input,
+#studentDetailSis input[type="radio"],
+#studentDetailSis input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    margin: 0;
+    flex: none;
+    border: none;
+    background: transparent;
+    accent-color: #2563eb;
+}
+
+#studentDetailSis .sis-field select,
+#studentDetailSis .sis-field-wide select[data-field="course"] {
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+}
+
+#studentDetailSis .sis-field-wide .sis-select-wrap::after {
+    content: none;
+}
+
+#studentDetailSis .sis-field,
+#studentDetailSis .sis-choices {
+    color: #111827;
+}
+
+#sisDownloadBtn,
+#detailSisYearSelect {
+    height: 30px;
+    box-sizing: border-box;
+}
+
+#detailSisYearSelect {
+    padding: 0 10px;
+}
+
+/* =========================================================
+   Responsive — Mobile refinements (toolbars, search width,
+   library rails, directory filters, work-day picker)
+   ========================================================= */
+
+@media (max-width: 640px) {
+    /* Search inputs take the full row width on phones instead of the
+       fixed 260px desktop width that can overflow the screen. */
+    .table-search { width: 100%; }
+
+    /* Appointments (and cases) toolbar stacks vertically — the summon /
+       action button sits above the full-width search. */
+    .toolbar-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .toolbar-row > .btn,
+    .toolbar-row > input {
+        width: 100%;
+        justify-content: center;
+        margin: 0;
+    }
+
+    /* "Form Library  +" / "Intervention Library  +": the heading and its
+       trailing action button stay on one row, action pinned right and
+       vertically centered — no orphaned "+" under the title. */
+    .section-title.section-title-inline {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center;
+    }
+    .section-title.section-title-inline h2 {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    /* Student directory: Year Level replaces Section; Year Level + Info
+       Sheet sit side by side, search takes its own full-width row. */
+    #yearLevelFilterSelect { display: block; }
+    #studentsFilterTabs { flex: 1 1 100%; }
+    #yearLevelFilterSelect,
+    #sisFilterSelect {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+    #studentSearchInput { flex: 1 1 100%; }
+
+    /* Work-day picker (accounts management): 3-column grid so Saturday
+       isn't stranded on its own line below the other weekdays. */
+    .work-days-picker {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+    .work-day-option span { width: 100%; }
+
+    /* Student's assigned forms / interventions: horizontal scroll rail
+       instead of a single too-narrow stacked column. */
+    #assignedFormsGrid,
+    #interventionsGrid {
+        display: flex;
+        align-items: stretch;
+        gap: 12px;
+        overflow-x: auto;
+        padding-bottom: 8px;
+        scroll-snap-type: x proximity;
+        -webkit-overflow-scrolling: touch;
+    }
+    #assignedFormsGrid > .assigned-form-tile,
+    #interventionsGrid > .assigned-form-tile {
+        flex: 0 0 min(240px, 80vw);
+        min-height: 0;
+        scroll-snap-align: start;
+    }
+    #assignedFormsGrid > .empty-state,
+    #interventionsGrid > .empty-state {
+        flex: 1 1 auto;
+        width: 100%;
+    }
 }

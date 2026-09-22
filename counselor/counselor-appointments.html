@@ -3,12 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>COLM Guidance</title>
+    <title>Appointments · COLM Guidance Portal</title>
     
         <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
        <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .summon-student-list {
+      max-height: 220px;
+      overflow-y: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+    }
+    .summon-student-list label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      padding: 9px 12px;
+      border-bottom: 1px solid #f3f4f6;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 13.5px;
+    }
+    .summon-student-list label:last-child { border-bottom: none; }
+    .summon-student-list label:hover { background: #f9fafb; }
+    .summon-student-list input[type="checkbox"] {
+      width: auto;
+      accent-color: #2d6cdf;
+    }
+    .summon-student-meta {
+      margin-left: auto;
+      color: #6b7280;
+      font-size: 12px;
+      font-weight: 400;
+    }
+    .summon-empty {
+      padding: 14px;
+      text-align: center;
+      color: #9ca3af;
+      font-size: 13px;
+    }
+  </style>
 </head>
 <body>
 
@@ -162,7 +199,6 @@
                 <button type="button" class="btn btn-outline" id="availabilityToggleBtn">Set as Unavailable</button>
             </div>
         </div>
-
         <div class="section-title" style="margin-top:30px;">
             <h2>Appointments</h2>
             <select id="appointmentsFilterSelect" class="table-search" style="width:auto;">
@@ -176,6 +212,7 @@
         </div>
 
         <div class="toolbar-row">
+            <button type="button" class="btn btn-primary" id="summonBtn" style="margin-top:0;"><i class="fa-solid fa-bullhorn"></i> Summon Students</button>
             <input type="text" id="appointmentsStudentSearch" class="table-search" placeholder="Search by student name...">
         </div>
 
@@ -199,6 +236,77 @@
 
     </main>
 
+    <!-- Summon students modal (group appointment scheduling) -->
+    <div class="modal-overlay" id="summonModalOverlay">
+        <div class="modal-box wide">
+            <div class="modal-header">
+                <h3>Summon Students</h3>
+                <button type="button" class="modal-close" id="summonCloseBtn" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="summonForm" data-submit-cooldown="8000">
+                    <p class="modal-meta">Schedule a counseling session for a group of students. All the selected students attend on the SAME day and time slot — one batch session at the guidance office.</p>
+
+                    <div class="form-field">
+                        <label>Students to summon</label>
+                        <input type="text" id="summonStudentSearch" class="table-search" placeholder="Search by name...">
+                        <div class="summon-student-list" id="summonStudentList"></div>
+                        <span class="hint" id="summonSelectedHint">No students selected yet.</span>
+                    </div>
+
+                    <div class="account-form-grid" style="margin-top:14px;">
+                        <div class="form-field">
+                            <label for="summonDateInput">Date</label>
+                            <input type="date" id="summonDateInput">
+                            <span class="hint">Monday to Saturday.</span>
+                        </div>
+                        <div class="form-field">
+                            <label for="summonConcernTypeInput">Concern Type</label>
+                            <select id="summonConcernTypeInput" required>
+                                <option value="">Select a concern type...</option>
+                                <option>Academic</option>
+                                <option>Career Guidance</option>
+                                <option>Family Concerns</option>
+                                <option>Bullying &amp; Peer Relations</option>
+                                <option>Emotional &amp; Mental Health</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-field" style="margin-top:14px;">
+                        <div class="appt-time-heading">
+                            <label>Time slot (shared by the whole batch)</label>
+                            <div class="appt-slot-legend">
+                                <span><span class="appt-legend-swatch appt-legend-free"></span>Available</span>
+                                <span><span class="appt-legend-swatch appt-legend-booked"></span>Booked</span>
+                            </div>
+                        </div>
+                        <input type="hidden" id="summonTimeInput">
+                        <div id="summonSlotGrid" class="appt-slot-grid" aria-live="polite"></div>
+                        <div class="appt-slots-meta" id="summonSlotsMeta"></div>
+                        <span class="hint" id="summonSlotsHint" style="display:none;"></span>
+                    </div>
+
+                    <div class="form-field" style="margin-top:14px;">
+                        <label for="summonReasonInput">Reason / Instructions</label>
+                        <textarea id="summonReasonInput" rows="3" required placeholder="Why do these students need to come to the guidance office?"></textarea>
+                    </div>
+
+                    <div class="form-note-banner" id="summonEmailNote" style="display:none; margin-top:14px;">
+                        <i class="fa-regular fa-envelope"></i> Each student is notified in the portal — and emailed if they've linked a personal email.
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="summonSubmitBtn">Summon Students</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Appointment action modal (approve / decline / complete / reschedule / note) -->
     <div class="modal-overlay" id="actionModalOverlay">
         <div class="modal-box">
@@ -215,7 +323,7 @@
                         <div class="form-field" style="margin-top:14px;">
                             <label for="actionDateInput">New date</label>
                             <input type="date" id="actionDateInput">
-                            <span class="hint">Reschedule to a different day — Monday to Saturday.</span>
+                            <span class="hint">Any day Monday to Saturday — same-day moves just need a different time slot.</span>
                         </div>
                         <div class="form-field">
                             <div class="appt-time-heading">
@@ -243,6 +351,12 @@
                     </div>
                 </form>
             </div>
+        </div>
+    </div>
+    <div id="slipEmailLoadingOverlay" class="page-load-overlay blocking-overlay" style="display:none; position:fixed; inset:0; z-index:2100;">
+        <div style="text-align:center;">
+            <div class="page-load-spinner" style="margin:0 auto 14px; border-color:rgba(255,255,255,.3); border-top-color:#fff;"></div>
+            <div id="slipEmailLoadingMsg" style="color:#fff;">Sending visitation slip…</div>
         </div>
     </div>
 
@@ -305,6 +419,48 @@
       return a.students ? `${a.students.first_name} ${a.students.last_name}` : "Unknown student";
     }
 
+    function batchRowsFor(a) {
+      if (!a.summon_batch_id) return [a];
+      return Object.values(allAppointmentsById).filter(
+        (r) => r.summon_batch_id === a.summon_batch_id && !["conducted", "declined"].includes(r.status)
+      );
+    }
+
+    // A moved session counts as "rescheduled" whether it's the new real
+    // status or a legacy row still stored as approved + was_rescheduled.
+    function isRescheduledAppointment(a) {
+      return a.status === "rescheduled" || (a.was_rescheduled && a.status === "approved");
+    }
+
+    function latestInfoAnswers(a) {
+      const sheets = Array.isArray(a.students?.student_info_sheets)
+        ? a.students.student_info_sheets
+            .filter((sheet) => sheet.status === "submitted")
+            .sort((left, right) => String(right.submitted_at || "").localeCompare(String(left.submitted_at || "")))
+        : [];
+      return sheets[0]?.answers || {};
+    }
+
+    function visitationParentAge(answers, parentGuardian) {
+      const parent = String(parentGuardian || "").trim().toLowerCase();
+      const candidates = [
+        ["father_name", "father_age"],
+        ["mother_name", "mother_age"],
+        ["guardian_name", "guardian_age"],
+      ];
+      const match = candidates.find(([nameKey]) => String(answers[nameKey] || "").trim().toLowerCase() === parent);
+      return match
+        ? String(answers[match[1]] || "")
+        : String(answers.guardian_age || answers.father_age || answers.mother_age || "");
+    }
+
+    // The visitation-slip fields the email should attach when a visit is
+    // scheduled/confirmed. date/time default to the appointment's own and
+    // are formatted the same way the printable slip shows them.
+    function slipPayload(a, date = a.appointment_date, time = a.appointment_time) {
+      return { date: formatDate(date), time: formatTime(time) };
+    }
+
     async function updateAppointment(appointmentId, patch) {
       const { error } = await supabaseClient.from("appointments").update(patch).eq("appointment_id", appointmentId);
       if (error) {
@@ -315,7 +471,7 @@
       return true;
     }
 
-    async function notifyStudentAboutAppointment(a, title, concern = a.concern || null, note = null) {
+    async function notifyStudentAboutAppointment(a, title, concern = a.concern || null, note = null, opts = {}) {
       if (!a.students?.user_id) return;
       await supabaseClient.from("notifications").insert({
         recipient_user_id: a.students.user_id,
@@ -327,23 +483,48 @@
 
       // Best-effort email to students who have a verified personal email on
       // file — the notify-student-email Edge Function looks up the student
-      // itself and silently skips anyone still unverified, so this never
-      // mails the placeholder @colm.edu.ph addresses. Fire-and-forget: the
-      // in-app notification above is the source of truth, this just adds
-      // delivery outside the portal when it can. Failures are logged so a
-      // silent no-email is never hidden again.
-      supabaseClient
-        .functions.invoke("notify-student-email", {
-          body: {
-            recipient_user_id: a.students.user_id,
-            subject: title,
-            concern,
-            note,
-            details: `${formatDate(a.appointment_date)} at ${formatTime(a.appointment_time)}`,
-            portal_url: location.origin + "/student/student-appointments.html",
-          },
-        })
-        .catch((err) => console.warn("notify-student-email failed:", err?.message ?? err));
+      // itself and skips anyone unverified; it never mails the placeholder
+      // @colm.edu.ph addresses. The in-app notification above is the source
+      // of truth, the email just adds delivery outside the portal when it
+      // can. Returns the invoke result ({ data, error }, never throws) so an
+      // email-slip action can report the real outcome to the counselor —
+      // HTTP failures from the function (e.g. a Resend rejection) are NOT
+      // thrown by functions.invoke, so they must be read from the result.
+      // opts.slip (a {date, time, rescheduled} object) asks the function to
+      // attach the visitation slip as a PDF alongside the email.
+      const emailBody = {
+        recipient_user_id: a.students.user_id,
+        subject: title,
+        concern,
+        note,
+        details: `${formatDate(a.appointment_date)} at ${formatTime(a.appointment_time)}`,
+        portal_url: location.origin + "/student/student-appointments.html",
+      };
+      if (opts.slip) emailBody.slip = opts.slip;
+      return invokeEdge("notify-student-email", emailBody).catch((err) => ({
+        data: null,
+        error: err,
+      }));
+    }
+
+    // Extracts a readable failure message from the supabase-js invoke result.
+    // HTTP errors arrive as { error: FunctionsHttpError } where error.context
+    // is the Response — read its body so the real reason (e.g. what Resend
+    // said) reaches the counselor instead of a numbers-only status message.
+    async function emailInvokeErrorText(invokeResult) {
+      if (!invokeResult?.error) return "";
+      const resp = invokeResult.error.context;
+      if (resp && typeof resp.text === "function") {
+        try {
+          const body = await resp.text();
+          const parsed = JSON.parse(body);
+          if (parsed?.error) return String(parsed.error);
+          if (body) return body.slice(0, 300);
+        } catch {
+          /* fall through to the generic message */
+        }
+      }
+      return invokeResult.error.message || "Unknown error";
     }
 
     // ---------- Visitation slip (printable, C3) ----------
@@ -353,11 +534,15 @@
     // schedule than the appointment's own date (they default to the
     // appointment's actual date).
     function printVisitationSlipForAppointment(a, dateOverride, timeOverride) {
+      const answers = latestInfoAnswers(a);
+      const parentGuardian = a.students?.parent_guardian || answers.guardian_name || "";
       openVisitationSlip({
         studentName: studentName(a),
         gradeSection: [a.students?.year_level, a.students?.section].filter(Boolean).join(" – "),
-        parentGuardian: a.students?.parent_guardian,
+        parentGuardian,
+        parentAge: visitationParentAge(answers, parentGuardian),
         contactNumber: a.students?.contact_number,
+        homeAddress: answers.address || "",
         date: formatDate(dateOverride || a.appointment_date),
         time: formatTime(timeOverride || a.appointment_time),
         concern: a.concern,
@@ -407,6 +592,27 @@
         showReschedule: true,
         showEmailNote: false,
       },
+      "reschedule-batch": {
+        title: "Reschedule Batch",
+        confirmLabel: "Reschedule Batch & Notify",
+        confirmClass: "btn-primary",
+        showReason: true,
+        reasonLabel: "Note to the batch (optional)",
+        reasonRequired: false,
+        showReschedule: true,
+        showEmailNote: false,
+      },
+      "email-slip": {
+        title: "Email Visitation Slip",
+        confirmLabel: "Send Slip to Email",
+        confirmClass: "btn-primary",
+        showReason: true,
+        reasonLabel: "Note to student (optional)",
+        reasonRequired: false,
+        showReschedule: false,
+        showEmailNote: false,
+        helpSlip: true,
+      },
       note: {
         title: "Add Note",
         confirmLabel: "Save Note",
@@ -435,12 +641,15 @@
       return `${pad(Math.floor(min / 60))}:${pad(min % 60)}`;
     }
 
-    function rsSlotButtonHtml(min, taken) {
+    function rsSlotButtonHtml(min, taken, passed) {
       const value = rsSlotTimeString(min);
       const isTaken = taken.has(value);
-      return `<button type="button" class="appt-slot${isTaken ? " booked" : ""}" data-value="${value}"${isTaken ? " disabled" : ""} title="${isTaken ? "Already booked" : `Set ${formatTime(value)}`}">
+      const isPassed = passed.has(value);
+      const state = isTaken ? "booked" : isPassed ? "passed" : "";
+      const label = isTaken ? "Booked" : isPassed ? "Passed" : "";
+      return `<button type="button" class="appt-slot${state ? " " + state : ""}" data-value="${value}"${state ? " disabled" : ""} title="${isTaken ? "Already booked" : isPassed ? "Already passed for today" : `Set ${formatTime(value)}`}">
         <span class="appt-slot-time">${formatTime(value)}</span>
-        ${isTaken ? '<span class="appt-slot-state">Booked</span>' : '<span class="appt-slot-check"><i class="fa-solid fa-check"></i></span>'}
+        ${state ? `<span class="appt-slot-state">${label}</span>` : '<span class="appt-slot-check"><i class="fa-solid fa-check"></i></span>'}
       </button>`;
     }
 
@@ -472,28 +681,47 @@
       const afternoon = [];
       for (let m = RS_AFTERNOON_START_MIN; m < RS_SLOT_END_MIN; m += RS_SLOT_STEP_MIN) afternoon.push(m);
 
+      // Slots whose start time has already passed today are not selectable.
+      const passed = new Set();
+      if (date === todayStr()) {
+        const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+        morning.concat(afternoon).forEach((m) => {
+          if (m <= nowMin) passed.add(rsSlotTimeString(m));
+        });
+      }
+
       grid.innerHTML = `
         <div class="appt-slot-sections">
           <div class="appt-slot-section">
             <div class="appt-slot-section-title">Morning</div>
-            <div class="appt-slot-row">${morning.map((m) => rsSlotButtonHtml(m, rsTakenSlots)).join("")}</div>
+            <div class="appt-slot-row">${morning.map((m) => rsSlotButtonHtml(m, rsTakenSlots, passed)).join("")}</div>
           </div>
           <div class="appt-slot-section">
             <div class="appt-slot-section-title">Afternoon</div>
-            <div class="appt-slot-row">${afternoon.map((m) => rsSlotButtonHtml(m, rsTakenSlots)).join("")}</div>
+            <div class="appt-slot-row">${afternoon.map((m) => rsSlotButtonHtml(m, rsTakenSlots, passed)).join("")}</div>
           </div>
         </div>
       `;
 
       const total = morning.length + afternoon.length;
+      const passedCount = passed.size;
       const available = grid.querySelectorAll(".appt-slot:not(:disabled)").length;
-      const booked = total - available;
+      const booked = total - available - passedCount;
 
       if (available === 0) {
-        hint.textContent = "No available times on this date — every slot is booked.";
+        if (passedCount > 0 && booked === 0) {
+          hint.textContent = "All of today's time slots have already passed. Please choose another date.";
+        } else {
+          hint.textContent = "No available times on this date — every slot is booked.";
+        }
         hint.style.display = "";
-      } else if (booked > 0) {
-        if (meta) meta.textContent = `${available} of ${total} slots available · ${booked} already booked`;
+        if (meta) meta.textContent = "";
+      } else if (booked > 0 || passedCount > 0) {
+        if (meta) {
+          let metaText = `${available} of ${total} slots available · ${booked} already booked`;
+          if (passedCount > 0) metaText += ` · ${passedCount} passed for today`;
+          meta.textContent = metaText;
+        }
       }
 
       grid.querySelectorAll(".appt-slot:not(:disabled)").forEach((btn) => {
@@ -518,9 +746,17 @@
       actionModalAppointment = a;
       actionModalKey = actionKey;
 
-      document.getElementById("actionModalTitle").textContent = config.title;
-      document.getElementById("actionModalMeta").textContent =
-        `${studentName(a)} · ${formatDate(a.appointment_date)} at ${formatTime(a.appointment_time)}`;
+      // A batch reschedule acts on every row sharing the summon's
+      // batch id, so surface the batch size instead of this row alone.
+      const isBatchReschedule = actionKey === "reschedule-batch";
+      const batchRows = isBatchReschedule ? batchRowsFor(a) : [];
+
+      document.getElementById("actionModalTitle").textContent = isBatchReschedule
+        ? `Reschedule Batch (${batchRows.length} students)`
+        : config.title;
+      document.getElementById("actionModalMeta").textContent = isBatchReschedule
+        ? `The whole batch · currently ${formatDate(a.appointment_date)} at ${formatTime(a.appointment_time)}`
+        : `${studentName(a)} · ${formatDate(a.appointment_date)} at ${formatTime(a.appointment_time)}`;
 
       const reasonField = document.getElementById("actionReasonField");
       const reasonInput = document.getElementById("actionReasonInput");
@@ -556,6 +792,24 @@
       actionModalKey = null;
     }
 
+    function setSlipEmailLoading(isLoading) {
+      let overlay = document.getElementById("slipEmailLoadingOverlay");
+      if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.id = "slipEmailLoadingOverlay";
+        overlay.className = "page-load-overlay blocking-overlay";
+        overlay.innerHTML = `
+          <div style="text-align:center;">
+            <div class="page-load-spinner" style="margin:0 auto 14px; border-color:rgba(255,255,255,.3); border-top-color:#fff;"></div>
+            <div style="color:#fff;">Sending visitation slip...</div>
+          </div>`;
+        document.body.appendChild(overlay);
+      }
+      overlay.style.display = isLoading ? "flex" : "none";
+      overlay.setAttribute("aria-hidden", isLoading ? "false" : "true");
+      document.body.classList.toggle("slip-email-sending", isLoading);
+    }
+
     document.getElementById("actionModalCloseBtn").addEventListener("click", closeActionModal);
     document.getElementById("actionModalOverlay").addEventListener("click", (e) => {
       if (e.target.id === "actionModalOverlay") closeActionModal();
@@ -588,15 +842,76 @@
           ok = await updateAppointment(a.appointment_id, { status: "conducted", counselor_note: reason || null });
           if (ok) await notifyStudentAboutAppointment(a, "Your appointment session has been marked as conducted");
           break;
+        case "email-slip": {
+          setSlipEmailLoading(true);
+          closeActionModal();
+          const slip = slipPayload(a);
+          if (!slip) {
+            showToast("Couldn't build the slip for this appointment.", "error");
+            setSlipEmailLoading(false);
+            confirmBtn.disabled = false;
+            return;
+          }
+          const emailResult = await notifyStudentAboutAppointment(a, "Your visitation slip has been emailed to you", a.concern || null, reason || null, {
+            slip,
+          });
+
+          if (emailResult?.error) {
+            const detail = await emailInvokeErrorText(emailResult);
+            showToast(`Slip email failed to send: ${detail}`, "error");
+            console.error("notify-student-email error:", emailResult.error);
+            setSlipEmailLoading(false);
+            confirmBtn.disabled = false;
+            return;
+          }
+
+          const data = emailResult?.data;
+          if (!data) {
+            showToast("Slip could not be emailed — this student has no portal account to receive it.", "warning");
+            setSlipEmailLoading(false);
+            confirmBtn.disabled = false;
+            return;
+          }
+          if (data?.skipped) {
+            const skipMsg =
+              data.skipped === "placeholder email"
+                ? "this student uses a placeholder @colm.edu.ph email so no message can be delivered"
+                : data.skipped === "email not verified"
+                  ? "this student hasn't verified a personal email yet"
+                  : data.skipped;
+            showToast(`Cannot send visitation slip: ${skipMsg}.`, "error");
+            setSlipEmailLoading(false);
+            confirmBtn.disabled = false;
+            return;
+          }
+
+          if (data?.slipError) {
+            showToast(
+              `Slip email was sent, but the PDF couldn't be attached: ${data.slipError}`,
+              "warning"
+            );
+            setSlipEmailLoading(false);
+            confirmBtn.disabled = false;
+            return;
+          }
+          if (data?.slipAttached !== true) {
+            showToast(
+              "Slip email was sent, but without the PDF attachment — the deployed notify-student-email Edge Function appears outdated. Redeploy it from supabase/functions (from Supabase dashboard: Edge Functions > notify-student-email > Deploy with the code from the repo).",
+              "warning"
+            );
+            setSlipEmailLoading(false);
+            confirmBtn.disabled = false;
+            return;
+          }
+
+          showToast(`Slip emailed to ${studentName(a)}'s Gmail (with PDF)`, "success");
+          setSlipEmailLoading(false);
+          break;
+        }
         case "reschedule": {
           const newDate = document.getElementById("actionDateInput").value;
           const newTime = document.getElementById("actionTimeInput").value;
 
-          if (newDate === a.appointment_date) {
-            showToast("Rescheduling must be to a different day.", "error");
-            confirmBtn.disabled = false;
-            return;
-          }
           if (!newDate) {
             showToast("Please choose a new date.", "error");
             confirmBtn.disabled = false;
@@ -612,6 +927,11 @@
             confirmBtn.disabled = false;
             return;
           }
+          if (newDate === a.appointment_date && newTime === a.appointment_time) {
+            showToast("That's the current date and time — choose a different time slot.", "error");
+            confirmBtn.disabled = false;
+            return;
+          }
           if (rsTakenSlots.has(newTime)) {
             showToast("That time slot is already booked for that date — please choose another.", "error");
             renderRescheduleSlots();
@@ -624,6 +944,7 @@
             .update({
               appointment_date: newDate,
               appointment_time: newTime,
+              status: "rescheduled",
               counselor_note: reason || a.counselor_note || null,
               was_rescheduled: true,
             })
@@ -640,7 +961,80 @@
             return;
           }
           ok = true;
-          await notifyStudentAboutAppointment(a, "Your appointment request was rescheduled", a.concern || null, reason || a.counselor_note || null);
+          await notifyStudentAboutAppointment(a, "Your appointment has been rescheduled", a.concern || null, reason || a.counselor_note || null);
+          break;
+        }
+        case "reschedule-batch": {
+          const newDate = document.getElementById("actionDateInput").value;
+          const newTime = document.getElementById("actionTimeInput").value;
+          const reason = document.getElementById("actionReasonInput").value.trim();
+
+          if (!newDate) {
+            showToast("Please choose a new date.", "error");
+            confirmBtn.disabled = false;
+            return;
+          }
+          if (isSunday(newDate)) {
+            showToast("Guidance is closed on Sundays. Please choose a date from Monday to Saturday.", "error");
+            confirmBtn.disabled = false;
+            return;
+          }
+          if (!newTime) {
+            showToast("Please choose a new time slot.", "error");
+            confirmBtn.disabled = false;
+            return;
+          }
+          if (newDate === a.appointment_date && newTime === a.appointment_time) {
+            showToast("That's the batch's current date and time — choose a different time slot.", "error");
+            confirmBtn.disabled = false;
+            return;
+          }
+
+          const batchRows = batchRowsFor(a);
+          if (batchRows.length <= 1) {
+            showToast("This summon no longer forms a batch — reschedule the student's own row instead.", "error");
+            confirmBtn.disabled = false;
+            return;
+          }
+          if (rsTakenSlots.has(newTime)) {
+            showToast("That time slot is already booked for that date — please choose another.", "error");
+            renderRescheduleSlots();
+            confirmBtn.disabled = false;
+            return;
+          }
+
+          // Move EVERY row that shares the summon's batch id to the one
+          // new slot, keeping them together (same summon_batch_id, so the
+          // DB's shared-slot rule still lets them all occupy it).
+          const { error } = await supabaseClient
+            .from("appointments")
+            .update({
+              appointment_date: newDate,
+              appointment_time: newTime,
+              status: "rescheduled",
+              was_rescheduled: true,
+            })
+            .eq("summon_batch_id", a.summon_batch_id);
+
+          if (error) {
+            const message =
+              error.code === "23505"
+                ? "That date and time was just taken by another booking — please pick another slot."
+                : "Couldn't reschedule the batch: " + error.message;
+            showToast(message, "error");
+            console.error(error);
+            confirmBtn.disabled = false;
+            return;
+          }
+          ok = true;
+          for (const row of batchRows) {
+            await notifyStudentAboutAppointment(
+              row,
+              "Your appointment has been rescheduled",
+              row.concern || null,
+              reason || null
+            );
+          }
           break;
         }
         case "note":
@@ -662,22 +1056,343 @@
       }
     });
 
+    // ---------- Summon students (group appointment scheduling) ----------
+    // Lets a counselor schedule counseling sessions for several students at
+    // once. All selected students attend the ONE date and time slot picked
+    // below — a shared batch session. One "approved" appointment row per
+    // student (a summon is scheduled by the office, not a request waiting on
+    // review), each carrying the same summon_batch_id so the DB allows the
+    // shared slot, then every student gets an in-app notification plus a
+    // best-effort email via notify-student-email.
+
+    const summonStudents = [];          // all active students, loaded once
+    const summonSelected = new Map();   // student_id -> student, in click order
+    let summonTakenSlots = new Set();   // office-wide taken "HH:MM" for the chosen date
+
+    function fullStudentName(s) {
+      return [s.first_name, s.middle_name, s.last_name].filter(Boolean).join(" ");
+    }
+
+    function renderSummonStudentList() {
+      const box = document.getElementById("summonStudentList");
+      const query = document.getElementById("summonStudentSearch").value.trim().toLowerCase();
+      const matches = query
+        ? summonStudents.filter((s) => fullStudentName(s).toLowerCase().includes(query))
+        : summonStudents;
+
+      if (!matches.length) {
+        box.innerHTML = `<div class="summon-empty">No students match “${escapeHtml(query)}”.</div>`;
+      } else {
+        box.innerHTML = matches
+          .map((s) => {
+            const checked = summonSelected.has(s.student_id) ? "checked" : "";
+            const meta = [s.year_level, s.section].filter(Boolean).join(" – ");
+            return `<label>
+              <input type="checkbox" value="${s.student_id}" ${checked}>
+              <span>${escapeHtml(fullStudentName(s))}</span>
+              ${meta ? `<span class="summon-student-meta">${escapeHtml(meta)}</span>` : ""}
+            </label>`;
+          })
+          .join("");
+      }
+
+      box.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+        cb.addEventListener("change", () => {
+          const id = Number(cb.value);
+          if (cb.checked) summonSelected.set(id, summonStudents.find((s) => s.student_id === id));
+          else summonSelected.delete(id);
+          renderSummonStudentList();
+        });
+      });
+
+      updateSummonCounts();
+    }
+
+    function updateSummonCounts() {
+      const count = summonSelected.size;
+      document.getElementById("summonSelectedHint").textContent = count
+        ? `${count} student${count === 1 ? "" : "s"} selected — the whole batch will share one time slot.`
+        : "No students selected yet.";
+      document.getElementById("summonSubmitBtn").innerHTML = count
+        ? `Summon ${count} Student${count === 1 ? "" : "s"}`
+        : "Summon Students";
+    }
+
+    // Fetches the office's shared slot state for the chosen date and renders a
+    // single "pick one time" grid — ALL selected students share the slot, so
+    // no per-student dropdowns are needed.
+    async function renderSummonSlots() {
+      const grid = document.getElementById("summonSlotGrid");
+      const meta = document.getElementById("summonSlotsMeta");
+      const hint = document.getElementById("summonSlotsHint");
+      const timeInput = document.getElementById("summonTimeInput");
+      const date = document.getElementById("summonDateInput").value;
+
+      timeInput.value = "";
+      grid.innerHTML = "";
+      hint.style.display = "none";
+      hint.textContent = "";
+      if (meta) meta.textContent = "";
+
+      if (!date) return;
+
+      const { data, error } = await supabaseClient.rpc("office_slot_times", { target_date: date });
+      summonTakenSlots = error ? new Set() : new Set((data || []).map((r) => (typeof r === "string" ? r : r.taken_time)));
+
+      const morning = [];
+      for (let m = RS_SLOT_START_MIN; m < RS_MORNING_END_MIN; m += RS_SLOT_STEP_MIN) morning.push(m);
+      const afternoon = [];
+      for (let m = RS_AFTERNOON_START_MIN; m < RS_SLOT_END_MIN; m += RS_SLOT_STEP_MIN) afternoon.push(m);
+
+      // Slots whose start time has already passed today are not selectable.
+      const passed = new Set();
+      if (date === todayStr()) {
+        const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+        morning.concat(afternoon).forEach((m) => {
+          if (m <= nowMin) passed.add(rsSlotTimeString(m));
+        });
+      }
+
+      grid.innerHTML = `
+        <div class="appt-slot-sections">
+          <div class="appt-slot-section">
+            <div class="appt-slot-section-title">Morning</div>
+            <div class="appt-slot-row">${morning.map((m) => rsSlotButtonHtml(m, summonTakenSlots, passed)).join("")}</div>
+          </div>
+          <div class="appt-slot-section">
+            <div class="appt-slot-section-title">Afternoon</div>
+            <div class="appt-slot-row">${afternoon.map((m) => rsSlotButtonHtml(m, summonTakenSlots, passed)).join("")}</div>
+          </div>
+        </div>
+      `;
+
+      const total = morning.length + afternoon.length;
+      const passedCount = passed.size;
+      const available = grid.querySelectorAll(".appt-slot:not(:disabled)").length;
+      const booked = total - available - passedCount;
+
+      if (available === 0) {
+        if (passedCount > 0 && booked === 0) {
+          hint.textContent = "All of today's time slots have already passed. Please choose another date.";
+        } else {
+          hint.textContent = "No available times on this date — every slot is booked.";
+        }
+        hint.style.display = "";
+        if (meta) meta.textContent = "";
+      } else if (booked > 0 || passedCount > 0) {
+        if (meta) {
+          let metaText = `${available} of ${total} slots available · ${booked} already booked`;
+          if (passedCount > 0) metaText += ` · ${passedCount} passed for today`;
+          meta.textContent = metaText;
+        }
+      }
+
+      grid.querySelectorAll(".appt-slot:not(:disabled)").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          grid.querySelectorAll(".appt-slot").forEach((b) => b.classList.remove("selected"));
+          btn.classList.add("selected");
+          timeInput.value = btn.dataset.value;
+        });
+      });
+    }
+
+    async function openSummonModal() {
+      if (!summonStudents.length) {
+        const { data, error } = await supabaseClient
+          .from("students")
+          .select("student_id, first_name, middle_name, last_name, year_level, section, user_id")
+          .eq("is_archived", false)
+          .order("last_name", { ascending: true });
+
+        if (error) {
+          showToast("Couldn't load students: " + error.message, "error");
+          console.error(error);
+          return;
+        }
+        summonStudents.push(...(data || []));
+      }
+
+      document.getElementById("summonForm").reset();
+      summonSelected.clear();
+
+      const dateInput = document.getElementById("summonDateInput");
+      dateInput.min = todayStr();
+      dateInput.value = "";
+
+      renderSummonStudentList();
+      renderSummonSlots();
+      document.getElementById("summonEmailNote").style.display = "flex";
+
+      document.getElementById("summonModalOverlay").classList.add("show");
+      document.getElementById("summonStudentSearch").focus();
+    }
+
+    function closeSummonModal() {
+      document.getElementById("summonModalOverlay").classList.remove("show");
+    }
+
+    document.getElementById("summonCloseBtn").addEventListener("click", closeSummonModal);
+    document.getElementById("summonModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "summonModalOverlay") closeSummonModal();
+    });
+
+    document.getElementById("summonBtn").addEventListener("click", openSummonModal);
+    document.getElementById("summonStudentSearch").addEventListener("input", renderSummonStudentList);
+
+    document.getElementById("summonDateInput").addEventListener("change", (e) => {
+      if (e.target.value && isSunday(e.target.value)) {
+        showToast("Guidance is closed on Sundays. Please choose a date from Monday to Saturday.", "error");
+        e.target.value = "";
+      }
+      renderSummonSlots();
+    });
+
+    document.getElementById("summonForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const date = document.getElementById("summonDateInput").value;
+      const time = document.getElementById("summonTimeInput").value;
+      const category = document.getElementById("summonConcernTypeInput").value;
+      const reason = document.getElementById("summonReasonInput").value.trim();
+
+      if (!summonSelected.size) {
+        showToast("Please select at least one student to summon.", "error");
+        return;
+      }
+      if (!date) {
+        showToast("Please choose a date for the summons.", "error");
+        return;
+      }
+      if (isSunday(date)) {
+        showToast("Guidance is closed on Sundays. Please choose a date from Monday to Saturday.", "error");
+        return;
+      }
+      if (!time) {
+        showToast("Please choose the time slot for the whole batch.", "error");
+        return;
+      }
+      if (summonTakenSlots.has(time)) {
+        showToast("That time slot is already booked for that date — please choose another.", "error");
+        renderSummonSlots();
+        return;
+      }
+      if (!category) {
+        showToast("Please choose a concern type.", "error");
+        return;
+      }
+      if (reason.length < 10) {
+        showToast("Please describe the reason for the summons in a full sentence.", "error");
+        document.getElementById("summonReasonInput").focus();
+        return;
+      }
+
+      // Re-check the office schedule right before inserting so a slot that
+      // was just booked by someone else surfaces here, not as a failed row.
+      const { data: freshTakenData, error: freshTakenError } = await supabaseClient.rpc("office_slot_times", { target_date: date });
+      if (!freshTakenError && (freshTakenData || []).some((r) => (typeof r === "string" ? r : r.taken_time) === time)) {
+        showToast("That time slot was just booked by someone else — please choose another.", "error");
+        renderSummonSlots();
+        return;
+      }
+
+      const rows = Array.from(summonSelected.values());
+      const summonBatchId = (typeof crypto !== "undefined" && crypto.randomUUID && crypto.randomUUID()) || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+      const btn = document.getElementById("summonSubmitBtn");
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner"></i> Scheduling…';
+
+      const schoolYear = defaultSchoolYear();
+      let created = 0;
+      const failedDetails = [];
+
+      for (const student of rows) {
+        const { error: insertError } = await supabaseClient.from("appointments").insert({
+          student_id: student.student_id,
+          counselor_id: currentCounselor.counselor_id,
+          appointment_date: date,
+          appointment_time: time,
+          concern: reason,
+          concern_category: category,
+          school_year: schoolYear,
+          status: "approved",
+          summon_batch_id: summonBatchId,
+        });
+
+        if (insertError) {
+          const message =
+            insertError.code === "23505"
+              ? "that time slot was just taken by another booking"
+              : insertError.message;
+          failedDetails.push(message);
+          console.error(insertError);
+          continue;
+        }
+
+        created++;
+        if (student.user_id) {
+          await supabaseClient.from("notifications").insert({
+            recipient_user_id: student.user_id,
+            type: "appointment",
+            title: "You have an appointment at the guidance office",
+            message: reason,
+            link: "student-appointments.html",
+          });
+
+          supabaseClient
+            .functions.invoke("notify-student-email", {
+              body: {
+                recipient_user_id: student.user_id,
+                subject: "You have an appointment at the guidance office",
+                concern: reason,
+                note: null,
+                details: `${formatDate(date)} at ${formatTime(time)}`,
+                portal_url: location.origin + "/student/student-appointments.html",
+              },
+            })
+            .catch((err) => console.warn("notify-student-email failed:", err?.message ?? err));
+        }
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = "Summon Students";
+
+      if (created > 0) {
+        closeSummonModal();
+        showToast(`${created} student${created === 1 ? "" : "s"} summoned.`, "success");
+        await loadAppointments();
+        await refreshPendingCount();
+      }
+      if (failedDetails.length) {
+        showToast(`${failedDetails.length} student${failedDetails.length === 1 ? "" : "s"} couldn't be scheduled: ${failedDetails.join(" · ")}`, "error");
+      }
+    });
+
     function appointmentRowHtml(a) {
       const actions = [];
+      const batch = a.summon_batch_id ? batchRowsFor(a) : [];
+      const isBatch = batch.length > 1; // a lone summon isn't a batch
       if (a.status === "pending") {
         actions.push(`<button type="button" class="icon-btn sm primary" data-action="approve" title="Approve"><i class="fa-solid fa-check"></i></button>`);
         actions.push(`<button type="button" class="icon-btn sm danger" data-action="decline" title="Decline"><i class="fa-solid fa-xmark"></i></button>`);
-      } else if (a.status === "approved") {
-        // No plain "Cancel" once a session is approved — the client's rule
+      } else if (a.status === "approved" || a.status === "rescheduled") {
+        // No plain "Cancel" once a session is scheduled — the client's rule
         // is that a scheduled session is never cancelled outright, only
         // rescheduled. Declining is still fine at the "pending" stage above,
         // since that's withdrawing a request that was never confirmed, not
-        // erasing a scheduled session.
+        // erasing a scheduled session. "Rescheduled" is a live, booked
+        // session too (just moved) so it keeps the same actions.
         actions.push(`<button type="button" class="icon-btn sm primary" data-action="complete" title="Mark Conducted"><i class="fa-solid fa-check-double"></i></button>`);
         actions.push(`<button type="button" class="icon-btn sm" data-action="invite" title="Print Visitation Slip"><i class="fa-solid fa-file-lines"></i></button>`);
+        actions.push(`<button type="button" class="icon-btn sm primary" data-action="email-slip" title="Email Visitation Slip to student's Gmail"><i class="fa-solid fa-envelope-open-text"></i></button>`);
         actions.push(`<button type="button" class="icon-btn sm" data-action="reschedule" title="Reschedule"><i class="fa-regular fa-calendar-days"></i></button>`);
+        // Whole-batch reschedule only makes sense when 2+ students were
+        // summoned together — a single summoned student is just their own row.
+        if (isBatch) {
+          actions.push(`<button type="button" class="icon-btn sm" data-action="reschedule-batch" title="Reschedule the whole batch (${batch.length} students together)"><i class="fa-solid fa-users"></i></button>`);
+        }
       }
-      if (["approved", "conducted"].includes(a.status)) {
+      if (["approved", "conducted", "rescheduled"].includes(a.status)) {
         actions.push(`<button type="button" class="icon-btn sm" data-action="note" title="${a.counselor_note ? "Edit Note" : "Add Note"}"><i class="fa-regular fa-note-sticky"></i></button>`);
       }
 
@@ -685,18 +1400,30 @@
         ? `<i class="fa-solid fa-note-sticky note-indicator" title="${escapeHtml(a.counselor_note)}"></i>`
         : "";
 
-      const rescheduledBadge = a.was_rescheduled
+      const displayStatus = a.was_rescheduled && (a.status === "approved" || a.status === "rescheduled")
+        ? "rescheduled"
+        : a.status;
+
+      // An appointment never shows two statuses at once: while a moved
+      // session is still live it displays as "Rescheduled" only. The small
+      // history chip only reappears once the session ends (conducted /
+      // declined) so a finished, once-moved session still tells that story.
+      const rescheduledBadge = a.was_rescheduled && displayStatus !== "rescheduled"
         ? `<span class="badge badge-rescheduled" title="This appointment's date/time was changed at least once">Rescheduled</span>`
+        : "";
+
+      const batchChip = isBatch
+        ? `<div class="batch-meta"><span class="chip batch-chip" title="Part of a ${batch.length}-student summon on the same slot"><i class="fa-solid fa-users"></i> Batch &middot; ${batch.length}</span></div>`
         : "";
 
       return `
         <tr data-id="${a.appointment_id}">
-          <td>${escapeHtml(studentName(a))}</td>
+          <td>${escapeHtml(studentName(a))}${batchChip}</td>
           <td>${formatDate(a.appointment_date)}</td>
           <td>${formatTime(a.appointment_time)}</td>
           <td class="col-concern col-concern-type">${a.concern_category ? `<span class="chip">${escapeHtml(a.concern_category)}</span>` : "—"}</td>
           <td class="col-concern col-concern-details">${escapeHtml(a.concern || "—")} ${noteIndicator}</td>
-          <td><span class="badge badge-${badgeClass(a.status)}">${capitalize(a.status)}</span> ${rescheduledBadge}</td>
+          <td><span class="badge badge-${badgeClass(displayStatus)}">${capitalize(displayStatus)}</span> ${rescheduledBadge}</td>
           <td><div class="table-actions">${actions.join("")}</div></td>
         </tr>
       `;
@@ -709,7 +1436,9 @@
         row.querySelector('[data-action="decline"]')?.addEventListener("click", () => openActionModal("decline", a));
         row.querySelector('[data-action="complete"]')?.addEventListener("click", () => openActionModal("complete", a));
         row.querySelector('[data-action="reschedule"]')?.addEventListener("click", () => openActionModal("reschedule", a));
+        row.querySelector('[data-action="reschedule-batch"]')?.addEventListener("click", () => openActionModal("reschedule-batch", a));
         row.querySelector('[data-action="invite"]')?.addEventListener("click", () => printVisitationSlipForAppointment(a));
+        row.querySelector('[data-action="email-slip"]')?.addEventListener("click", () => openActionModal("email-slip", a));
         row.querySelector('[data-action="note"]')?.addEventListener("click", () => openActionModal("note", a));
       });
     }
@@ -719,7 +1448,7 @@
     // only applies filters on an embedded resource when it's joined as
     // inner. Safe here since appointments.student_id is never null.
     const APPOINTMENTS_SELECT =
-      "appointment_id, student_id, concern, concern_category, appointment_date, appointment_time, status, counselor_note, was_rescheduled, students!inner(first_name, last_name, user_id, student_email, section, year_level, contact_number, parent_guardian)";
+      "appointment_id, student_id, concern, concern_category, appointment_date, appointment_time, status, counselor_note, was_rescheduled, summon_batch_id, students!inner(first_name, last_name, user_id, student_email, section, year_level, contact_number, parent_guardian, student_info_sheets(answers, status, submitted_at))";
     const APPOINTMENTS_PAGE_SIZE = 20;
     let activeAppointmentsFilter = "pending";
     let appointmentsPage = 1;
@@ -741,9 +1470,11 @@
         .from("appointments")
         .select(APPOINTMENTS_SELECT, { count: "exact" });
 
-      // "Rescheduled" isn't a status a row ever sits in (rescheduling keeps
-      // an appointment "approved," just on a new date/time) — it's a history
-      // flag, so this filter reads was_rescheduled instead of status.
+      // "Rescheduled" is now a real status (a moved session keeps working
+      // as a booked appointment, just flagged), and rescheduling also sets
+      // the was_rescheduled history flag — so this filter reads the flag,
+      // catching live "rescheduled" rows AND sessions that were moved and
+      // have since been completed, keeping the history view complete.
       if (activeAppointmentsFilter === "rescheduled") {
         query = query.eq("was_rescheduled", true);
       } else if (activeAppointmentsFilter !== "all") {
@@ -770,9 +1501,31 @@
 
       const wrapper = document.createElement("tbody");
       wrapper.innerHTML = data.map(appointmentRowHtml).join("");
+      markBatchBlocks(wrapper);
+
       attachRowActions(wrapper, allAppointmentsById);
 
       while (wrapper.firstChild) container.appendChild(wrapper.firstChild);
+    }
+
+    // Rows of one summoned batch share the exact same date+time, and the
+    // list is sorted by date/time, so they render as a contiguous run.
+    // Tint each such run so the whole group reads as one block — a lone
+    // summon (1 student) is never grouped.
+    function markBatchBlocks(wrapper) {
+      const rows = wrapper.querySelectorAll("tr[data-id]");
+      let currentBatchId = null;
+
+      rows.forEach((tr) => {
+        const a = allAppointmentsById[tr.dataset.id];
+        const isBatch = a?.summon_batch_id && batchRowsFor(a).length > 1;
+        if (isBatch && a.summon_batch_id === currentBatchId) {
+          tr.classList.add("batch-row");
+        } else {
+          currentBatchId = isBatch ? a.summon_batch_id : null;
+          if (isBatch) tr.classList.add("batch-row");
+        }
+      });
     }
 
     async function loadAppointments() {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>COLM Guidance</title>
+    <title>Account Management · COLM Guidance Portal</title>
     
         <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
       <link rel="stylesheet"
@@ -347,6 +347,20 @@
         .join(", ");
     }
 
+    async function edgeErrorDetail(error) {
+      const response = error?.context;
+      if (response instanceof Response) {
+        try {
+          const body = await response.clone().json();
+          return body?.error || body?.message || "";
+        } catch {
+          return "";
+        }
+      }
+      const data = response?.data;
+      return data && typeof data === "object" ? data.error || data.message || "" : data || "";
+    }
+
     // ---------- Bulk student import ----------
 
     const HEADER_ALIASES = {
@@ -652,14 +666,10 @@
       const educationLevel = document.getElementById("importEducationLevel").value;
       const section = document.getElementById("importSection").value.trim();
 
-      if (!(await attachSession())) return;
-
-      const { data, error } = await supabaseClient.functions.invoke("create-student-accounts", {
-        body: {
-          students: parsedStudents.map((r) => ({ ...r, section: r.section || section })),
-          educationLevel,
-          section,
-        },
+      const { data, error } = await invokeEdge("create-student-accounts", {
+        students: parsedStudents.map((r) => ({ ...r, section: r.section || section })),
+        educationLevel,
+        section,
       });
 
       btn.disabled = false;
@@ -705,7 +715,7 @@
       const input = document.getElementById("staffUsernameInput");
       const fn = slugifyName(document.getElementById("staffFirstNameInput").value);
       const ln = slugifyName(document.getElementById("staffLastNameInput").value);
-      const cand = fn || ln ? `${fn}${ln ? "." + ln : ""}` : "";
+      const cand = fn || ln ? `colm_${fn}${ln ? "." + ln : ""}` : "";
       // Auto-fill only when the field is empty or still holding the value
       // we last auto-filled. If the user typed something custom, leave it —
       // but resume auto-filling once they wipe it back to empty.
@@ -961,29 +971,32 @@
       statusConfirmActionBtn.textContent = goingInactive ? "Deactivating…" : "Reactivating…";
       statusConfirmError.style.display = "none";
 
-      if (!(await attachSession())) {
+      // Block the screen so the status change isn't interrupted (double
+      // clicks, page taps) — the edge function signs the account out too.
+      showBlockingLoading(goingInactive ? "Deactivating account…" : "Reactivating account…");
+      try {
+        const { data: res, error: fnError } = await invokeEdge("set-staff-account-status", {
+          counselorId,
+          active: !goingInactive,
+        });
+
+        if (fnError || res?.error) {
+          const detail = res?.error || fnError?.context?.data?.error || "";
+          statusConfirmError.textContent = detail || fnError?.message || "Something went wrong.";
+          statusConfirmError.style.display = "block";
+          statusConfirmActionBtn.disabled = false;
+          statusConfirmActionBtn.textContent = goingInactive ? "Deactivate" : "Reactivate";
+          console.error(fnError || res?.error, fnError?.context?.data);
+          return;
+        }
+
         closeStatusConfirm();
-        return;
+        showToast(goingInactive ? "Account deactivated." : "Account reactivated.", "success");
+        await loadStaffDirectory();
+        await loadAuditLog();
+      } finally {
+        hideBlockingLoading();
       }
-
-      const { data: res, error: fnError } = await supabaseClient.functions.invoke("set-staff-account-status", {
-        body: { counselorId, active: !goingInactive },
-      });
-
-      if (fnError || res?.error) {
-        const detail = res?.error || fnError?.context?.data?.error || "";
-        statusConfirmError.textContent = detail || fnError?.message || "Something went wrong.";
-        statusConfirmError.style.display = "block";
-        statusConfirmActionBtn.disabled = false;
-        statusConfirmActionBtn.textContent = goingInactive ? "Deactivate" : "Reactivate";
-        console.error(fnError || res?.error, fnError?.context?.data);
-        return;
-      }
-
-      closeStatusConfirm();
-      showToast(goingInactive ? "Account deactivated." : "Account reactivated.", "success");
-      await loadStaffDirectory();
-      await loadAuditLog();
     });
 
     document.getElementById("createStaffForm").addEventListener("submit", async (e) => {
@@ -994,8 +1007,11 @@
         usernameInput.value = (() => {
           const fn = slugifyName(document.getElementById("staffFirstNameInput").value);
           const ln = slugifyName(document.getElementById("staffLastNameInput").value);
-          return fn || ln ? `${fn}${ln ? "." + ln : ""}` : "";
+          return fn || ln ? `colm_${fn}${ln ? "." + ln : ""}` : "";
         })();
+      }
+      if (usernameInput.value && !usernameInput.value.trim().toLowerCase().startsWith("colm_")) {
+        usernameInput.value = `colm_${usernameInput.value.trim()}`;
       }
       if (!(await validateUsernameAvailability())) {
         usernameInput.focus();
@@ -1015,21 +1031,14 @@
       saveBtn.disabled = true;
       saveBtn.textContent = "Creating…";
 
-      if (!(await attachSession())) {
-        saveBtn.disabled = false;
-        saveBtn.textContent = "Create Account";
-        return;
-      }
-
-      const { data, error } = await supabaseClient.functions.invoke("create-staff-account", { body: payload });
+      const { data, error } = await invokeEdge("create-staff-account", payload);
 
       saveBtn.disabled = false;
       saveBtn.textContent = "Create Account";
 
       if (error || data?.error) {
-        const status = error?.context?.status ? ` (HTTP ${error.context.status})` : "";
-        const detail = data?.error || error?.context?.data?.error || "";
-        showToast(`Couldn't create account${status}: ${detail || error.message}`, "error");
+        const detail = data?.error || (await edgeErrorDetail(error));
+        showToast(`Couldn't create account: ${detail || error.message}`, "error");
         console.error(error || data?.error, error?.context?.data);
         return;
       }

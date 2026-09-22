@@ -1,0 +1,1266 @@
+let currentCounselor = null;
+    let editingFormId = null;
+    let sections = [];
+    let currentSectionIndex = 0;
+    let assigningForm = null;
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str ?? "";
+      return div.innerHTML;
+    }
+
+    function escapeAttr(str) {
+      return String(str ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function formatDate(isoStr) {
+      return new Date(isoStr).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    }
+
+    function parseOptions(text) {
+      return String(text || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+
+    function currentQuestions() {
+      return sections[currentSectionIndex].questions;
+    }
+
+    // ---- Form-builder draft (localStorage autosave) ---------------
+    // Automatically backs up an in-progress NEW form so a stray reload or
+    // an accidental modal close never loses a counselor's work. Drafts
+    // only ever exist for brand-new forms (editingFormId stays null) GÇö
+    // existing forms already persist in the database, so nothing here can
+    // shadow real saved data. A draft is wiped the moment the form is
+    // actually saved.
+    function builderDraftKey() {
+      return currentCounselor ? `portal.builderDraft.${currentCounselor.counselor_id}` : "";
+    }
+
+    function saveBuilderDraftNow() {
+      if (editingFormId) return; // existing form = DB is source of truth
+      const formName = document.getElementById("formNameInput").value.trim();
+      const formDesc = document.getElementById("formDescInput").value.trim();
+      const isBlank =
+        !formName && sections.length === 1 && sections[0].questions.length === 0 && !sections[0].section_title.trim();
+      if (isBlank) {
+        clearBuilderDraft();
+        return;
+      }
+      try {
+        localStorage.setItem(
+          builderDraftKey(),
+          JSON.stringify({ formName, formDesc, sections, currentSectionIndex })
+        );
+      } catch (e) {
+        /* storage unavailable GÇö drafts are optional */
+      }
+    }
+
+    function loadBuilderDraft() {
+      const key = builderDraftKey();
+      if (!key) return null;
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function clearBuilderDraft() {
+      const key = builderDraftKey();
+      if (!key) return;
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        /* ignore */
+      }
+    }
+
+    let builderSaveTimer = null;
+    function scheduleBuilderSave() {
+      clearTimeout(builderSaveTimer);
+      builderSaveTimer = setTimeout(saveBuilderDraftNow, 800);
+    }
+
+    // One delegated listener over the whole builder modal covers every
+    // editing surface (name, description, section titles, questions,
+    // and the add/remove/move buttons) GÇö no need to touch each handler.
+    const builderOverlay = document.getElementById("formModalOverlay");
+    ["input", "change", "click"].forEach((evt) =>
+      builderOverlay.addEventListener(evt, scheduleBuilderSave)
+    );
+
+    const FIELD_TYPES = [
+      { value: "text", label: "Short answer" },
+      { value: "textarea", label: "Paragraph" },
+      { value: "number", label: "Number" },
+      { value: "date", label: "Date" },
+      { value: "select", label: "Dropdown" },
+      { value: "radio", label: "Multiple choice" },
+      { value: "checkbox", label: "Checkboxes" },
+    ];
+
+    function blankSection() {
+      return { section_id: null, section_title: "", section_description: "", questions: [] };
+    }
+
+    function fieldRowHtml(f, i) {
+      const questions = currentQuestions();
+      const showOptions = ["select", "radio", "checkbox"].includes(f.field_type);
+      const optionsWord = f.field_type === "select" ? "dropdown" : f.field_type === "radio" ? "choices" : "checkboxes";
+
+      return `
+        <div class="field-row" data-index="${i}">
+          <div class="field-row-top">
+            <div class="form-field label-field">
+              <label>Question</label>
+              <input type="text" data-prop="label" value="${escapeAttr(f.label)}" placeholder="e.g. Reason for visit" required>
+            </div>
+            <div class="form-field type-field">
+              <label>Type</label>
+              <select data-prop="field_type">
+                ${FIELD_TYPES.map(
+                  (t) => `<option value="${t.value}" ${f.field_type === t.value ? "selected" : ""}>${t.label}</option>`
+                ).join("")}
+              </select>
+            </div>
+          </div>
+          ${
+            showOptions
+              ? `
+          <div class="field-row-options">
+            <div class="form-field" style="margin:0;">
+              <label>Options (comma-separated)</label>
+              <input type="text" data-prop="optionsText" value="${escapeAttr(f.optionsText || "")}" placeholder="e.g. Yes, No, Maybe">
+              <span class="hint">Shown as ${optionsWord} on the student's form.</span>
+            </div>
+          </div>`
+              : ""
+          }
+          <div class="field-row-bottom">
+            <label class="field-required-toggle">
+              <input type="checkbox" data-prop="is_required" ${f.is_required ? "checked" : ""}>
+              Required
+            </label>
+            <div class="staff-item-actions">
+              <button type="button" class="icon-btn" data-action="move-up" title="Move up" ${i === 0 ? "disabled" : ""}>
+                <i class="fa-solid fa-arrow-up"></i>
+              </button>
+              <button type="button" class="icon-btn" data-action="move-down" title="Move down" ${i === questions.length - 1 ? "disabled" : ""}>
+                <i class="fa-solid fa-arrow-down"></i>
+              </button>
+              <button type="button" class="icon-btn danger" data-action="remove" title="Remove question">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderFields() {
+      const container = document.getElementById("fieldsContainer");
+      const questions = currentQuestions();
+      if (questions.length === 0) {
+        container.innerHTML = `<div class="builder-empty-fields">No questions yet. Add one below.</div>`;
+        return;
+      }
+      container.innerHTML = questions.map((f, i) => fieldRowHtml(f, i)).join("");
+    }
+
+    function renderSectionEditor() {
+      const n = sections.length;
+      document.getElementById("sectionIndicator").textContent = `Section ${currentSectionIndex + 1} of ${n}`;
+      document.getElementById("sectionProgressFill").style.width = `${((currentSectionIndex + 1) / n) * 100}%`;
+      document.getElementById("prevSectionBtn").disabled = currentSectionIndex === 0;
+      document.getElementById("nextSectionBtn").disabled = currentSectionIndex === n - 1;
+      document.getElementById("deleteSectionBtn").disabled = n <= 1;
+      document.getElementById("sectionTitleInput").value = sections[currentSectionIndex].section_title;
+      document.getElementById("sectionDescInput").value = sections[currentSectionIndex].section_description || "";
+      renderFields();
+    }
+
+    document.getElementById("sectionTitleInput").addEventListener("input", (e) => {
+      sections[currentSectionIndex].section_title = e.target.value;
+    });
+    document.getElementById("sectionDescInput").addEventListener("input", (e) => {
+      sections[currentSectionIndex].section_description = e.target.value;
+    });
+
+    document.getElementById("prevSectionBtn").addEventListener("click", () => {
+      if (currentSectionIndex > 0) {
+        currentSectionIndex--;
+        renderSectionEditor();
+      }
+    });
+    document.getElementById("nextSectionBtn").addEventListener("click", () => {
+      if (currentSectionIndex < sections.length - 1) {
+        currentSectionIndex++;
+        renderSectionEditor();
+      }
+    });
+    document.getElementById("addSectionBtn").addEventListener("click", () => {
+      sections.push(blankSection());
+      currentSectionIndex = sections.length - 1;
+      renderSectionEditor();
+    });
+    document.getElementById("deleteSectionBtn").addEventListener("click", async () => {
+      if (sections.length <= 1) return;
+      const ok = await confirmDialog("Remove this section and its questions from the form?", {
+        confirmLabel: "Remove",
+        danger: true,
+      });
+      if (!ok) return;
+      sections.splice(currentSectionIndex, 1);
+      currentSectionIndex = Math.max(0, currentSectionIndex - 1);
+      renderSectionEditor();
+    });
+
+    document.getElementById("fieldsContainer").addEventListener("input", (e) => {
+      const row = e.target.closest(".field-row");
+      const prop = e.target.dataset.prop;
+      if (!row || !prop || prop === "field_type" || prop === "is_required") return;
+      currentQuestions()[Number(row.dataset.index)][prop] = e.target.value;
+    });
+
+    document.getElementById("fieldsContainer").addEventListener("change", (e) => {
+      const row = e.target.closest(".field-row");
+      const prop = e.target.dataset.prop;
+      if (!row || !prop) return;
+      const i = Number(row.dataset.index);
+
+      if (prop === "is_required") {
+        currentQuestions()[i].is_required = e.target.checked;
+      } else if (prop === "field_type") {
+        currentQuestions()[i].field_type = e.target.value;
+        renderFields();
+      }
+    });
+
+    document.getElementById("fieldsContainer").addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-action]");
+      if (!btn) return;
+      const questions = currentQuestions();
+      const i = Number(btn.closest(".field-row").dataset.index);
+
+      if (btn.dataset.action === "remove") {
+        questions.splice(i, 1);
+      } else if (btn.dataset.action === "move-up" && i > 0) {
+        [questions[i - 1], questions[i]] = [questions[i], questions[i - 1]];
+      } else if (btn.dataset.action === "move-down" && i < questions.length - 1) {
+        [questions[i + 1], questions[i]] = [questions[i], questions[i + 1]];
+      }
+      renderFields();
+    });
+
+    document.getElementById("addFieldBtn").addEventListener("click", () => {
+      currentQuestions().push({ label: "", field_type: "text", optionsText: "", is_required: false });
+      renderFields();
+    });
+
+    const FORMS_SELECT = "form_id, form_name, description, created_at, form_questions(question_id)";
+    const FORMS_PAGE_SIZE = 20;
+    let formsOffset = 0;
+    let formsHasMore = false;
+
+    function appendFormRows(data) {
+      const list = document.getElementById("formsListStaff");
+      data.forEach((f) => {
+        const questionCount = Array.isArray(f.form_questions) ? f.form_questions.length : 0;
+
+        const card = document.createElement("div");
+        card.className = "form-library-card";
+        card.innerHTML = `
+          <div class="form-library-icon"><i class="fa-solid fa-file-lines"></i></div>
+          <h3>${escapeHtml(f.form_name)}</h3>
+          <p>${escapeHtml(f.description || "No description.")}</p>
+          <div class="form-library-meta">${questionCount} question${questionCount === 1 ? "" : "s"} -+ Created ${formatDate(f.created_at)}</div>
+          <div class="form-library-actions">
+            <button type="button" class="icon-btn" data-action="assign" title="Assign to students"><i class="fa-solid fa-user-plus"></i></button>
+            <button type="button" class="icon-btn" data-action="submissions" title="View submissions"><i class="fa-solid fa-inbox"></i></button>
+            <button type="button" class="icon-btn" data-action="edit" title="Edit"><i class="fa-solid fa-pen"></i></button>
+            <button type="button" class="icon-btn danger" data-action="delete" title="Delete"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        `;
+        card.querySelector('[data-action="assign"]').addEventListener("click", () => openAssignModal(f));
+        card.querySelector('[data-action="submissions"]').addEventListener("click", () => openSubmissionsModal(f));
+        card.querySelector('[data-action="edit"]').addEventListener("click", () => openForm(f));
+        card.querySelector('[data-action="delete"]').addEventListener("click", () => deleteForm(f));
+        list.appendChild(card);
+      });
+    }
+
+    function renderLoadMoreFormsButton() {
+      let btn = document.getElementById("loadMoreFormsBtn");
+      if (!formsHasMore) {
+        if (btn) btn.remove();
+        return;
+      }
+      if (!btn) {
+        btn = document.createElement("button");
+        btn.type = "button";
+        btn.id = "loadMoreFormsBtn";
+        btn.className = "btn btn-outline btn-block";
+        btn.textContent = "Load More";
+        btn.addEventListener("click", loadMoreForms);
+        document.getElementById("formsListStaff").closest(".library-panel").after(btn);
+      }
+      btn.disabled = false;
+      btn.textContent = "Load More";
+    }
+
+    async function loadForms() {
+      const list = document.getElementById("formsListStaff");
+      list.innerHTML = `<div class="empty-state">LoadingGÇª</div>`;
+      document.getElementById("loadMoreFormsBtn")?.remove();
+      formsOffset = 0;
+
+      const { data, error } = await supabaseClient
+        .from("forms")
+        .select(FORMS_SELECT)
+        .order("created_at", { ascending: false })
+
+      if (error) {
+        list.innerHTML = `<div class="empty-state">Couldn't load forms.</div>`;
+        console.error(error);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        list.innerHTML = `<div class="empty-state">No forms yet. Click "New Form" to build one.</div>`;
+        formsHasMore = false;
+        return;
+      }
+
+      list.innerHTML = "";
+      appendFormRows(data);
+
+      formsOffset = data.length;
+      formsHasMore = data.length === FORMS_PAGE_SIZE;
+      renderLoadMoreFormsButton();
+    }
+
+    async function loadMoreForms() {
+      const btn = document.getElementById("loadMoreFormsBtn");
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "LoadingGÇª";
+      }
+
+      const { data, error } = await supabaseClient
+        .from("forms")
+        .select(FORMS_SELECT)
+        .order("created_at", { ascending: false })
+        .range(formsOffset, formsOffset + FORMS_PAGE_SIZE - 1);
+
+      if (error) {
+        showToast("Couldn't load more forms: " + error.message, "error");
+        console.error(error);
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Load More";
+        }
+        return;
+      }
+
+      appendFormRows(data || []);
+      formsOffset += (data || []).length;
+      formsHasMore = (data || []).length === FORMS_PAGE_SIZE;
+      renderLoadMoreFormsButton();
+    }
+
+    async function openForm(form) {
+      editingFormId = form ? form.form_id : null;
+      document.getElementById("formModalTitle").textContent = form ? "Edit Form" : "New Form";
+      document.getElementById("formNameInput").value = form ? form.form_name : "";
+      document.getElementById("formDescInput").value = form ? form.description || "" : "";
+
+      if (form) {
+        const [{ data: sectionRows, error: secErr }, { data: questionRows, error: qErr }] = await Promise.all([
+          supabaseClient
+            .from("form_sections")
+            .select("section_id, section_title, section_description, order_no")
+            .eq("form_id", form.form_id)
+            .order("order_no", { ascending: true }),
+          supabaseClient
+            .from("form_questions")
+            .select("question_id, section_id, question_text, question_type, options, is_required, order_no")
+            .eq("form_id", form.form_id)
+            .order("order_no", { ascending: true }),
+        ]);
+
+        if (secErr || qErr) {
+          showToast("Couldn't load form: " + (secErr || qErr).message, "error");
+          console.error(secErr || qErr);
+          sections = [blankSection()];
+        } else {
+          sections = (sectionRows || []).map((s) => ({
+            section_id: s.section_id,
+            section_title: s.section_title,
+            section_description: s.section_description || "",
+            questions: (questionRows || [])
+              .filter((q) => q.section_id === s.section_id)
+              .map((q) => ({
+                question_id: q.question_id,
+                label: q.question_text,
+                field_type: q.question_type,
+                optionsText: q.options || "",
+                is_required: q.is_required,
+              })),
+          }));
+          if (sections.length === 0) sections = [blankSection()];
+        }
+      } else {
+        sections = [blankSection()];
+      }
+
+      // Brand-new forms get an automatic restore: if the counselor left a
+      // builder draft behind (autosaved every ~800ms while typing), offer
+      // it back instead of silently starting from a bare blank.
+      if (!form && !editingFormId) {
+        const saved = loadBuilderDraft();
+        if (saved && Array.isArray(saved.sections) && saved.sections.length) {
+          const ok = await confirmDialog("You have an unsaved draft for a new form. Resume it?", {
+            confirmLabel: "Resume",
+            cancelLabel: "Discard",
+          });
+          if (ok) {
+            document.getElementById("formNameInput").value = saved.formName || "";
+            document.getElementById("formDescInput").value = saved.formDesc || "";
+            sections = saved.sections;
+            currentSectionIndex = Math.min(saved.currentSectionIndex || 0, sections.length - 1);
+            showToast("Resumed your draft.", "info");
+          } else {
+            clearBuilderDraft();
+          }
+        }
+      }
+
+      currentSectionIndex = 0;
+      renderSectionEditor();
+      document.getElementById("formModalOverlay").classList.add("show");
+      document.getElementById("formNameInput").focus();
+    }
+
+    function closeForm() {
+      document.getElementById("formModalOverlay").classList.remove("show");
+      document.getElementById("formBuilderForm").reset();
+      editingFormId = null;
+      sections = [];
+      currentSectionIndex = 0;
+    }
+
+    document.getElementById("newFormBtn").addEventListener("click", () => openForm(null));
+    document.getElementById("formModalCloseBtn").addEventListener("click", closeForm);
+    document.getElementById("formModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "formModalOverlay") closeForm();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        closeForm();
+        closeAssignModal();
+      }
+    });
+
+    document.getElementById("formBuilderForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const formName = document.getElementById("formNameInput").value.trim();
+      if (!formName) return;
+
+      for (const s of sections) {
+        if (!s.section_title || !s.section_title.trim()) {
+          showToast("Every section needs a title.", "error");
+          return;
+        }
+        if (s.questions.length === 0) {
+          showToast(`Section "${s.section_title}" needs at least one question.`, "error");
+          return;
+        }
+        for (const f of s.questions) {
+          if (!f.label || !f.label.trim()) {
+            showToast("Every question needs text.", "error");
+            return;
+          }
+          if (["select", "radio", "checkbox"].includes(f.field_type) && parseOptions(f.optionsText).length < 2) {
+            showToast(`"${f.label}" needs at least two options.`, "error");
+            return;
+          }
+        }
+      }
+
+      const payload = {
+        form_name: formName,
+        description: document.getElementById("formDescInput").value.trim() || null,
+      };
+
+      const saveBtn = document.getElementById("formSaveBtn");
+      saveBtn.disabled = true;
+      saveBtn.textContent = "SavingGÇª";
+
+      try {
+        let formId = editingFormId;
+
+        if (formId) {
+          const { error } = await supabaseClient.from("forms").update(payload).eq("form_id", formId);
+          if (error) throw error;
+
+          const { error: delQErr } = await supabaseClient.from("form_questions").delete().eq("form_id", formId);
+          if (delQErr) throw delQErr;
+
+          const { error: delSErr } = await supabaseClient.from("form_sections").delete().eq("form_id", formId);
+          if (delSErr) throw delSErr;
+        } else {
+          const { data, error } = await supabaseClient
+            .from("forms")
+            .insert({ ...payload, counselor_id: currentCounselor.counselor_id })
+            .select("form_id")
+            .single();
+          if (error) throw error;
+          formId = data.form_id;
+        }
+
+        const sectionRows = sections.map((s, i) => ({
+          form_id: formId,
+          section_title: s.section_title.trim(),
+          section_description: s.section_description ? s.section_description.trim() || null : null,
+          order_no: i + 1,
+        }));
+
+        const { data: insertedSections, error: secInsErr } = await supabaseClient
+          .from("form_sections")
+          .insert(sectionRows)
+          .select("section_id");
+        if (secInsErr) throw secInsErr;
+
+        const questionRows = [];
+        sections.forEach((s, si) => {
+          const sectionId = insertedSections[si].section_id;
+          s.questions.forEach((f, qi) => {
+            questionRows.push({
+              form_id: formId,
+              section_id: sectionId,
+              question_text: f.label.trim(),
+              question_type: f.field_type,
+              options: ["select", "radio", "checkbox"].includes(f.field_type) ? parseOptions(f.optionsText).join(", ") : null,
+              is_required: !!f.is_required,
+              order_no: qi + 1,
+            });
+          });
+        });
+
+        const { error: qInsErr } = await supabaseClient.from("form_questions").insert(questionRows);
+        if (qInsErr) throw qInsErr;
+
+        closeForm();
+        await loadForms();
+      } catch (error) {
+        showToast("Couldn't save form: " + error.message, "error");
+        console.error(error);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save Form";
+      }
+    });
+
+    function friendlyDeleteError(error) {
+      if (error.code === "23503") {
+        return "This form is already assigned to a student and can't be deleted. Remove the assignment(s) first.";
+      }
+      return error.message;
+    }
+
+    async function deleteForm(f) {
+      const { count, error: checkErr } = await supabaseClient
+        .from("form_assignments")
+        .select("assignment_id", { count: "exact", head: true })
+        .eq("form_id", f.form_id);
+
+      if (checkErr) {
+        showToast("Couldn't check form assignments: " + checkErr.message, "error");
+        console.error(checkErr);
+        return;
+      }
+
+      if (count && count > 0) {
+        showToast(`"${f.form_name}" has already been assigned to ${count} student${count === 1 ? "" : "s"} and can't be deleted.`, "error");
+        return;
+      }
+
+      const ok = await confirmDialog(`Delete "${f.form_name}"? This can't be undone.`, {
+        confirmLabel: "Delete",
+        danger: true,
+      });
+      if (!ok) return;
+
+      const { error: qError } = await supabaseClient.from("form_questions").delete().eq("form_id", f.form_id);
+      if (qError) {
+        showToast("Couldn't delete form: " + friendlyDeleteError(qError), "error");
+        console.error(qError);
+        return;
+      }
+
+      const { error: sError } = await supabaseClient.from("form_sections").delete().eq("form_id", f.form_id);
+      if (sError) {
+        showToast("Couldn't delete form: " + friendlyDeleteError(sError), "error");
+        console.error(sError);
+        return;
+      }
+
+      const { error } = await supabaseClient.from("forms").delete().eq("form_id", f.form_id);
+      if (error) {
+        showToast("Couldn't delete form: " + friendlyDeleteError(error), "error");
+        console.error(error);
+        return;
+      }
+      await loadForms();
+    }
+
+    let allStudentsForAssign = [];
+    let existingAssignmentsForForm = [];
+    let checkedStudentIds = new Set();
+
+    // defaultSchoolYear() now lives in counselor-common.js (shared).
+
+    async function openAssignModal(form) {
+      assigningForm = form;
+      document.getElementById("assignFormName").textContent = form.form_name;
+      document.getElementById("assignSchoolYearDisplay").textContent = `S.Y. ${defaultSchoolYear()}`;
+      document.getElementById("assignStudentSearch").value = "";
+      checkedStudentIds = new Set();
+
+      const list = document.getElementById("assignStudentList");
+      list.innerHTML = `<div class="empty-state">LoadingGÇª</div>`;
+      document.getElementById("assignModalOverlay").classList.add("show");
+
+      const [{ data: students, error: stErr }, { data: existing, error: exErr }] = await Promise.all([
+        supabaseClient.from("students").select("student_id, first_name, last_name, student_number, user_id").eq("is_archived", false).order("first_name", { ascending: true }),
+        supabaseClient
+          .from("form_assignments")
+          .select("assignment_id, student_id, school_year, status")
+          .eq("form_id", form.form_id),
+      ]);
+
+      if (stErr || exErr) {
+        list.innerHTML = `<div class="empty-state">Couldn't load students.</div>`;
+        console.error(stErr || exErr);
+        return;
+      }
+
+      allStudentsForAssign = students || [];
+      existingAssignmentsForForm = existing || [];
+      renderAssignStudentList();
+    }
+
+    function filteredAssignStudents() {
+      const query = document.getElementById("assignStudentSearch").value.trim().toLowerCase();
+      if (!query) return allStudentsForAssign;
+      return allStudentsForAssign.filter((s) => {
+        const name = `${s.first_name} ${s.last_name}`.toLowerCase();
+        const number = (s.student_number || "").toLowerCase();
+        return name.includes(query) || number.includes(query);
+      });
+    }
+
+    function renderAssignStudentList() {
+      const list = document.getElementById("assignStudentList");
+      const filtered = filteredAssignStudents();
+
+      list.innerHTML = filtered.length
+        ? filtered
+            .map(
+              (s) => `
+        <label class="assign-student-row" data-student-id="${s.student_id}">
+          <input type="checkbox" value="${s.student_id}" ${checkedStudentIds.has(s.student_id) ? "checked" : ""}>
+          <span>${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}${s.student_number ? ` -+ ${escapeHtml(s.student_number)}` : ""}</span>
+          <span class="hint assign-year-hint"></span>
+        </label>
+      `
+            )
+            .join("")
+        : `<div class="empty-state">No students match your search.</div>`;
+
+      document.getElementById("assignSelectAllCount").textContent = filtered.length;
+      document.getElementById("assignSelectAll").checked =
+        filtered.length > 0 && filtered.every((s) => checkedStudentIds.has(s.student_id));
+      updateAssignCheckedCount();
+      updateAssignYearHints();
+    }
+
+    function updateAssignCheckedCount() {
+      const el = document.getElementById("assignCheckedCount");
+      el.textContent = checkedStudentIds.size > 0 ? `${checkedStudentIds.size} selected` : "";
+    }
+
+    function updateAssignYearHints() {
+      const year = defaultSchoolYear();
+      const assignedThisYear = new Map(
+        existingAssignmentsForForm.filter((a) => a.school_year === year).map((a) => [a.student_id, a])
+      );
+
+      document.querySelectorAll("#assignStudentList .assign-student-row").forEach((row) => {
+        const studentId = Number(row.dataset.studentId);
+        const hintEl = row.querySelector(".assign-year-hint");
+        const existing = assignedThisYear.get(studentId);
+        let hint = "";
+        if (existing) {
+          hint = existing.status === "submitted" ? `Submitted GÇö will re-open for editing` : `Already assigned for ${year}`;
+        }
+        hintEl.textContent = hint;
+        hintEl.style.display = existing ? "" : "none";
+      });
+    }
+
+    document.getElementById("assignStudentSearch").addEventListener("input", renderAssignStudentList);
+
+    document.getElementById("assignStudentList").addEventListener("change", (e) => {
+      if (e.target.type !== "checkbox") return;
+      const id = Number(e.target.value);
+      if (e.target.checked) {
+        checkedStudentIds.add(id);
+      } else {
+        checkedStudentIds.delete(id);
+      }
+      const filtered = filteredAssignStudents();
+      document.getElementById("assignSelectAll").checked =
+        filtered.length > 0 && filtered.every((s) => checkedStudentIds.has(s.student_id));
+      updateAssignCheckedCount();
+    });
+
+    document.getElementById("assignSelectAll").addEventListener("change", (e) => {
+      filteredAssignStudents().forEach((s) => {
+        if (e.target.checked) {
+          checkedStudentIds.add(s.student_id);
+        } else {
+          checkedStudentIds.delete(s.student_id);
+        }
+      });
+      renderAssignStudentList();
+    });
+
+    function closeAssignModal() {
+      document.getElementById("assignModalOverlay").classList.remove("show");
+      assigningForm = null;
+    }
+
+    document.getElementById("assignModalCloseBtn").addEventListener("click", closeAssignModal);
+    document.getElementById("assignModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "assignModalOverlay") closeAssignModal();
+    });
+
+    document.getElementById("assignSaveBtn").addEventListener("click", async () => {
+      const schoolYear = defaultSchoolYear();
+
+      if (checkedStudentIds.size === 0) {
+        closeAssignModal();
+        return;
+      }
+
+      // The "Already assigned for {year}" hint next to a checked student is
+      // just a hint GÇö nothing stops them from also being submitted, which
+      // silently created a second assignment row (and the same form
+      // appearing twice, forever "Not Started," on the student's own Forms
+      // page). Drop anyone already assigned to this form for this exact
+      // school year before inserting GÇö EXCEPT students whose submission was
+      // already turned in: re-adding them re-opens the form so the student
+      // can edit their answers again.
+      const assignedThisYear = new Map(
+        existingAssignmentsForForm.filter((a) => a.school_year === schoolYear).map((a) => [a.student_id, a])
+      );
+      const newStudentIds = [];
+      const reassignRows = [];
+      checkedStudentIds.forEach((id) => {
+        const existing = assignedThisYear.get(id);
+        if (!existing) {
+          newStudentIds.push(id);
+        } else if (existing.status === "submitted") {
+          reassignRows.push(existing);
+        }
+      });
+      const skippedCount = checkedStudentIds.size - newStudentIds.length - reassignRows.length;
+
+      if (newStudentIds.length === 0 && reassignRows.length === 0) {
+        showToast(`All selected students are already assigned this form for ${schoolYear}.`, "info");
+        closeAssignModal();
+        return;
+      }
+
+      const rows = newStudentIds.map((studentId) => ({
+        form_id: assigningForm.form_id,
+        student_id: studentId,
+        counselor_id: currentCounselor.counselor_id,
+        school_year: schoolYear,
+      }));
+
+      const btn = document.getElementById("assignSaveBtn");
+      btn.disabled = true;
+      btn.textContent = "AssigningGÇª";
+
+      if (reassignRows.length) {
+        const { error: reoErr } = await supabaseClient
+          .from("form_assignments")
+          .update({ status: "assigned", submitted_at: null, counselor_id: currentCounselor.counselor_id })
+          .in(
+            "assignment_id",
+            reassignRows.map((r) => r.assignment_id)
+          );
+        if (reoErr) {
+          btn.disabled = false;
+          btn.textContent = "Assign";
+          showToast("Couldn't re-open the form: " + reoErr.message, "error");
+          console.error(reoErr);
+          return;
+        }
+      }
+
+      const { error } = await supabaseClient.from("form_assignments").insert(rows);
+
+      btn.disabled = false;
+      btn.textContent = "Assign";
+
+      if (error) {
+        const message =
+          error.code === "23505"
+            ? "One or more selected students were just assigned this form by someone else GÇö refresh and try again."
+            : "Couldn't assign form: " + error.message;
+        showToast(message, "error");
+        console.error(error);
+        return;
+      }
+
+      const studentsById = {};
+      allStudentsForAssign.forEach((s) => (studentsById[s.student_id] = s));
+      const notifiedStudentIds = [...newStudentIds, ...reassignRows.map((r) => r.student_id)];
+      const notifRows = notifiedStudentIds
+        .map((studentId) => {
+          const user = studentsById[studentId];
+          if (!user?.user_id) return null;
+          const reassigned = reassignRows.some((r) => r.student_id === studentId);
+          return {
+            recipient_user_id: user.user_id,
+            type: "form",
+            title: reassigned
+              ? `Form re-opened for editing: ${assigningForm.form_name}`
+              : `New form assigned: ${assigningForm.form_name}`,
+            link: "student-forms.html",
+          };
+        })
+        .filter(Boolean);
+      if (notifRows.length) await supabaseClient.from("notifications").insert(notifRows);
+
+      const summaryParts = [];
+      if (newStudentIds.length) summaryParts.push(`${newStudentIds.length} assigned`);
+      if (reassignRows.length) summaryParts.push(`${reassignRows.length} re-opened for editing`);
+      if (skippedCount) summaryParts.push(`${skippedCount} already had it for ${schoolYear}`);
+      showToast(`Saved: ${summaryParts.join(" -+ ")}.`, "success");
+      closeAssignModal();
+    });
+
+    // ---------- Submissions ----------
+
+    let submissionsForm = null;
+    let submissionAssignmentsById = {};
+    let submissionsPage = 1;
+    const SUBMISSIONS_PAGE_SIZE = 20;
+
+    function submissionBadgeClass(status) {
+      return status === "submitted" ? "approved" : "pending";
+    }
+
+    function submissionRowHtml(a) {
+      const name = a.students ? `${a.students.first_name} ${a.students.last_name}` : "Unknown student";
+      const isSubmitted = a.status === "submitted";
+      return `
+        <tr data-id="${a.assignment_id}">
+          <td>${escapeHtml(name)}</td>
+          <td>${escapeHtml(a.school_year || "GÇö")}</td>
+          <td><span class="badge badge-${submissionBadgeClass(a.status)}">${isSubmitted ? "Submitted" : "Pending"}</span></td>
+          <td>${a.submitted_at ? formatDate(a.submitted_at) : "GÇö"}</td>
+          <td>${
+            isSubmitted
+              ? `<button type="button" class="icon-btn sm" data-action="view" title="View answers"><i class="fa-solid fa-eye"></i></button>`
+              : "GÇö"
+          }</td>
+        </tr>
+      `;
+    }
+
+    function renderSubmissionsTable(assignments) {
+      const list = document.getElementById("submissionsList");
+      const pager = document.getElementById("submissionsPagination");
+
+      if (!assignments.length) {
+        list.innerHTML = `<tr class="table-empty"><td colspan="5">Not assigned to any students yet.</td></tr>`;
+        pager.innerHTML = "";
+        return;
+      }
+
+      submissionsPage = renderPaginationControls(pager, {
+        totalItems: assignments.length,
+        page: submissionsPage,
+        pageSize: SUBMISSIONS_PAGE_SIZE,
+        onPageChange: (p) => {
+          submissionsPage = p;
+          renderSubmissionsTable(assignments);
+        },
+      });
+
+      list.innerHTML = paginateItems(assignments, submissionsPage, SUBMISSIONS_PAGE_SIZE)
+        .map(submissionRowHtml)
+        .join("");
+
+      list.querySelectorAll("tr[data-id]").forEach((row) => {
+        row.querySelector('[data-action="view"]')?.addEventListener("click", () => {
+          openSubmissionDetail(submissionAssignmentsById[row.dataset.id]);
+        });
+      });
+    }
+
+    async function openSubmissionsModal(form) {
+      submissionsForm = form;
+      submissionsPage = 1;
+      document.getElementById("submissionsFormName").textContent = form.form_name;
+
+      const list = document.getElementById("submissionsList");
+      list.innerHTML = `<tr class="table-empty"><td colspan="5">LoadingGÇª</td></tr>`;
+      document.getElementById("submissionsModalOverlay").classList.add("show");
+
+      const { data, error } = await supabaseClient
+        .from("form_assignments")
+        .select("assignment_id, status, school_year, submitted_at, students(first_name, last_name)")
+        .eq("form_id", form.form_id)
+        .order("submitted_at", { ascending: false, nullsFirst: false });
+
+      if (error) {
+        list.innerHTML = `<tr class="table-empty"><td colspan="5">Couldn't load submissions.</td></tr>`;
+        console.error(error);
+        return;
+      }
+
+      const assignments = data || [];
+      submissionAssignmentsById = {};
+      assignments.forEach((a) => (submissionAssignmentsById[a.assignment_id] = a));
+
+      renderSubmissionsTable(assignments);
+    }
+
+    function closeSubmissionsModal() {
+      document.getElementById("submissionsModalOverlay").classList.remove("show");
+      submissionsForm = null;
+    }
+
+    document.getElementById("submissionsModalCloseBtn").addEventListener("click", closeSubmissionsModal);
+    document.getElementById("submissionsModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "submissionsModalOverlay") closeSubmissionsModal();
+    });
+
+    function submissionAnswerDisplay(question, answerValue) {
+      if (answerValue === undefined || answerValue === null || answerValue === "") {
+        return `<span class="submission-answer-empty">No answer</span>`;
+      }
+      return escapeHtml(answerValue);
+    }
+
+    async function openSubmissionDetail(assignment) {
+      if (!assignment) return;
+
+      const name = assignment.students ? `${assignment.students.first_name} ${assignment.students.last_name}` : "Unknown student";
+      document.getElementById("submissionDetailTitle").textContent = submissionsForm.form_name;
+      document.getElementById("submissionDetailMeta").textContent =
+        `${name} -+ ${assignment.school_year || "GÇö"} -+ Submitted ${assignment.submitted_at ? formatDate(assignment.submitted_at) : "GÇö"}`;
+
+      const body = document.getElementById("submissionDetailBody");
+      body.innerHTML = `<div class="notif-empty" style="padding:20px;">LoadingGÇª</div>`;
+      document.getElementById("submissionDetailModalOverlay").classList.add("show");
+
+      const [{ data: sectionRows, error: secErr }, { data: questionRows, error: qErr }, { data: submission, error: subErr }] =
+        await Promise.all([
+          supabaseClient
+            .from("form_sections")
+            .select("section_id, section_title, section_description, order_no")
+            .eq("form_id", submissionsForm.form_id)
+            .order("order_no", { ascending: true }),
+          supabaseClient
+            .from("form_questions")
+            .select("question_id, section_id, question_text, question_type, options, is_required, order_no")
+            .eq("form_id", submissionsForm.form_id)
+            .order("order_no", { ascending: true }),
+          supabaseClient
+            .from("form_submissions")
+            .select("submission_id, form_answers(question_id, answer_value)")
+            .eq("assignment_id", assignment.assignment_id)
+            .maybeSingle(),
+        ]);
+
+      if (secErr || qErr || subErr) {
+        body.innerHTML = `<div class="notif-empty" style="padding:20px;">Couldn't load this submission.</div>`;
+        console.error(secErr || qErr || subErr);
+        return;
+      }
+
+      const answersByQuestion = {};
+      (submission?.form_answers || []).forEach((ans) => {
+        answersByQuestion[ans.question_id] = ans.answer_value;
+      });
+
+      const sections = sectionRows || [];
+      const questions = questionRows || [];
+
+      body.innerHTML = sections.length
+        ? sections
+            .map((s) => {
+              const sectionQuestions = questions.filter((q) => q.section_id === s.section_id);
+              return `
+            <div class="submission-section">
+              <h4>${escapeHtml(s.section_title || "Section")}</h4>
+              ${s.section_description ? `<p class="submission-section-desc">${escapeHtml(s.section_description)}</p>` : ""}
+              ${sectionQuestions
+                .map(
+                  (q) => `
+                <div class="submission-question">
+                  <div class="submission-question-label">${escapeHtml(q.question_text)}</div>
+                  <div class="submission-question-answer">${submissionAnswerDisplay(q, answersByQuestion[q.question_id])}</div>
+                </div>
+              `
+                )
+                .join("")}
+            </div>
+          `;
+            })
+            .join("")
+        : `<div class="notif-empty" style="padding:20px;">This form has no questions.</div>`;
+    }
+
+    document.getElementById("submissionDetailCloseBtn").addEventListener("click", () => {
+      document.getElementById("submissionDetailModalOverlay").classList.remove("show");
+    });
+    document.getElementById("submissionDetailModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "submissionDetailModalOverlay") {
+        document.getElementById("submissionDetailModalOverlay").classList.remove("show");
+      }
+    });
+
+    // ---------- Intervention Library ----------
+
+    const IMAGE_EXT_RE = /\.(png|jpe?g|gif|webp|svg|heic|heif|bmp)$/i;
+
+    function isImageFileName(name) {
+      return IMAGE_EXT_RE.test(name || "");
+    }
+
+    function openImageLightbox(url) {
+      const img = document.getElementById("imageLightboxImg");
+      const lbox = img.closest(".image-lightbox");
+      lbox.classList.add("loading");
+      img.classList.remove("is-loaded");
+      img.onload = () => {
+        img.classList.add("is-loaded");
+        lbox.classList.remove("loading");
+      };
+      img.src = url;
+      document.getElementById("imageLightboxOverlay").classList.add("show");
+    }
+
+    document.getElementById("imageLightboxClose").addEventListener("click", () => {
+      document.getElementById("imageLightboxOverlay").classList.remove("show");
+    });
+    document.getElementById("imageLightboxOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "imageLightboxOverlay") {
+        document.getElementById("imageLightboxOverlay").classList.remove("show");
+      }
+    });
+
+    async function loadInterventionTemplates() {
+      const list = document.getElementById("interventionTemplatesList");
+      list.innerHTML = `<div class="empty-state">LoadingGÇª</div>`;
+
+      const { data, error } = await supabaseClient
+        .from("intervention_templates")
+        .select("intervention_template_id, title, file_path, file_name, created_at")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        list.innerHTML = `<div class="empty-state">Couldn't load intervention templates.</div>`;
+        console.error(error);
+        return;
+      }
+
+      const templates = data || [];
+      if (templates.length === 0) {
+        list.innerHTML = `<div class="empty-state">No intervention templates yet. Click "+" to upload one.</div>`;
+        return;
+      }
+
+      list.innerHTML = "";
+      templates.forEach((t) => {
+        const card = document.createElement("div");
+        card.className = "form-library-card";
+        const iconHtml = isImageFileName(t.file_name)
+          ? `<div class="form-library-icon form-library-thumb">
+               <img data-signed-path="${escapeHtml(t.file_path)}" alt="${escapeHtml(t.file_name)}">
+             </div>`
+          : `<div class="form-library-icon"><i class="fa-solid fa-file-lines"></i></div>`;
+        card.innerHTML = `
+          ${iconHtml}
+          <h3>${escapeHtml(t.title)}</h3>
+          <p>${escapeHtml(t.file_name)}</p>
+          <div class="form-library-meta">Uploaded ${formatDate(t.created_at)}</div>
+          <div class="form-library-actions">
+            <button type="button" class="icon-btn" data-action="view" title="View file"><i class="fa-solid fa-eye"></i></button>
+            <button type="button" class="icon-btn danger" data-action="delete" title="Delete"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        `;
+        hydrateTemplateThumb(card);
+        card.querySelector(".form-library-thumb img")?.addEventListener("click", () => openInterventionFile(t.file_path, t.file_name));
+        card.querySelector('[data-action="view"]').addEventListener("click", () => openInterventionFile(t.file_path, t.file_name));
+        card.querySelector('[data-action="delete"]').addEventListener("click", () => deleteInterventionTemplate(t));
+        list.appendChild(card);
+      });
+    }
+
+    function hydrateTemplateThumb(card) {
+      const img = card.querySelector(".form-library-thumb img[data-signed-path]");
+      if (!img) return;
+      supabaseClient.storage
+        .from("case-attachments")
+        .createSignedUrl(img.dataset.signedPath, 60)
+        .then(({ data, error }) => {
+          if (error || !data) return;
+          makeImgLazy(img);
+          img.src = data.signedUrl;
+          img.dataset.signed = data.signedUrl;
+        });
+    }
+
+    async function openInterventionFile(path, fileName) {
+      const { data, error } = await supabaseClient.storage.from("case-attachments").createSignedUrl(path, 60);
+      if (error) {
+        showToast("Couldn't open file: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+      if (isImageFileName(fileName)) {
+        openImageLightbox(data.signedUrl);
+        return;
+      }
+      window.open(data.signedUrl, "_blank");
+    }
+
+    async function deleteInterventionTemplate(t) {
+      // Deleting a template only removes it from the library going
+      // forward GÇö every case it's already been assigned to keeps its own
+      // copy of the file (see interventions.sql), so this can't erase any
+      // student's existing intervention record.
+      const ok = await confirmDialog(`Remove "${t.title}" from the library? Cases it's already been assigned to keep their own copy.`, {
+        confirmLabel: "Remove",
+        danger: true,
+      });
+      if (!ok) return;
+
+      const { error } = await supabaseClient
+        .from("intervention_templates")
+        .delete()
+        .eq("intervention_template_id", t.intervention_template_id);
+
+      if (error) {
+        showToast("Couldn't remove template: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      await loadInterventionTemplates();
+    }
+
+    function openNewInterventionTemplateModal() {
+      document.getElementById("interventionTemplateForm").reset();
+      document.getElementById("interventionTemplateModalOverlay").classList.add("show");
+    }
+
+    function closeInterventionTemplateModal() {
+      document.getElementById("interventionTemplateModalOverlay").classList.remove("show");
+    }
+
+    document.getElementById("newInterventionTemplateBtn").addEventListener("click", openNewInterventionTemplateModal);
+    document.getElementById("interventionTemplateModalCloseBtn").addEventListener("click", closeInterventionTemplateModal);
+    document.getElementById("interventionTemplateModalOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "interventionTemplateModalOverlay") closeInterventionTemplateModal();
+    });
+
+    document.getElementById("interventionTemplateForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const title = document.getElementById("templateTitleInput").value.trim();
+      const file = document.getElementById("templateFileInput").files?.[0];
+      if (!file) {
+        showToast("Choose a file to upload first.", "error");
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        showToast(`"${file.name}" is over 10MB GÇö please use a smaller file.`, "error");
+        return;
+      }
+
+      const btn = document.getElementById("saveInterventionTemplateBtn");
+      const templateUploadProgress = document.getElementById("templateUploadProgress");
+      hideUploadProgress(templateUploadProgress);
+      startBtnLoading(btn, "UploadingGÇª");
+
+      const path = `intervention-templates/${currentCounselor.counselor_id}/${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabaseClient.storage.from("case-attachments").upload(path, file, {
+        onUploadProgress: (e) => {
+          const pct = e.totalBytes ? Math.round((e.bytesUploaded / e.totalBytes) * 100) : 0;
+          setUploadProgress(templateUploadProgress, pct);
+        },
+      });
+
+      if (uploadError) {
+        stopBtnLoading(btn, "Save to Library");
+        hideUploadProgress(templateUploadProgress);
+        showToast("Couldn't upload file: " + uploadError.message, "error");
+        console.error(uploadError);
+        return;
+      }
+
+      const { error } = await supabaseClient.from("intervention_templates").insert({
+        counselor_id: currentCounselor.counselor_id,
+        title,
+        file_path: path,
+        file_name: file.name,
+      });
+
+      stopBtnLoading(btn, "Save to Library");
+      hideUploadProgress(templateUploadProgress);
+
+      if (error) {
+        showToast("Couldn't save template: " + error.message, "error");
+        console.error(error);
+        return;
+      }
+
+      closeInterventionTemplateModal();
+      await loadInterventionTemplates();
+      showToast("Intervention template saved.", "success");
+    });
+
+    (async () => {
+      const result = await requireCounselorAuth();
+      if (!result) return;
+
+      currentCounselor = result.counselor;
+      await Promise.all([loadForms(), loadInterventionTemplates()]);
+      hidePageLoadOverlay();
+    })();
+  

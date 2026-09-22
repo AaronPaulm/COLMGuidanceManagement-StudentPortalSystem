@@ -55,11 +55,19 @@ function corsHeadersFor(req: Request): Record<string, string> {
   return headers;
 }
   
-// Every bulk-imported student gets the same standard first-login password
-// rather than a random one per row — the school's preference, so students
-// can be told this password verbally/in a group instead of relying on the
-// printed per-student slip.
-const STUDENT_TEMP_PASSWORD = "colmstudent";
+// Each imported student gets a unique first-login password (e.g.
+// "colmstudent13452"): "colmstudent" plus a random numeric suffix. The
+// `used` set keeps every password in a batch distinct so the printed
+// per-student slips never show a duplicate.
+function randomTempPassword(used: Set<string>): string {
+  let password = "";
+  do {
+    const digits = String(Math.floor(10000 + Math.random() * 90000));
+    password = `colmstudent${digits}`;
+  } while (used.has(password));
+  used.add(password);
+  return password;
+}
 
 function slugify(str: string): string {
   return (str || "")
@@ -185,11 +193,13 @@ Deno.serve(async (req) => {
     const results: StudentResult[] = [];
 
     // ── Username generation ──────────────────────────────────────────────
-    // Each student gets a human-readable username (e.g. juan.delacruz) for
-    // login instead of the fake internal email. When a name collides with
-    // an existing student or an earlier entry in this batch, the student
-    // number's last 4 digits are appended (e.g. juan.delacruz0001).
+    // Each student gets a colm-prefixed, human-readable username (e.g.
+    // colm_juan.delacruz) for login instead of the fake internal email.
+    // When a name collides with an existing student or an earlier entry
+    // in this batch, the student number's last 4 digits are appended
+    // (e.g. colm_juan.delacruz0001).
     const usedUsernames = new Set<string>();
+    const usedPasswords = new Set<string>();
     const { data: existingUsernameRows } = await adminClient
       .from("students")
       .select("username")
@@ -215,7 +225,7 @@ Deno.serve(async (req) => {
       const studentNumber = `${currentYear}-${String(nextSeq).padStart(4, "0")}`;
       nextSeq++;
 
-      const baseSlug = `${slugify(firstName)}.${slugify(lastName) || "student"}`;
+      const baseSlug = `colm_${slugify(firstName)}.${slugify(lastName) || "student"}`;
       const studentNumSuffix = studentNumber.split("-")[1] || "0001";
       let username = baseSlug;
       if (usedUsernames.has(username)) {
@@ -224,7 +234,7 @@ Deno.serve(async (req) => {
       let emailSlug = username;
       let suffix = 2;
 
-      const tempPassword = STUDENT_TEMP_PASSWORD;
+      const tempPassword = randomTempPassword(usedPasswords);
 
       if (!firstName) {
         results.push({

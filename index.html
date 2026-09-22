@@ -7,7 +7,7 @@
   <link rel="icon" type="image/png" href="images/COLM LOGO.png">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <title>COLM Guidance Portal</title>
+  <title>Student Sign In · COLM Guidance Portal</title>
 </head>
 <body>
   <main class="container">
@@ -26,21 +26,16 @@
         <p>Sign in to continue to the COLM Guidance Portal</p>
       </header>
 
-      <div id="sessionNotice" class="banner" style="display:none;"></div>
-
-      <nav class="role-switch" aria-label="Login Role">
-        <button type="button" id="studentBtn" class="active" data-role="student">Student</button>
-                        <button type="button" id="counselorBtn" data-role="counselor">Guidance Personnel</button>
-      </nav>
+<div id="sessionNotice" class="banner" style="display:none;"></div>
 
       <p id="staffNotice">Sign in as Student</p>
 
       <form id="loginForm">
         <label for="username">Username</label>
-        <input type="text" id="username" name="username" required>
+        <input type="text" id="username" name="username" required autocomplete="username">
 
         <label for="password">Password</label>
-        <input type="password" id="password" name="password" required>
+        <input type="password" id="password" name="password" required autocomplete="current-password">
         <div>
           <a href="forgot-password.html" class="forgot-password-link">Forgot password?</a>
         </div>
@@ -115,12 +110,19 @@
 
       const notice = document.getElementById("sessionNotice");
 
+      // Deactivated student accounts land on their own page (dedicated
+      // "contact the guidance office" form) instead of an inline banner.
+      // Personnel keep the inline deactivation notice below.
+      if (reason === "archived") {
+        window.location.replace("account-deactivated.html");
+        return;
+      }
+
       if (reason && notice) {
         const messages = {
           required: "Please sign in to continue.",
           forbidden: "You don't have access to that page with your current role.",
           timeout: "You were signed out due to inactivity. Please sign in again.",
-          archived: "This account has been archived. Contact the guidance office if you believe this is a mistake.",
           deactivated: "This account has been deactivated. Contact the guidance office for assistance."
         };
         notice.textContent = messages[reason] || "Please sign in to continue.";
@@ -130,40 +132,13 @@
       const form = document.getElementById("loginForm");
       const errorMsg = document.getElementById("errorMsg");
       const submitBtn = document.getElementById("loginBtn");
-      const roleButtons = document.querySelectorAll(".role-switch button");
-      const staffNotice = document.getElementById("staffNotice");
-
-      const updateRoleUI = () => {
-        const activeBtn = document.querySelector(".role-switch button.active");
-        const role = activeBtn ? activeBtn.getAttribute("data-role") : "student";
-
-        if (role === "counselor") {
-          staffNotice.textContent = "Sign in as Guidance Personnel";
-          submitBtn.textContent = "Login as Guidance Personnel";
-        } else {
-          staffNotice.textContent = "Sign in as Student";
-          submitBtn.textContent = "Login as Student";
-        }
-      };
-
-      roleButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-          roleButtons.forEach((btn) => btn.classList.remove("active"));
-          button.classList.add("active");
-          updateRoleUI();
-        });
-      });
-
-      updateRoleUI();
 
       // Maps a typed username or email to the address Supabase accepts for
-      // sign-in / password reset. Empty result => unknown identifier.
-      // Students resolve by username; personnel resolve by their own
-      // username (resolve_counselor_username); emails pass straight through.
-      async function resolveEmailIdentifier(rawIdentifier, role) {
+      // sign-in / password reset. Students resolve by username; emails pass
+      // straight through. (Personnel use their own sign-in page.)
+      async function resolveEmailIdentifier(rawIdentifier) {
         if (rawIdentifier.includes("@")) return rawIdentifier;
-        const rpcName = role === "counselor" ? "resolve_counselor_username" : "resolve_username";
-        const { data } = await supabaseClient.rpc(rpcName, { p_username: rawIdentifier });
+        const { data } = await supabaseClient.rpc("resolve_username", { p_username: rawIdentifier });
         return data || null;
       }
 
@@ -175,13 +150,11 @@
 
         const rawIdentifier = document.getElementById("username").value.trim();
         const password = document.getElementById("password").value;
-        const activeBtn = document.querySelector(".role-switch button.active");
-        const selectedRole = activeBtn ? activeBtn.getAttribute("data-role") : "student";
 
         try {
           // Resolve username -> auth email, or pass email straight through.
-          let email = await resolveEmailIdentifier(rawIdentifier, selectedRole);
-          if (!email) throw new Error("Invalid email or password.");
+          let email = await resolveEmailIdentifier(rawIdentifier);
+          if (!email) throw new Error("Invalid username or password.");
 
           const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
           if (error) throw error;
@@ -195,18 +168,12 @@
 
           const actualRole = userRow?.role?.toLowerCase();
 
-          if (selectedRole !== actualRole) {
-            // Destroy the session before erroring — otherwise the account is
-            // silently logged in and a refresh bounces to its real dashboard,
-            // even though the wrong role was selected. Keep the message
-            // generic so a wrong role isn't confirmed to third parties.
+          if (actualRole !== "student") {
+            // Not a student account signing into the student portal —
+            // destroy the session before erroring, keep the message generic
+            // so a wrong role isn't confirmed to third parties.
             await supabaseClient.auth.signOut();
-            throw new Error("Invalid email or password.");
-          }
-
-          if (actualRole === "counselor") {
-            window.location.href = "counselor/counselor-dashboard.html";
-            return;
+            throw new Error("Invalid username or password.");
           }
 
           // Students whose email isn't verified yet (freshly bulk-imported)
@@ -222,20 +189,20 @@
             window.location.href = "student/student-dashboard.html";
           }
         } catch (err) {
-          // A banned auth account (set when a counselor archives a student)
+          // A banned auth account (set when a counselor deactivates a student)
           // fails right here at sign-in, before we ever get a session to
           // check students.is_archived with — so the only signal available
-          // is Supabase's own error text. Give a clear, accurate message
-          // instead of leaving people thinking they mistyped their password.
+          // is Supabase's own error text. Send deactivated students to
+          // their dedicated contact page.
           const isBanned = /banned/i.test(err.message || "");
-          errorMsg.textContent = isBanned
-            ? selectedRole === "counselor"
-              ? "This account has been deactivated. Contact the guidance office for assistance."
-              : "This account has been archived. Contact the guidance office if you believe this is a mistake."
-            : err.message || "Invalid email or password.";
+          if (isBanned) {
+            window.location.replace("account-deactivated.html");
+            return;
+          }
+          errorMsg.textContent = err.message || "Invalid username or password.";
           errorMsg.style.display = "block";
           submitBtn.disabled = false;
-          updateRoleUI();
+          submitBtn.textContent = "Login as Student";
         }
       });
     });

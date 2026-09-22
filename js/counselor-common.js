@@ -1,3 +1,25 @@
+// Auth splash helpers — see style.css .auth-splash. Shown immediately
+// (before first paint, since this script blocks parsing) so a portal
+// page never flashes on screen while the session is being checked,
+// like when a logged-out user presses Back into a cached page.
+let ccAuthSplashEl = null;
+function ccShowAuthSplash() {
+  if (ccAuthSplashEl) return;
+  const el = document.createElement("div");
+  el.className = "auth-splash";
+  el.innerHTML = '<div class="auth-splash-spinner"></div>';
+  el.setAttribute("aria-hidden", "true");
+  (document.body || document.documentElement).appendChild(el);
+  ccAuthSplashEl = el;
+}
+function ccHideAuthSplash() {
+  if (ccAuthSplashEl) {
+    ccAuthSplashEl.remove();
+    ccAuthSplashEl = null;
+  }
+}
+ccShowAuthSplash();
+
 function toggleMenu() {
   document.getElementById("mobileMenu").classList.toggle("show");
 }
@@ -60,7 +82,18 @@ function schoolPrintLetterhead() {
 // for handwriting. Same "open a new tab, print / save as PDF" pattern
 // as the Reports page's openPrintableReport().
 function openVisitationSlip(opts) {
-  const { studentName, gradeSection = "", parentGuardian = "", contactNumber = "", date, time, concern = "" } = opts;
+  const {
+    studentName,
+    gradeSection = "",
+    parentGuardian = "",
+    parentAge = "",
+    contactNumber = "",
+    homeAddress = "",
+    date,
+    time,
+    concern = "",
+    rescheduled = false,
+  } = opts;
   const formattedContact = ccFormatPhone(contactNumber);
 
   const win = window.open("", "_blank");
@@ -84,11 +117,14 @@ function openVisitationSlip(opts) {
         .print-school-footer { position:absolute; bottom:0; left:0; right:0; }
         h1 { font-size:18px; margin:0 0 26px; text-align:center; }
         .row { display:flex; align-items:flex-end; gap:10px; font-size:13.5px; margin-bottom:15px; }
+        .conference-row { gap:6px; font-size:11px; }
+        .conference-row label { font-size:11px; }
         .row label { white-space:nowrap; }
         .fill { flex:1; min-height:17px; border-bottom:1px solid #111827; padding:0 4px; font-size:13px; overflow:hidden; }
         .fill.grow2 { flex:2.2; }
         .fill.fixed { flex:none; width:120px; }
         .reason { font-size:13.5px; margin-bottom:16px; }
+        .reason > .reason-label { display:block; margin-bottom:6px; }
         .reason .lines { margin-top:4px; }
         .reason-box { border:1px solid #111827; min-height:66px; padding:4px; font-size:13px; overflow:visible; white-space:pre-wrap; overflow-wrap:break-word; word-break:break-word; }
         .actions-title { font-size:13.5px; margin-bottom:8px; }
@@ -102,6 +138,8 @@ function openVisitationSlip(opts) {
         .print-letterhead > tbody > tr { display:contents; }
         .print-letterhead > tbody > tr > td { display:contents; }
         .print-btn { position:fixed; top:12px; right:12px; z-index:20; padding:8px 16px; border-radius:8px; border:none; background:#2563eb; color:#fff; font-weight:600; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.25); }
+        .resched-stamp { display:inline-block; border:2px solid #b91c1c; color:#b91c1c; font-weight:700; font-size:15px; letter-spacing:2px; padding:4px 18px; border-radius:6px; margin:0 0 20px; text-transform:uppercase; }
+        .resched-line { display:flex; align-items:center; gap:14px; margin:0 0 8px; }
         @media screen and (max-width: 900px) { body { width:100%; min-height:auto; margin:0; box-shadow:none; } }
         @page { size:8.5in 11in; margin:0; }
         @media print {
@@ -133,23 +171,29 @@ function openVisitationSlip(opts) {
             <td>
               <h1>Parent/Guardian&rsquo;s Visitation Slip</h1>
 
+              <div class="resched-line">
+                <div class="row" style="flex:1; margin-bottom:0;">
+                  <label>Date:</label>
+                  <div class="fill">${ccEscapeHtml(date)}</div>
+                  <label>Time:</label>
+                  <div class="fill">${ccEscapeHtml(time)}</div>
+                </div>
+                ${rescheduled ? '<span class="resched-stamp">RESCHEDULED</span>' : ""}
+              </div>
+
               <div class="row">
                 <label>Name of Mother/Father/Guardian:</label>
                 <div class="fill grow2">${ccEscapeHtml(parentGuardian)}</div>
                 <label>Age:</label>
-                <div class="fill fixed"></div>
+                <div class="fill fixed">${ccEscapeHtml(parentAge)}</div>
               </div>
               <div class="row">
-                <label>Date:</label>
-                <div class="fill">${ccEscapeHtml(date)}</div>
-                <label>Time:</label>
-                <div class="fill">${ccEscapeHtml(time)}</div>
                 <label>Contact No.:</label>
                 <div class="fill">${ccEscapeHtml(formattedContact)}</div>
               </div>
               <div class="row">
                 <label>Home Address:</label>
-                <div class="fill"></div>
+                <div class="fill">${ccEscapeHtml(homeAddress)}</div>
               </div>
               <div class="row">
                 <label>Name of son/daughter:</label>
@@ -161,7 +205,7 @@ function openVisitationSlip(opts) {
                 <label>Child&rsquo;s Class Adviser:</label>
                 <div class="fill"></div>
               </div>
-              <div class="row">
+              <div class="row conference-row">
                 <label>Number of Conference with the Class Adviser:</label>
                 <div class="fill"></div>
                 <label>Date of Last Conference:</label>
@@ -169,7 +213,7 @@ function openVisitationSlip(opts) {
               </div>
 
               <div class="reason">
-                Reason for Visit:
+                <div class="reason-label">Reason for Visit:</div>
                 <div class="lines">
                   <div class="reason-box">${ccEscapeHtml(concern)}</div>
                 </div>
@@ -607,7 +651,7 @@ highlightActiveNav();
 async function logoutCounselor(reason) {
   sessionStorage.removeItem("counselorName");
   await supabaseClient.auth.signOut();
-  window.location.href = reason ? `../index.html?reason=${reason}` : "../index.html";
+  window.location.href = reason ? `../personnel-login.html?reason=${reason}` : "../personnel-login.html";
 }
 
 // Fills every .avatar-initials element (the sidebar header + profile page)
@@ -642,7 +686,7 @@ function setUserAvatar(firstName, lastName) {
 async function attachSession() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) {
-    window.location.href = "../index.html?reason=required";
+    window.location.href = "../personnel-login.html?reason=required";
     return false;
   }
 
@@ -650,7 +694,7 @@ async function attachSession() {
   if (session.expires_at && session.expires_at * 1000 < Date.now() + 60_000) {
     const { data: refreshed, error } = await supabaseClient.auth.refreshSession();
     if (error || !refreshed?.session) {
-      window.location.href = "../index.html?reason=timeout";
+      window.location.href = "../personnel-login.html?reason=timeout";
       return false;
     }
     accessToken = refreshed.session.access_token;
@@ -658,6 +702,27 @@ async function attachSession() {
 
   supabaseClient.functions.setAuth(accessToken);
   return true;
+}
+
+// Invokes an Edge Function with a guaranteed-fresh access token. attachSession
+// only refreshes when the token is within ~60s of expiry, so an Edge Function
+// can STILL answer 401 with a token that PostgREST accepted a moment earlier
+// (rotation race, silently-expired JWT, clock skew...). On HTTP 401 this forces
+// one refreshSession and retries the call once. Callers receive { data, error }
+// shaped exactly like supabaseClient.functions.invoke — error.context.status and
+// error.context.data stay available for the existing toasts.
+async function invokeEdge(fnName, body = {}, options = {}) {
+  if (!(await attachSession())) return { data: null, error: new Error("Not authenticated") };
+
+  const first = await supabaseClient.functions.invoke(fnName, { body, ...options });
+  if (!first.error || first.error.context?.status !== 401) return first;
+
+  // The token was rejected — force a fresh one and try once more.
+  const { data: refreshed, error: refreshError } = await supabaseClient.auth.refreshSession();
+  if (refreshError || !refreshed?.session) return first;
+
+  supabaseClient.functions.setAuth(refreshed.session.access_token);
+  return supabaseClient.functions.invoke(fnName, { body, ...options });
 }
 
 async function requireCounselorAuth() {
@@ -678,7 +743,7 @@ async function requireCounselorAuth() {
 
   // Not logged in? send back to login page
   if (!session) {
-    window.location.href = "../index.html?reason=required";
+    window.location.href = "../personnel-login.html?reason=required";
     return null;
   }
 
@@ -700,7 +765,7 @@ async function requireCounselorAuth() {
       window.location.href = "../student/student-dashboard.html";
       return null;
     default:
-      window.location.href = "../index.html";
+      window.location.href = "../personnel-login.html";
       return null;
   }
 
@@ -708,7 +773,7 @@ async function requireCounselorAuth() {
   // account was soft-disabled (is_active=false). Send them back to
   // the login page; the auth ban also blocks fresh sign-ins.
   if (!counselor) {
-    window.location.href = "../index.html?reason=deactivated";
+    window.location.href = "../personnel-login.html?reason=deactivated";
     return null;
   }
 
@@ -719,6 +784,9 @@ async function requireCounselorAuth() {
   const initialsEl = document.querySelector(".avatar-initials");
   if (initialsEl) sessionStorage.setItem("counselorInitials", initialsEl.textContent);
   sessionStorage.setItem("counselorName", fullName);
+
+  // Session confirmed — lift the auth splash before anything renders.
+  ccHideAuthSplash();
 
   initNotifications(session.user.id);
 
@@ -743,6 +811,41 @@ function startBtnLoading(btn, label) {
 function stopBtnLoading(btn, idleLabel) {
   btn.disabled = false;
   btn.textContent = idleLabel || btn.dataset.idleLabel || btn.textContent;
+}
+
+// Full-screen "working" overlay for slow account-status actions
+// (activating/deactivating students or staff accounts). Blocks all
+// clicks so nobody double-acts in the middle of a change or trips a
+// toast under it. Pairs with hideBlockingLoading() — always hide it in
+// a finally block. Safe to call repeatedly: reuses one element.
+function showBlockingLoading(message) {
+  let overlay = document.getElementById("actionLoadingOverlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "actionLoadingOverlay";
+    overlay.className = "page-load-overlay blocking-overlay";
+    overlay.innerHTML =
+      '<div style="display:flex;flex-direction:column;align-items:center;gap:16px;">' +
+      '<div class="page-load-spinner"></div>' +
+      '<p id="actionLoadingMsg" style="font-weight:600;">Working…</p>' +
+      "</div>";
+    overlay.style.position = "fixed";
+    overlay.style.inset = "0";
+    overlay.style.zIndex = "2000";
+    document.body.appendChild(overlay);
+  }
+  overlay.classList.remove("hide");
+  const msg = overlay.querySelector("#actionLoadingMsg");
+  if (msg && message) msg.textContent = message;
+  document.documentElement.style.overflow = "hidden";
+  document.body.style.overflow = "hidden";
+}
+
+function hideBlockingLoading() {
+  const overlay = document.getElementById("actionLoadingOverlay");
+  if (overlay) overlay.classList.add("hide");
+  document.documentElement.style.overflow = "";
+  document.body.style.overflow = "";
 }
 
 function setUploadProgress(el, percent) {
@@ -774,3 +877,37 @@ function makeImgLazy(img) {
     { once: true }
   );
 }
+
+// Office documents served from storage don't render in a browser tab —
+// navigating straight there makes the browser download the file and leaves
+// the new tab blank. Route those through Google's online viewer instead so
+// the user gets a real preview; everything else opens as it did before.
+function openDocFile(signedUrl, fileName) {
+  const name = fileName || signedUrl || "";
+  const ext = String(name).split(".").pop().toLowerCase();
+  const officeExts = ["doc", "docx", "xls", "xlsx", "ppt", "pptx", "rtf", "odt", "ods", "odp", "csv"];
+  if (officeExts.includes(ext)) {
+    const viewerUrl = "https://docs.google.com/viewer?url=" + encodeURIComponent(signedUrl);
+    window.open(viewerUrl, "_blank", "noopener");
+    return;
+  }
+  window.open(signedUrl, "_blank");
+}
+
+// A logged-out user pressing the browser Back button can be served the
+// portal page from the back/forward cache — scripts don't re-run, so the
+// normal auth guard never fires and account data would still be shown.
+// pageshow fires on every restore (before the browser repaints the cached
+// snapshot), so cover the page synchronously first, then re-check the
+// session and kick out to the personnel sign-in when it's gone.
+window.addEventListener("pageshow", (e) => {
+  if (!e.persisted) return;
+  ccShowAuthSplash();
+  supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      ccHideAuthSplash();
+      return;
+    }
+    window.location.replace("../personnel-login.html?reason=required");
+  });
+});

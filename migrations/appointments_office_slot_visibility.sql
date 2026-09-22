@@ -18,7 +18,12 @@
 -- Fix: a SECURITY DEFINER function that returns ONLY the taken
 -- times for a date (no other columns), callable by any
 -- authenticated user. Students learn which slots are busy without
--- seeing a single byte of anyone else's data. Safe to re-run.
+-- seeing a single byte of anyone else's data.
+--
+-- Which statuses hold a slot: a slot is "taken" only while an
+-- appointment is PENDING or APPROVED. Once a session is
+-- CONDUCTED (or the request is DECLINED) it stops blocking, so
+-- the slot opens again for other bookings. Safe to re-run.
 -- ============================================================
 
 create or replace function public.office_slot_times(target_date date)
@@ -31,7 +36,7 @@ as $$
   select left(a.appointment_time::text, 5)
   from public.appointments a
   where a.appointment_date = target_date
-    and a.status not in ('cancelled', 'declined')
+    and a.status in ('pending', 'approved')
 $$;
 
 -- Only authenticated accounts may ask; block anonymous/public access.

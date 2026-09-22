@@ -10,6 +10,8 @@
     { "source": "/verify-email", "destination": "/verify-email.html" },
     { "source": "/forgot-password", "destination": "/forgot-password.html" },
     { "source": "/reset-password", "destination": "/reset-password.html" },
+    { "source": "/personnel-login", "destination": "/personnel-login.html" },
+    { "source": "/account-deactivated", "destination": "/account-deactivated.html" },
     { "source": "/counselor", "destination": "/counselor/counselor-dashboard.html" },
     { "source": "/counselor/dashboard", "destination": "/counselor/counselor-dashboard.html" },
     { "source": "/counselor/appointments", "destination": "/counselor/counselor-appointments.html" },

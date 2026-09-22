@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>COLM Guidance</title>
+    <title>Announcements · COLM Guidance Portal</title>
     
         <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
        <link rel="stylesheet"
@@ -142,7 +142,7 @@
 
             <div>
                 <div class="CalendarFilterBar">
-                    <span class="filter-label" id="selectedDateLabel">Today's Announcements</span>
+                    <span class="filter-label" id="selectedDateLabel">Announcements</span>
                     <span class="filter-count" id="selectedDayCount"></span>
                 </div>
                 <div id="announcementsList"></div>
@@ -265,7 +265,7 @@
       });
 
       renderCalendar();
-      renderDayList(selectedDateStr);
+      renderMonthList();
     }
 
     function renderCalendar() {
@@ -310,7 +310,7 @@
         cell.addEventListener("click", () => {
           selectedDateStr = dateStr;
           renderCalendar();
-          renderDayList(dateStr);
+          renderMonthList();
           if (announcementsByDate[dateStr] && announcementsByDate[dateStr].length > 0) {
             openDayModal(dateStr);
           }
@@ -332,32 +332,36 @@
       summaryLabel.textContent = summaryParts.join(" · ") || "No upcoming announcements this month";
     }
 
-    function renderDayList(dateStr) {
+    function renderMonthList() {
       const list = document.getElementById("announcementsList");
       const label = document.getElementById("selectedDateLabel");
-      const items = announcementsByDate[dateStr] || [];
+      const monthPrefix = `${viewYear}-${pad(viewMonth + 1)}`;
+      const monthItems = allAnnouncements
+        .filter((a) => a.announcement_date.startsWith(monthPrefix))
+        .sort((a, b) => a.announcement_date.localeCompare(b.announcement_date));
 
-      label.textContent =
-        dateStr === todayStr()
-          ? `Today's Announcements — ${formatLong(dateStr)}`
-          : formatLong(dateStr);
+      label.textContent = `Announcements — ${new Date(viewYear, viewMonth, 1).toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      })}`;
 
       const countBadge = document.getElementById("selectedDayCount");
-      countBadge.textContent = items.length
-        ? `${items.length} announcement${items.length === 1 ? "" : "s"}`
+      countBadge.hidden = monthItems.length === 0;
+      countBadge.textContent = monthItems.length
+        ? `${monthItems.length} announcement${monthItems.length === 1 ? "" : "s"}`
         : "";
 
-      if (items.length === 0) {
+      if (monthItems.length === 0) {
         list.innerHTML = `
           <div class="empty-state">
             <i class="fa-solid fa-bullhorn" style="font-size:28px; margin-bottom:10px; color:#d1d5db;"></i>
-            <p>No announcements for this day.</p>
+            <p>No announcements this month.</p>
           </div>`;
         return;
       }
 
       list.innerHTML = "";
-      items.forEach((a) => {
+      monthItems.forEach((a) => {
         const posted = a.counselors
           ? `${a.counselors.first_name} ${a.counselors.last_name}`
           : "Guidance Office";
@@ -368,7 +372,7 @@
           <div>
             <h3>${escapeHtml(a.title)} <span class="ann-cat${a.category === "event" ? " event" : ""}">${escapeHtml(categoryLabel(a))}</span></h3>
             <p>${escapeHtml(a.announcement_content)}</p>
-            <small>Posted by ${escapeHtml(posted)}</small>
+            <small>${formatShort(a.announcement_date)} · Posted by ${escapeHtml(posted)}</small>
           </div>
         `;
         row.addEventListener("click", () => openAnnouncementModal(a));
@@ -428,6 +432,7 @@
         viewYear--;
       }
       renderCalendar();
+      renderMonthList();
     });
 
     document.getElementById("nextMonthBtn").addEventListener("click", () => {
@@ -437,6 +442,7 @@
         viewYear++;
       }
       renderCalendar();
+      renderMonthList();
     });
 
     document.getElementById("todayBtn").addEventListener("click", () => {
@@ -445,7 +451,7 @@
       viewMonth = now.getMonth();
       selectedDateStr = todayStr();
       renderCalendar();
-      renderDayList(selectedDateStr);
+      renderMonthList();
     });
 
     window.addEventListener("app:notification", (e) => {

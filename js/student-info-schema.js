@@ -20,6 +20,9 @@
 //            rowLabels (one row each), dynamic tables get add/remove
 //            buttons (extra-curricular orgs, consultations, tests)
 //   half   — render at half width in the two-column grid
+//   optionsFor — a select whose option list comes from another field's value
+//            (e.g. Year Level follows Education Level). The wizard resolves
+//            it against the live answers and re-filters on change.
 //
 // Requiredness (per your paper form):
 //   I, II, III, V          — every field required (unless marked optional)
@@ -74,6 +77,21 @@ window.STUDENT_INFO_SCHEMA = (function () {
   ];
   const COURSE_OPTIONS = COURSE_GROUPS.flatMap((group) => group.options);
 
+  // Education level drives the Year Level choices — a student can only pick
+  // a valid level for their education level, so typos are impossible. The
+  // answers store the record's key ('college' | 'senior_high' | 'junior_high')
+  // so this syncs straight back to students.education_level.
+  const EDUCATION_LEVEL_LABELS = {
+    college: "College",
+    senior_high: "Senior High School",
+    junior_high: "Junior High School",
+  };
+  const YEAR_LEVEL_BY_EDUCATION = {
+    college: ["1st Year", "2nd Year", "3rd Year", "4th Year"],
+    senior_high: ["Grade 11", "Grade 12"],
+    junior_high: ["Grade 7", "Grade 8", "Grade 9", "Grade 10"],
+  };
+
   // ---------- Sections I–VI (student-facing) ----------
 
   const SECTIONS = [
@@ -81,7 +99,7 @@ window.STUDENT_INFO_SCHEMA = (function () {
       id: "personal",
       numeral: "I",
       title: "Personal Information",
-      description: "Your basic personal data. Name and Year & Section come from your school record.",
+      description: "Your basic personal data. Name comes from your school record; confirm your Education Level and Year Level below.",
       req: { mode: "all" },
       fields: [
         { key: "last_name", label: "Surname", type: "text", auto: true, half: true },
@@ -99,7 +117,24 @@ window.STUDENT_INFO_SCHEMA = (function () {
         { key: "dob", label: "Date of Birth", type: "date", half: true },
         { key: "pob", label: "Place of Birth", type: "text", noDigits: true, half: true },
         { key: "religion", label: "Religion", type: "text", noDigits: true, half: true },
-        { key: "year_level", label: "Year Level", type: "text", auto: true, half: true, layout: "quarter" },
+        {
+          key: "education_level",
+          label: "Education Level",
+          type: "select",
+          options: Object.keys(EDUCATION_LEVEL_LABELS),
+          auto: true,
+          half: true,
+          layout: "quarter",
+        },
+        {
+          key: "year_level",
+          label: "Year Level",
+          type: "select",
+          optionsFor: { field: "education_level", options: YEAR_LEVEL_BY_EDUCATION },
+          auto: true,
+          half: true,
+          layout: "quarter",
+        },
         { key: "section", label: "Section", type: "text", auto: true, half: true, layout: "quarter" },
         { key: "course", label: "Course", type: "select", optionGroups: COURSE_GROUPS, options: COURSE_OPTIONS, layout: "wide", optional: true },
         { key: "complexion", label: "Complexion", type: "text", noDigits: true, half: true },
@@ -367,6 +402,7 @@ window.STUDENT_INFO_SCHEMA = (function () {
     { field: "email", column: "student_email" },
     { field: "contact", column: "contact_number" },
     { field: "guardian_name", column: "parent_guardian" },
+    { field: "education_level", column: "education_level" },
     { field: "year_level", column: "year_level" },
     { field: "course", column: "course" },
   ];
@@ -398,7 +434,9 @@ window.STUDENT_INFO_SCHEMA = (function () {
   }
 
   function optionLabel(field, option) {
-    return field.key === "course" ? courseLabel(option) : option;
+    if (field.key === "course") return courseLabel(option);
+    if (field.key === "education_level") return EDUCATION_LEVEL_LABELS[option] || option;
+    return option;
   }
 
   // Normalizes any phone value to +63 XXX XXX XXXX: the leading local
@@ -464,11 +502,26 @@ window.STUDENT_INFO_SCHEMA = (function () {
     }
   }
 
-  function tableHtml(field, rows, disabled) {
+  function tableHtml(field, rows, disabled, print) {
     const cols = field.columns;
     let headCells = field.rowLabels ? `<th style="width:130px;"></th>` : `<th style="width:36px;">#</th>`;
     headCells += cols.map((c) => `<th>${esc(c.label)}</th>`).join("");
-    if (!disabled) headCells += `<th style="width:36px;"></th>`;
+    if (!disabled && field.dynamic) headCells += `<th style="width:36px;"></th>`;
+
+    // Fixed (rowLabels) tables always render exactly one row per label and
+    // map stored rows to labels by index. A stored array that came up short
+    // (e.g. a dropped leading empty row) would otherwise shift every record
+    // up one level. Left-pad with empty rows so records line up with their
+    // labels again — never trust raw indices for a fixed-layout table.
+    if (field.rowLabels) {
+      const arr = Array.isArray(rows) ? rows : [];
+      const n = field.rowLabels.length;
+      if (arr.length < n) {
+        const padded = new Array(n).fill({});
+        for (let i = 0; i < arr.length; i++) padded[n - arr.length + i] = arr[i];
+        rows = padded;
+      }
+    }
 
     const rowCount = field.rowLabels ? field.rowLabels.length : Math.max((rows || []).length, 1);
 
@@ -479,12 +532,18 @@ window.STUDENT_INFO_SCHEMA = (function () {
         ? `<td class="sis-row-label">${esc(field.rowLabels[i])}</td>`
         : `<td class="sis-row-num">${i + 1}</td>`;
       const cells = cols
-        .map(
-          (c) =>
-            `<td><input type="${c.type === "date" ? "date" : "text"}" data-field="${escAttr(field.key)}" data-row="${i}" data-col="${escAttr(c.key)}" value="${escAttr(row[c.key] ?? "")}" ${disabledAttr(disabled)}></td>`
-        )
+        .map((c) => {
+          if (print) {
+            const v = (row[c.key] ?? "").toString();
+            return `<td><div class="sis-print-cell">${v.trim() ? esc(v) : "&nbsp;"}</div></td>`;
+          }
+          return `<td><input type="${c.type === "date" ? "date" : "text"}" data-field="${escAttr(field.key)}" data-row="${i}" data-col="${escAttr(c.key)}" value="${escAttr(row[c.key] ?? "")}" ${disabledAttr(disabled)}></td>`;
+        })
         .join("");
-      const removeCell = disabled
+      // Remove buttons belong to dynamic tables only. Fixed (rowLabels)
+      // tables are template-defined — deleting a row there would break the
+      // index-to-label alignment that the whole table relies on.
+      const removeCell = disabled || !field.dynamic
         ? ""
         : `<td><button type="button" class="icon-btn sm sis-remove-row" title="Remove row"><i class="fa-solid fa-xmark"></i></button></td>`;
       body += `<tr data-row="${i}">${labelCell}${cells}${removeCell}</tr>`;
@@ -505,9 +564,16 @@ window.STUDENT_INFO_SCHEMA = (function () {
     `;
   }
 
-  function fieldInnerHtml(field, value, disabled) {
+  function fieldInnerHtml(field, value, disabled, values, print) {
     switch (field.type) {
-      case "select":
+      case "select": {
+        // Cascade: when a select's options depend on another field's value
+        // (e.g. Year Level follows Education Level), resolve the option list
+        // against the current value of that source field.
+        const optionSource = field.optionsFor
+          ? (field.optionsFor.options || {})[String(values ? values[field.optionsFor.field] ?? "" : "")] || []
+          : field.options || [];
+        const optionSet = new Set(optionSource);
         return `<div class="sis-select-wrap"><select data-field="${escAttr(field.key)}" ${disabledAttr(disabled)}>
             <option value="">— Select —</option>
             ${
@@ -524,7 +590,7 @@ window.STUDENT_INFO_SCHEMA = (function () {
                       </optgroup>`
                     )
                     .join("")
-                : (field.options || [])
+                : optionSource
                     .map(
                       (o) =>
                         `<option value="${escAttr(o)}" ${String(value ?? "") === o ? "selected" : ""}>${esc(optionLabel(field, o))}</option>`
@@ -532,11 +598,12 @@ window.STUDENT_INFO_SCHEMA = (function () {
                     .join("")
             }
             ${
-              value && !(field.options || []).includes(String(value))
-                ? `<option value="${escAttr(value)}" selected>Previously saved: ${esc(value)}</option>`
+              value && !optionSet.has(String(value))
+                ? `<option value="${escAttr(value)}" selected>${print ? esc(value) : `Previously saved: ${esc(value)}`}</option>`
                 : ""
             }
           </select></div>`;
+      }
       case "datalist":
         return `<input type="text" data-field="${escAttr(field.key)}" list="${escAttr(field.key + "-list")}" value="${escAttr(value ?? "")}" ${disabledAttr(disabled)}>
           <datalist id="${escAttr(field.key + "-list")}">
@@ -567,7 +634,7 @@ window.STUDENT_INFO_SCHEMA = (function () {
           .join("")}</div>`;
       }
       case "table":
-        return tableHtml(field, value, disabled);
+        return tableHtml(field, value, disabled, print);
       default:
         return simpleInputHtml(field, value, disabled);
     }
@@ -576,7 +643,7 @@ window.STUDENT_INFO_SCHEMA = (function () {
   // One field rendered as a labeled block. Subblock headers split a
   // section into lettered parts (IV-A / IV-B); tables render full-width
   // without the standard form-field box (they carry their own styling).
-  function fieldHtml(field, value, disabled) {
+  function fieldHtml(field, value, disabled, values, print) {
     if (field.type === "subblock") {
       return `<div class="sis-subblock">${esc(field.label)}</div>`;
     }
@@ -585,7 +652,7 @@ window.STUDENT_INFO_SCHEMA = (function () {
       return `
         <div class="sis-field sis-field-table">
           <label class="sis-table-label">${esc(field.label)}</label>
-          ${tableHtml(field, value, disabled)}
+          ${tableHtml(field, value, disabled, print)}
         </div>
       `;
     }
@@ -595,7 +662,7 @@ window.STUDENT_INFO_SCHEMA = (function () {
       <div class="sis-field ${field.half ? "half" : ""} ${field.layout ? `sis-field-${escAttr(field.layout)}` : ""}">
         <div class="form-field">
           <label>${esc(field.label)}</label>
-          ${fieldInnerHtml(field, value, disabled)}
+          ${fieldInnerHtml(field, value, disabled, values, print)}
           ${hint}
         </div>
       </div>
@@ -623,6 +690,17 @@ window.STUDENT_INFO_SCHEMA = (function () {
           });
           rows.push(row);
         });
+        // Self-heal fixed (rowLabels) tables on save: whatever the DOM held,
+        // the stored array must have exactly one row per label so rendering
+        // later stays index-aligned (no dropped-row shifts).
+        if (field.rowLabels && field.rowLabels.length !== rows.length) {
+          const fixed = new Array(field.rowLabels.length).fill({});
+          for (let i = 0; i < rows.length && i < fixed.length; i++) {
+            fixed[field.rowLabels.length - rows.length + i] = rows[i];
+          }
+          rows.length = 0;
+          rows.push(...fixed);
+        }
         answers[field.key] = rows;
         return;
       }

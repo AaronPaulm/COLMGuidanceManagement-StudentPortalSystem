@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>COLM Guidance</title>
+    <title>Appointments · COLM Guidance Portal</title>
     
         <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
       <link rel="stylesheet"
@@ -473,12 +473,15 @@
       if (banner) banner.style.display = "none";
     }
 
-    function slotButtonHtml(min, taken) {
+    function slotButtonHtml(min, taken, passed) {
       const value = slotTimeString(min);
       const isTaken = taken.has(value);
-      return `<button type="button" class="appt-slot${isTaken ? " booked" : ""}" data-value="${value}"${isTaken ? " disabled" : ""} title="${isTaken ? "Already booked" : `Book ${formatTime(value)}`}">
+      const isPassed = passed.has(value);
+      const state = isTaken ? "booked" : isPassed ? "passed" : "";
+      const label = isTaken ? "Booked" : isPassed ? "Passed" : "";
+      return `<button type="button" class="appt-slot${state ? " " + state : ""}" data-value="${value}"${state ? " disabled" : ""} title="${isTaken ? "Already booked" : isPassed ? "Already passed for today" : `Book ${formatTime(value)}`}">
         <span class="appt-slot-time">${formatTime(value)}</span>
-        ${isTaken ? '<span class="appt-slot-state">Booked</span>' : '<span class="appt-slot-check"><i class="fa-solid fa-check"></i></span>'}
+        ${state ? `<span class="appt-slot-state">${label}</span>` : '<span class="appt-slot-check"><i class="fa-solid fa-check"></i></span>'}
       </button>`;
     }
 
@@ -512,16 +515,28 @@
       const afternoon = [];
       for (let m = AFTERNOON_START_MIN; m < SLOT_END_MIN; m += SLOT_STEP_MIN) afternoon.push(m);
 
+      // Slots whose start time has already passed today are NOT bookable.
+      // (Past dates are already impossible via the min="today" on the date
+      // input; this handles picks of *today* made later in the day.)
+      const passed = new Set();
+      if (date === todayStr()) {
+        const now = new Date();
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        morning.concat(afternoon).forEach((m) => {
+          if (m <= nowMin) passed.add(slotTimeString(m));
+        });
+      }
+
       const renderSections = (taken) => {
         grid.innerHTML = `
           <div class="appt-slot-sections">
             <div class="appt-slot-section">
               <div class="appt-slot-section-title">Morning</div>
-              <div class="appt-slot-row">${morning.map((m) => slotButtonHtml(m, taken)).join("")}</div>
+              <div class="appt-slot-row">${morning.map((m) => slotButtonHtml(m, taken, passed)).join("")}</div>
             </div>
             <div class="appt-slot-section">
               <div class="appt-slot-section-title">Afternoon</div>
-              <div class="appt-slot-row">${afternoon.map((m) => slotButtonHtml(m, taken)).join("")}</div>
+              <div class="appt-slot-row">${afternoon.map((m) => slotButtonHtml(m, taken, passed)).join("")}</div>
             </div>
           </div>
         `;
@@ -554,17 +569,24 @@
         return;
       }
 
+      const passedCount = passed.size;
       const available = grid.querySelectorAll(".appt-slot:not(:disabled)").length;
-      const bookedCount = total - available;
+      const bookedCount = total - available - passedCount;
 
       if (available === 0) {
-        hint.textContent = "No available times on this date — every slot is booked. Please choose another date.";
+        if (passedCount > 0 && bookedCount === 0) {
+          hint.textContent = "All of today's time slots have already passed. Please choose another date.";
+        } else {
+          hint.textContent = "No available times on this date — every slot is booked. Please choose another date.";
+        }
         hint.style.display = "";
         if (meta) meta.textContent = "";
-      } else if (bookedCount === 0) {
+      } else if (bookedCount === 0 && passedCount === 0) {
         if (meta) meta.textContent = "";
-      } else if (meta) {
-        meta.textContent = `✓ ${available} of ${total} slots available · ${bookedCount} already booked`;
+      } else {
+        let metaText = `✓ ${available} of ${total} slots available · ${bookedCount} already booked`;
+        if (passedCount > 0) metaText += ` · ${passedCount} passed for today`;
+        if (meta) meta.textContent = metaText;
       }
 
       grid.querySelectorAll(".appt-slot:not(:disabled)").forEach((btn) => {

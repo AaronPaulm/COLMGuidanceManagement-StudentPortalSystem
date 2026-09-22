@@ -63,7 +63,7 @@ function generateTempPassword(): string {
   return pw;
 }
 
-// Username base for login, e.g. "maria.santos". Matches the student
+// Username base for login, e.g. "colm_maria.santos". Matches the student
 // import's slugify (lowercased, accents stripped, non-alphanumerics
 // removed), so names that collide with students still resolve cleanly.
 function slugify(str: string): string {
@@ -77,7 +77,11 @@ function slugify(str: string): string {
 function slugUsername(firstName: string, lastName: string): string {
   const fn = slugify(firstName);
   const ln = slugify(lastName);
-  return fn || ln ? `${fn}${ln ? "." + ln : ""}` : "";
+  return fn || ln ? `colm_${fn}${ln ? "." + ln : ""}` : "";
+}
+
+function withUsernamePrefix(username: string): string {
+  return username.startsWith("colm_") ? username : `colm_${username}`;
 }
 
 // Usernames share a single login namespace with students, so a new
@@ -94,6 +98,24 @@ async function usernameIsFree(
   const occupied = (rows: unknown[] | null, exId: string): boolean =>
     (rows || []).some((r: any) => r.user_id !== exId);
   return !occupied(counselorRows?.data, excludeUserId) && !occupied(studentRows?.data, excludeUserId);
+}
+
+async function emailIsRegistered(adminClient: any, email: string): Promise<boolean> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const perPage = 1000;
+
+  for (let page = 1; ; page++) {
+    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
+    if (error) throw new Error("Couldn't validate email availability: " + error.message);
+
+    if ((data?.users || []).some((authUser: { email?: string | null }) =>
+      (authUser.email || "").toLowerCase() === normalizedEmail
+    )) {
+      return true;
+    }
+
+    if (!data?.users || data.users.length < perPage) return false;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -140,11 +162,16 @@ Deno.serve(async (req) => {
     if (!firstName || !lastName || !email) return json({ error: "Missing required fields" }, 400);
 
     // Username: use the caller-provided one if present, otherwise
-    // derive slug(first).slug(last). Either way it must be unique in
+    // derive colm_slug(first).slug(last). Either way it must be unique in
     // the shared login namespace (counselors + students).
     let username = String(requestedUsername || "").trim().toLowerCase();
     if (!username) username = slugUsername(firstName, lastName);
+    else username = withUsernamePrefix(username);
     if (!username) return json({ error: "Couldn't derive a username — provide one manually" }, 400);
+
+    if (await emailIsRegistered(adminClient, email)) {
+      return json({ error: "This email address is already registered. Use a different email address." }, 409);
+    }
 
     const MAX_USERNAME_ATTEMPTS = 20;
     let baseUsername = username;

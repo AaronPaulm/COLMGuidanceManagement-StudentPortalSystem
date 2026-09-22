@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="icon" type="image/png" href="images/COLM LOGO.png">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <title>Guidance Personnel Sign In · COLM Guidance Portal</title>
+</head>
+<body>
+  <main class="container">
+    <aside class="left-panel">
+      <header>
+         <img src="images/COLM LOGO.png" alt="COLM Logo" class="logo">
+        <h1>College of Our Lady of Mercy of Pulilan Foundation Inc.</h1>
+        <hr>
+        <p>Guidance Management & Student Portal System</p>
+      </header>
+    </aside>
+
+    <section class="right-panel">
+      <header class="login-greeting">
+        <h2>Guidance Personnel Portal</h2>
+        <p>Staff sign in to manage guidance services</p>
+      </header>
+
+      <div id="sessionNotice" class="banner" style="display:none;"></div>
+
+      <form id="loginForm">
+        <label for="username">Username or Email</label>
+        <input type="text" id="username" name="username" required autocomplete="username" placeholder="Username or email">
+
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required autocomplete="current-password">
+        <div>
+          <a href="forgot-password.html" class="forgot-password-link">Forgot password?</a>
+        </div>
+
+        <button type="submit" id="loginBtn">Login as Guidance Personnel</button>
+        <div class="error-msg" id="errorMsg"></div>
+      </form>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/password-toggle.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      const params = new URLSearchParams(location.search);
+      const reason = params.get("reason");
+      const fragParams = new URLSearchParams(location.hash.slice(1));
+
+      // Password-reset recovery links must land on reset-password.html, never
+      // on a sign-in page. Supabase's emailed link either arrives as a
+      // new-style ?token_hash&type=recovery URL or as a classic fragment
+      // session (type=recovery), and an expired/used link arrives with #error=
+      // instead. Detect any of those and hand the URL straight to the reset
+      // page so it can show the password form or the expired-link panel.
+      const isRecoveryLanding =
+        (params.get("token_hash") && params.get("type") === "recovery") ||
+        fragParams.get("type") === "recovery";
+
+      if (isRecoveryLanding || location.hash.startsWith("#error=")) {
+        window.location.replace("reset-password.html" + location.search + location.hash);
+        return;
+      }
+
+      // Already logged in? Skip straight to the right place instead of
+      // showing the form again. Skip when a ?reason= is present so the
+      // intentional message (timeout, deactivated) actually shows.
+      if (!reason) {
+        const {
+          data: { session },
+        } = await supabaseClient.auth.getSession();
+
+        if (session) {
+          const { data: userRow } = await supabaseClient
+            .from("users")
+            .select("role")
+            .eq("user_id", session.user.id)
+            .maybeSingle();
+
+          const role = userRow?.role?.toLowerCase();
+          if (role === "counselor") {
+            window.location.href = "counselor/counselor-dashboard.html";
+            return;
+          }
+          if (role === "student") {
+            window.location.href = "index.html";
+            return;
+          }
+        }
+      }
+
+      const notice = document.getElementById("sessionNotice");
+
+      if (reason && notice) {
+        const messages = {
+          required: "Please sign in to continue.",
+          forbidden: "You don't have access to that page with your current role.",
+          timeout: "You were signed out due to inactivity. Please sign in again.",
+          deactivated: "This account has been deactivated. Contact the administrator for assistance."
+        };
+        notice.textContent = messages[reason] || "Please sign in to continue.";
+        notice.style.display = "flex";
+      }
+
+      const form = document.getElementById("loginForm");
+      const errorMsg = document.getElementById("errorMsg");
+      const submitBtn = document.getElementById("loginBtn");
+
+      // Maps a typed username or email to the address Supabase accepts for
+      // sign-in / password reset. Personnel resolve by their own username via
+      // resolve_counselor_username; emails pass straight through.
+      async function resolveEmailIdentifier(rawIdentifier) {
+        if (rawIdentifier.includes("@")) return rawIdentifier;
+        const { data } = await supabaseClient.rpc("resolve_counselor_username", { p_username: rawIdentifier });
+        return data || null;
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorMsg.style.display = "none";
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Logging in...";
+
+        const rawIdentifier = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value;
+
+        try {
+          // Resolve username -> auth email, or pass email straight through.
+          let email = await resolveEmailIdentifier(rawIdentifier);
+          if (!email) throw new Error("Invalid username or password.");
+
+          const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+
+          const { data: userRow, error: userRowError } = await supabaseClient
+            .from("users")
+            .select("role")
+            .eq("user_id", data.user.id)
+            .single();
+          if (userRowError) throw userRowError;
+
+          const actualRole = userRow?.role?.toLowerCase();
+
+          // Only guidance personnel sign in here. Destroy the session before
+          // erroring so a wrong role isn't confirmed to third parties.
+          if (actualRole !== "counselor") {
+            await supabaseClient.auth.signOut();
+            throw new Error("Invalid username or password.");
+          }
+
+          window.location.href = "counselor/counselor-dashboard.html";
+        } catch (err) {
+          // A banned auth account (set when an account is disabled) fails
+          // right here at sign-in, before a session ever exists.
+          const isBanned = /banned/i.test(err.message || "");
+          errorMsg.textContent = isBanned
+            ? "This account has been deactivated. Contact the administrator for assistance."
+            : err.message || "Invalid username or password.";
+          errorMsg.style.display = "block";
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Login as Guidance Personnel";
+        }
+      });
+    });
+  </script>
+</body>
+</html>

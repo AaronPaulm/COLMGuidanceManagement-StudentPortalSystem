@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="icon" type="image/png" href="images/COLM LOGO.png">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* This page's contact form is intentionally wider than the default
+       auth card (420px) so the fields don't feel crowded, and the message
+       box spans the same width as the text inputs. */
+    #contactForm.auth-card {
+      max-width: 560px;
+    }
+
+    #contactForm input,
+    #contactForm select,
+    #contactForm textarea {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    #contactForm label {
+      margin-top: 24px;
+    }
+
+    #contactForm textarea {
+      min-height: 150px;
+      padding: 10px 12px;
+      border: 1px solid #d5d7db;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #fff;
+      color: #111827;
+      resize: vertical;
+    }
+
+    #contactForm textarea:focus {
+      outline: none;
+      border-color: #2d6cdf;
+    }
+  </style>
+  <title>Account Deactivated · COLM Guidance Portal</title>
+</head>
+<body>
+  <main class="container">
+    <aside class="left-panel">
+      <header>
+         <img src="images/COLM LOGO.png" alt="COLM Logo" class="logo">
+        <h1>College of Our Lady of Mercy of Pulilan Foundation Inc.</h1>
+        <hr>
+        <p>Guidance Management & Student Portal System</p>
+      </header>
+    </aside>
+
+    <section class="right-panel">
+      <header class="login-greeting">
+        <h2>Account Deactivated</h2>
+        <p>Your account can't be used to sign in right now.</p>
+      </header>
+
+      <div id="notice" class="banner" style="display:none;"></div>
+
+      <form id="contactForm" class="auth-card" data-submit-cooldown="8000">
+        <p class="verify-intro">
+          Your account has been deactivated by the guidance office. Your records are kept, but you
+          can no longer log in. If you believe this is a mistake, use the form below to send the
+          guidance office a message.
+        </p>
+
+        <label for="contactName">Your Full Name</label>
+        <input type="text" id="contactName" autocomplete="name" placeholder="Juan Dela Cruz">
+
+        <label for="contactEmail">Your Email Address</label>
+        <input type="email" id="contactEmail" autocomplete="email" placeholder="you@gmail.com">
+
+        <label for="contactRecipient">Send To</label>
+        <select id="contactRecipient"></select>
+        <span class="hint" id="contactRecipientHint">The guidance personnel list loads automatically.</span>
+
+        <label for="contactMessage">Message</label>
+        <textarea id="contactMessage" rows="4" required placeholder="Tell the guidance office why you're reaching out…"></textarea>
+
+        <button type="submit" id="contactSendBtn">Email the Guidance Office</button>
+        <div class="error-msg" id="contactError" style="display:none;"></div>
+      </form>
+
+      <a href="index.html" class="link-btn" style="margin-top:16px;">Back to sign in</a>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script>
+    const form = document.getElementById("contactForm");
+    const nameInput = document.getElementById("contactName");
+    const emailInput = document.getElementById("contactEmail");
+    const messageInput = document.getElementById("contactMessage");
+    const recipientSelect = document.getElementById("contactRecipient");
+    const recipientHint = document.getElementById("contactRecipientHint");
+    const errorMsg = document.getElementById("contactError");
+
+    let allEmails = [];
+
+    function esc(value) {
+      const div = document.createElement("div");
+      div.textContent = String(value ?? "");
+      return div.innerHTML;
+    }
+
+    // Populates the "Send To" chooser with the active guidance personnel's
+    // login email (auth_email — the Gmail used when their account was
+    // created). If none can be found, the chooser stays empty and the
+    // send is blocked rather than inventing a fallback address.
+    function showNoRecipients() {
+      recipientSelect.innerHTML = '<option value="" disabled selected>No guidance email available</option>';
+      recipientHint.textContent = "No active guidance personnel with an email was found. Please try again later.";
+    }
+
+    async function loadRecipients() {
+      try {
+        // Anonymous users can't read `counselors` (RLS), so this goes
+        // through a security-definer RPC that returns the names + login
+        // emails of currently active personnel.
+        const { data, error } = await supabaseClient.rpc("get_active_counselor_contacts");
+
+        if (error) {
+          console.error(error);
+          showNoRecipients();
+          return;
+        }
+
+        const list = (data || []).filter((c) => (c.auth_email || "").trim());
+        allEmails = list.map((c) => c.auth_email.trim());
+
+        if (!list.length) {
+          showNoRecipients();
+          return;
+        }
+
+        const options = list
+          .map((c) => {
+            const name = [c.first_name, c.last_name].filter(Boolean).join(" ") || "Guidance personnel";
+            return `<option value="${esc(c.auth_email)}">${esc(`${name} · ${c.auth_email}`)}</option>`;
+          })
+          .join("");
+
+        recipientSelect.innerHTML =
+          (list.length > 1 ? `<option value="__all__">All guidance personnel (${list.length})</option>` : "") + options;
+        recipientHint.textContent = "Only currently active guidance personnel are shown.";
+      } catch (err) {
+        console.error(err);
+        showNoRecipients();
+      }
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errorMsg.style.display = "none";
+
+      const message = messageInput.value.trim();
+      if (!message) {
+        showContactError("Please write a short message before sending.");
+        return;
+      }
+
+      const selected = recipientSelect.value;
+      let recipients;
+      if (!selected || selected === "__all__") {
+        recipients = allEmails.length ? allEmails : [];
+      } else {
+        recipients = [selected];
+      }
+
+      if (!recipients.length) {
+        showContactError("No guidance email is available right now, so your message can't be sent. Please try again later or visit the guidance office directly.");
+        return;
+      }
+
+      const sendBtn = document.getElementById("contactSendBtn");
+      sendBtn.disabled = true;
+      sendBtn.textContent = "Opening your email app…";
+
+      const name = nameInput.value.trim();
+      const email = emailInput.value.trim();
+
+      const subject = `Deactivated account — contact from ${name || "a student"}`;
+      const body = [
+        message,
+        "",
+        "—",
+        `Name: ${name || "(not given)"}`,
+        `Contact email: ${email || "(not given)"}`,
+      ].join("\n");
+
+      const mailto = `mailto:${recipients.join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = mailto;
+
+      sendBtn.disabled = false;
+      sendBtn.textContent = "Email the Guidance Office";
+    });
+
+    loadRecipients();
+
+    function showContactError(text) {
+      errorMsg.textContent = text;
+      errorMsg.style.display = "block";
+    }
+  </script>
+</body>
+</html>

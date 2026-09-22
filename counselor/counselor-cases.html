@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>COLM Guidance</title>
+    <title>Cases · COLM Guidance Portal</title>
     
         <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
       <link rel="stylesheet"
@@ -1046,14 +1046,14 @@
       await refreshCurrentCase();
     }
 
-    async function openAttachment(path) {
+    async function openAttachment(path, fileName) {
       const { data, error } = await supabaseClient.storage.from("case-attachments").createSignedUrl(path, 60);
       if (error) {
         showToast("Couldn't open file: " + error.message, "error");
         console.error(error);
         return;
       }
-      window.open(data.signedUrl, "_blank");
+      openDocFile(data.signedUrl, fileName);
     }
 
     function interventionItemHtml(iv) {
@@ -1062,7 +1062,7 @@
             <img data-signed-path="${escapeHtml(iv.file_path)}" alt="${escapeHtml(iv.file_name)}">
             <span class="attachment-thumb-name">${escapeHtml(iv.file_name)}</span>
           </div>`
-        : `<button type="button" class="attachment-chip" data-action="view-intervention" data-path="${escapeHtml(iv.file_path)}"><i class="fa-solid fa-file-lines"></i> ${escapeHtml(iv.file_name)}</button>`;
+        : `<button type="button" class="attachment-chip" data-action="view-intervention" data-path="${escapeHtml(iv.file_path)}" data-name="${escapeHtml(iv.file_name)}"><i class="fa-solid fa-file-lines"></i> ${escapeHtml(iv.file_name)}</button>`;
       return `
         <div class="case-timeline-item">
           <div class="case-timeline-date">${formatDate(iv.created_at)}</div>
@@ -1113,7 +1113,7 @@
         : `<div class="notif-empty" style="padding:20px;">No interventions uploaded yet.</div>`;
 
       list.querySelectorAll('[data-action="view-intervention"]').forEach((chip) => {
-        chip.addEventListener("click", () => openAttachment(chip.dataset.path));
+        chip.addEventListener("click", () => openAttachment(chip.dataset.path, chip.dataset.name));
       });
       list.querySelectorAll('[data-action="toggle-intervention"]').forEach((btn) => {
         btn.addEventListener("click", () => toggleInterventionAccess(Number(btn.dataset.id)));

@@ -3,9 +3,9 @@
 // Called from counselor-student.html when a counselor needs to reset a
 // student's login password (e.g. the student forgot it and can't use the
 // self-service "Forgot password?" email flow, or never got their original
-// temp password). Resets it back to the school's standard student login
-// password, set directly via the Admin API, which needs the service-role
-// key and so can't run client-side.
+// temp password). Issues a fresh unique temp password, set directly via
+// the Admin API, which needs the service-role key and so can't run
+// client-side.
 //
 // Deploy with the Supabase CLI:
 //   supabase functions deploy reset-student-password
@@ -54,9 +54,13 @@ function corsHeadersFor(req: Request): Record<string, string> {
   return headers;
 }
 
-// Kept in sync with create-student-accounts — the same standard password
-// every student is expected to log in with initially.
-const STUDENT_TEMP_PASSWORD = "colmstudent";
+// Kept in sync with create-student-accounts — every reset issues a unique
+// first-login password (e.g. "colmstudent13452"): "colmstudent" plus a
+// random numeric suffix, never the shared "colmstudent" the old importer
+// used to hand out.
+function randomTempPassword(): string {
+  return `colmstudent${String(Math.floor(10000 + Math.random() * 90000))}`;
+}
 
 Deno.serve(async (req) => {
   const corsHeaders = corsHeadersFor(req);
@@ -98,13 +102,15 @@ Deno.serve(async (req) => {
     const { userId } = await req.json();
     if (!userId) return json({ error: "Invalid request" }, 400);
 
+    const tempPassword = randomTempPassword();
+
     const { error: updateError } = await adminClient.auth.admin.updateUserById(userId, {
-      password: STUDENT_TEMP_PASSWORD,
+      password: tempPassword,
     });
 
     if (updateError) return json({ error: updateError.message }, 400);
 
-    return json({ success: true, tempPassword: STUDENT_TEMP_PASSWORD });
+    return json({ success: true, tempPassword });
   } catch (err) {
     return json({ error: String(err) }, 500);
   }

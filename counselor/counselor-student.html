@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>COLM Guidance</title>
+    <title>Student Directory · COLM Guidance Portal</title>
     
         <link rel="icon" type="image/png" href="../images/COLM LOGO.png">
       <link rel="stylesheet"
@@ -154,10 +154,10 @@
             <div class="filter-toolbar" style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
                 <div class="filter-tabs" id="studentsFilterTabs">
                     <button type="button" class="active" data-filter="active">Active</button>
-                    <button type="button" data-filter="archived">Archived</button>
+                    <button type="button" data-filter="archived">Deactivated</button>
                 </div>
-                <select id="sectionFilterSelect" class="table-search" style="width:auto;">
-                    <option value="">All Sections</option>
+                <select id="yearLevelFilterSelect" class="table-search" style="width:auto;">
+                    <option value="">All Year Levels</option>
                 </select>
                 <select id="sisFilterSelect" class="table-search" style="width:auto;">
                     <option value="">Info Sheet: All</option>
@@ -172,7 +172,7 @@
             <span id="bulkSelectedCount">0 selected</span>
             <div style="display:flex; gap:8px;">
                 <button type="button" class="btn btn-outline btn-sm" id="bulkEditBtn"><i class="fa-solid fa-pen"></i> Edit Section/Year</button>
-                <button type="button" class="btn btn-danger btn-sm" id="bulkArchiveBtn"><i class="fa-solid fa-box-archive"></i> Archive</button>
+                <button type="button" class="btn btn-danger btn-sm" id="bulkArchiveBtn"><i class="fa-solid fa-user-slash"></i> Deactivate</button>
             </div>
         </div>
 
@@ -215,7 +215,7 @@
 
                 <div class="account-actions-row">
                     <button type="button" class="btn btn-outline btn-sm" id="resetPasswordBtn" title="Reset Password"><i class="fa-solid fa-key"></i> Reset Password</button>
-                    <button type="button" class="btn btn-outline btn-sm" id="archiveStudentBtn">Archive</button>
+                    <button type="button" class="btn btn-outline btn-sm" id="archiveStudentBtn">Deactivate</button>
                 </div>
 
                 <div class="account-form-grid">
@@ -268,7 +268,8 @@
                     </div>
                     <div class="form-field">
                         <label for="editEmail">Email</label>
-                        <input type="email" id="editEmail">
+                        <input type="email" id="editEmail" disabled>
+                        <span class="hint">Managed by the student's Gmail verification — not editable here.</span>
                     </div>
                 </div>
                 <div class="form-actions">
@@ -327,7 +328,10 @@
                      school year only (past years stay frozen). -->
                 <div class="builder-section-label" style="margin-top:20px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
                     <span>Student Information Sheet</span>
-                    <select id="detailSisYearSelect" class="table-search" style="width:auto; padding:4px 10px; font-size:12px;"></select>
+                    <span style="display:flex; align-items:center; gap:8px;">
+                        <button type="button" class="btn btn-outline btn-sm" id="sisDownloadBtn" style="display:none;"><i class="fa-solid fa-download"></i> Download</button>
+                        <select id="detailSisYearSelect" class="table-search" style="width:auto; padding:4px 10px; font-size:12px;"></select>
+                    </span>
                 </div>
                 <div id="studentDetailSis"><div class="notif-empty" style="padding:16px;">No info sheet on record.</div></div>
 
@@ -553,14 +557,18 @@
       bar.style.display = count > 0 ? "flex" : "none";
     }
 
-    function updateSectionSuggestions() {
-      const sections = [...new Set(allStudents.map((s) => s.section).filter(Boolean))].sort();
+    function updateYearLevelSuggestions() {
+      const yearLevels = [...new Set(allStudents.map((s) => s.year_level).filter(Boolean))].sort((a, b) => {
+        const na = parseInt(a, 10) || 0;
+        const nb = parseInt(b, 10) || 0;
+        return na - nb || String(a).localeCompare(String(b));
+      });
 
-      const filterSelect = document.getElementById("sectionFilterSelect");
+      const filterSelect = document.getElementById("yearLevelFilterSelect");
       const currentValue = filterSelect.value;
       filterSelect.innerHTML =
-        `<option value="">All Sections</option>` +
-        sections.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+        `<option value="">All Year Levels</option>` +
+        yearLevels.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
       filterSelect.value = currentValue;
     }
 
@@ -569,7 +577,7 @@
       studentsPage = 1;
 
       const query = document.getElementById("studentSearchInput").value.trim().toLowerCase();
-      const section = document.getElementById("sectionFilterSelect").value;
+      const yearLevel = document.getElementById("yearLevelFilterSelect").value;
       const sisFilter = document.getElementById("sisFilterSelect").value;
 
       let filtered = allStudents.filter((s) => {
@@ -577,8 +585,8 @@
         return !s.is_archived;
       });
 
-      if (section) {
-        filtered = filtered.filter((s) => (s.section || "") === section);
+      if (yearLevel) {
+        filtered = filtered.filter((s) => (s.year_level || "") === yearLevel);
       }
 
       if (sisFilter === "submitted") {
@@ -628,7 +636,7 @@
 
       sisStatusByStudent = new Map((sheets || []).map((r) => [r.student_id, r.status]));
       allStudents = data || [];
-      updateSectionSuggestions();
+      updateYearLevelSuggestions();
       applyStudentFilters();
     }
 
@@ -642,7 +650,7 @@
     });
 
     document.getElementById("studentSearchInput").addEventListener("input", applyStudentFilters);
-    document.getElementById("sectionFilterSelect").addEventListener("change", applyStudentFilters);
+    document.getElementById("yearLevelFilterSelect").addEventListener("change", applyStudentFilters);
     document.getElementById("sisFilterSelect").addEventListener("change", applyStudentFilters);
 
     document.getElementById("selectAllCheckbox").addEventListener("change", (e) => {
@@ -660,17 +668,22 @@
       if (!ids.length) return;
 
       const ok = await confirmDialog(
-        `Archive ${ids.length} student${ids.length === 1 ? "" : "s"}? Their records are kept, but they won't be able to log in anymore.`,
-        { confirmLabel: "Archive", danger: true }
+        `Deactivate ${ids.length} student${ids.length === 1 ? "" : "s"}? Their records are kept, but they won't be able to log in anymore.`,
+        { confirmLabel: "Deactivate", danger: true }
       );
       if (!ok) return;
 
-      for (const id of ids) {
-        const student = allStudents.find((s) => s.student_id === id);
-        if (student && !student.is_archived) await setStudentArchived(student, true, { silent: true });
+      showBlockingLoading(`Deactivating ${ids.length} student${ids.length === 1 ? "" : "s"}…`);
+      try {
+        for (const id of ids) {
+          const student = allStudents.find((s) => s.student_id === id);
+          if (student && !student.is_archived) await setStudentArchived(student, true, { silent: true });
+        }
+      } finally {
+        hideBlockingLoading();
       }
 
-      showToast(`Archived ${ids.length} student${ids.length === 1 ? "" : "s"}.`, "success");
+      showToast(`Deactivated ${ids.length} student${ids.length === 1 ? "" : "s"}.`, "success");
       selectedStudentIds.clear();
       applyStudentFilters();
     });
@@ -788,7 +801,7 @@
       showToast(`Updated ${ids.length} student${ids.length === 1 ? "" : "s"}.`, "success");
       closeBatchEditModal();
       selectedStudentIds.clear();
-      updateSectionSuggestions();
+      updateYearLevelSuggestions();
       applyStudentFilters();
     });
 
@@ -967,8 +980,10 @@
         document.getElementById("studentDetailNotes").innerHTML =
           `<div class="notif-empty" style="padding:16px;">Section VII becomes available once this student submits their sheet.</div>`;
         document.getElementById("sisNotesActions").style.display = "none";
+        document.getElementById("sisDownloadBtn").style.display = "none";
         return;
       }
+      document.getElementById("sisDownloadBtn").style.display = "inline-flex";
 
       const answers = sheet.answers || {};
       let html = `<div class="hint" style="margin-bottom:12px;">${
@@ -980,15 +995,17 @@
       STUDENT_INFO_SCHEMA.sections.forEach((sec) => {
         html += `<div class="builder-section-label">${escAttr(sec.numeral)}. ${escAttr(sec.title)}</div>`;
         html += `<div class="sis-grid ${sec.id === "personal" ? "sis-grid-personal" : ""}" style="margin-bottom:16px;">${sec.fields
-          .map((f) => STUDENT_INFO_SCHEMA.fieldHtml(f, answers[f.key], true))
+          .map((f) => STUDENT_INFO_SCHEMA.fieldHtml(f, answers[f.key], true, answers))
           .join("")}</div>`;
       });
 
       html += `
-        <div class="builder-section-label">Signature</div>
         <div class="sis-sign-preview" style="margin:10px 0 4px;">
           ${sheet.signature ? `<img src="${sheet.signature}" alt="Student signature">` : `<p class="submission-answer-empty">No signature captured.</p>`}
         </div>
+        <div class="sis-sign-name" style="margin-top:4px;">${escapeHtml(`${currentDetailStudent.first_name} ${currentDetailStudent.last_name}`)}</div>
+        <div class="sis-sign-line" style="margin-top:2px;"></div>
+        <div class="sis-sign-caption" style="margin-top:3px;">Signature over printed name of student.</div>
       `;
 
       wrap.innerHTML = html;
@@ -1017,6 +1034,165 @@
         }
       }
     }
+
+    // Print / save-as-PDF popup for the currently selected sheet. Reuses
+    // the same letterhead-lesson as the reports page: open a new tab,
+    // render every section read-only, add a sticky Print button.
+    function downloadInfoSheet() {
+      const year = document.getElementById("detailSisYearSelect").value;
+      const sheet = detailSheets.find((s) => s.school_year === year);
+      if (!sheet) return;
+
+      const s = currentDetailStudent;
+      const studentName = `${s.first_name} ${s.last_name}`;
+      const answers = sheet.answers || {};
+      const notes = detailNotesBySheet.get(sheet.sheet_id) || [];
+      const notesCols = STUDENT_INFO_SCHEMA.notesSection.columns;
+
+      const sectionsHtml = STUDENT_INFO_SCHEMA.sections
+        .map(
+          (sec) => `
+            <div class="sis-section-title">${escAttr(sec.numeral)}. ${escAttr(sec.title)}</div>
+            <div class="sis-grid ${sec.id === "personal" ? "sis-grid-personal" : ""}">${sec.fields
+            .map((f) => STUDENT_INFO_SCHEMA.fieldHtml(f, answers[f.key], true, answers, true))
+            .join("")}</div>`
+        )
+        .join("");
+
+      const notesRows = notes.length
+        ? notes
+            .map(
+              (r) => `
+              <tr>${notesCols
+                .map(
+                  (c) =>
+                    `<td><div class="sis-print-cell">${((r[c.key] ?? "").toString().trim() || "&nbsp;").replace(/\n/g, "<br>")}</div></td>`
+                )
+                .join("")}</tr>`
+            )
+            .join("")
+        : "";
+
+      const win = window.open("", "_blank");
+      if (!win) {
+        showToast("Please allow pop-ups to download this info sheet.", "error");
+        return;
+      }
+
+      win.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Student Information Sheet — ${ccEscapeHtml(studentName)} (S.Y. ${escAttr(year)})</title>
+          <style>
+            html { background:#eef1f5; margin:0; padding:0; }
+            body { font-family: Arial, sans-serif; color:#111827; width:8.5in; min-height:11in; margin:24px auto; box-sizing:border-box; position:relative; background:#fff; box-shadow:0 2px 18px rgba(0,0,0,.28); padding:140px 40px 130px; }
+            .print-school-header, .print-school-footer { background:#fff; }
+            .print-school-header img, .print-school-footer img { width:100%; height:auto; display:block; }
+            .print-school-header { position:absolute; top:0; left:0; right:0; }
+            .print-school-footer { position:absolute; bottom:0; left:0; right:0; }
+            h1 { font-size:19px; margin:0 0 6px; text-align:center; }
+            .student-line { font-size:13px; margin:0 0 18px; text-align:center; }
+            .sis-section-title { font-size:14px; font-weight:700; margin:18px 0 8px; border-bottom:1px solid #d1d5db; padding-bottom:4px; }
+            .sis-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px 18px; }
+            .sis-grid-personal { grid-template-columns:repeat(4,1fr); }
+            .sis-grid-personal .sis-field.half { grid-column:span 2; }
+            .sis-grid-personal .sis-field-quarter { grid-column:span 1; }
+            .sis-grid-personal .sis-field-wide { grid-column:1 / -1; }
+            .sis-field { min-width:0; }
+            .sis-field:not(.half) { grid-column:1 / -1; }
+            .sis-subblock { grid-column:1 / -1; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; margin-top:14px; padding-bottom:4px; border-bottom:1px solid #e5e7eb; }
+            .sis-field .form-field label { display:block; font-size:11.5px; color:#6b7280; margin-bottom:2px; }
+            .sis-field input:not([type="radio"]):not([type="checkbox"]), .sis-field select, .sis-field textarea { width:100%; box-sizing:border-box; border:1px solid #d1d5db; border-radius:4px; padding:6px 8px; font-size:12.5px; background:#fff; color:#111827; }
+            .sis-field input[type="radio"], .sis-field input[type="checkbox"] { width:16px; height:16px; margin:0; flex:none; accent-color:#2563eb; }
+            .sis-field select { appearance:none; -webkit-appearance:none; background:transparent; }
+            .sis-field .sis-select-wrap::after { content:none; }
+            .sis-field textarea { resize:none; }
+            .sis-choices { display:flex; flex-wrap:wrap; gap:2px 18px; }
+            .sis-choices .radio-option { display:flex; align-items:center; gap:6px; padding:2px 0; font-size:12.5px; }
+            .sis-choices:has(input[data-field="marital_status"]),
+            .sis-choices:has(input[data-field="residence"]) { display:grid; grid-template-columns:1fr 1fr; }
+            .sis-choices:has(input[data-field="financing"]),
+            .sis-choices:has(input[data-field="income_bracket"]) { display:grid; grid-template-columns:1fr 1fr 1fr; }
+            .sis-print-cell { min-height:18px; font-size:12.5px; word-break:break-word; white-space:pre-wrap; }
+            .sis-table-wrap { margin-bottom:6px; }
+            .sis-table { width:100%; border-collapse:collapse; table-layout:auto; }
+            .sis-table th, .sis-table td { border:1px solid #d1d5db; padding:5px 7px; font-size:12px; text-align:left; vertical-align:top; }
+            .sis-table input { border:none; background:transparent; }
+            .sis-row-label, .sis-row-num { font-weight:600; color:#374151; white-space:normal; }
+            .sis-table-wrap[data-table-field="education_table"] td:nth-child(2),
+            .sis-table-wrap[data-table-field="education_table"] th:nth-child(2),
+            .sis-table-wrap[data-table-field="education_table"] td:nth-child(3),
+            .sis-table-wrap[data-table-field="education_table"] th:nth-child(3) { min-width:180px; width:30%; }
+            .sis-table-wrap[data-table-field="education_table"] .sis-print-cell { white-space:normal; }
+            .sis-sign-preview img { max-width:260px; max-height:110px; padding:0 8px 4px; }
+            .sis-sign-line { border-bottom:1.5px solid #111827; margin-top:2px; max-width:220px; }
+            .sis-signed-name { font-family:"Times New Roman","Georgia",serif; font-size:18px; font-weight:600; letter-spacing:.4px; color:#111827; margin-top:4px; }
+            .sis-sign-caption { font-size:11.5px; color:#374151; margin-top:3px; }
+            .sis-notes-empty { font-size:12.5px; color:#6b7280; }
+            .print-btn { position:fixed; top:12px; right:12px; z-index:20; padding:8px 16px; border-radius:8px; border:none; background:#2563eb; color:#fff; font-weight:600; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.25); }
+            .print-letterhead { display:contents; border-collapse:collapse; }
+            .print-letterhead > thead, .print-letterhead > tfoot { display:none; }
+            .print-letterhead > tbody { display:contents; }
+            .print-letterhead > tbody > tr { display:contents; }
+            .print-letterhead > tbody > tr > td { display:contents; }
+            @media screen and (max-width: 900px) { body { width:100%; min-height:auto; margin:0; box-shadow:none; } }
+            @page { size:8.5in 11in; margin:0; }
+            @media print {
+              .print-btn { display:none; }
+              html { background:#fff; }
+              body { width:auto; min-height:auto; margin:0; padding:0; box-shadow:none; position:static; }
+              .print-school-header { position:fixed; top:0; left:0; right:0; z-index:10; height:135px; overflow:hidden; }
+              .print-school-footer { position:fixed; bottom:0; left:0; right:0; z-index:10; height:100px; overflow:hidden; }
+              .print-letterhead { display:table; width:8.5in; border-collapse:collapse; }
+              .print-letterhead > thead { display:table-header-group; }
+              .print-letterhead > thead > tr { display:table-row; }
+              .print-letterhead > thead > tr > td { display:table-cell; height:135px; padding:0; border:none; }
+              .print-letterhead > tfoot { display:table-footer-group; }
+              .print-letterhead > tfoot > tr { display:table-row; }
+              .print-letterhead > tfoot > tr > td { display:table-cell; height:100px; padding:0; border:none; }
+              .print-letterhead > tbody { display:table-row-group; }
+              .print-letterhead > tbody > tr { display:table-row; }
+              .print-letterhead > tbody > tr > td { display:table-cell; vertical-align:top; padding:4px 40px 10px; border:none; }
+            }
+          </style>
+        </head>
+        <body>
+          ${schoolPrintHeaderFooterHtml()}
+          <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+          <table class="print-letterhead">
+            ${schoolPrintLetterhead()}
+            <tbody>
+              <tr>
+                <td>
+                  <h1>Student Information Sheet</h1>
+                  <p class="student-line">${ccEscapeHtml(studentName)} &middot; S.Y. ${escAttr(year)}${sheet.status === "submitted" ? ` &middot; Submitted ${escAttr(formatDate(sheet.submitted_at))}` : ""}</p>
+                  ${sectionsHtml}
+
+                  <div class="sis-section-title">VII. Significant Notes (For Guidance Personnel only)</div>
+                  ${
+                    notesRows
+                      ? `<table class="sis-table"><thead><tr>${notesCols
+                          .map((c) => `<th>${escAttr(c.label)}</th>`)
+                          .join("")}</tr></thead><tbody>${notesRows}</tbody></table>`
+                      : '<p class="sis-notes-empty">No counselor notes recorded for this school year.</p>'
+                  }
+
+                  <div class="sis-sign-preview">${sheet.signature ? `<img src="${sheet.signature}" alt="Student signature">` : '<p class="sis-notes-empty">No signature captured.</p>'}</div>
+                  <div class="sis-signed-name">${ccEscapeHtml(studentName)}</div>
+                  <div class="sis-sign-line"></div>
+                  <div class="sis-sign-caption">Signature over printed name of student.</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+      `);
+      win.document.write("<" + "/body><" + "/html>");
+      win.document.close();
+    }
+
+    document.getElementById("sisDownloadBtn").addEventListener("click", downloadInfoSheet);
 
     document.getElementById("detailSisYearSelect").addEventListener("change", renderDetailSis);
 
@@ -1074,15 +1250,15 @@
 
     function renderStudentDetailBanner(s) {
       const statusBadge = document.getElementById("studentStatusBadge");
-      statusBadge.textContent = s.is_archived ? "Archived" : "Active";
+      statusBadge.textContent = s.is_archived ? "Deactivated" : "Active";
       statusBadge.className = `badge badge-${s.is_archived ? "cancelled" : "approved"}`;
 
       const archiveBtn = document.getElementById("archiveStudentBtn");
       archiveBtn.innerHTML = s.is_archived
-        ? `<i class="fa-solid fa-rotate-left"></i> Unarchive`
-        : `<i class="fa-solid fa-box-archive"></i> Archive`;
-      // Archiving disables the student's login — give it real visual
-      // weight instead of looking identical to Reset Password. Unarchiving
+        ? `<i class="fa-solid fa-user-check"></i> Activate`
+        : `<i class="fa-solid fa-user-slash"></i> Deactivate`;
+      // Deactivating disables the student's login — give it real visual
+      // weight instead of looking identical to Reset Password. Activating
       // is a restorative action, so it stays in the calmer outline style.
       archiveBtn.className = `btn btn-sm ${s.is_archived ? "btn-outline" : "btn-danger"}`;
     }
@@ -1195,15 +1371,7 @@
 
       const firstName = document.getElementById("editFirstName").value.trim();
       const lastName = document.getElementById("editLastName").value.trim();
-      const email = document.getElementById("editEmail").value.trim();
 
-      if (email && !/^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?)*\.[A-Z]{2,}$/i.test(email)) {
-        showToast("Please enter a valid email address (name@domain.com).", "error");
-        document.getElementById("editEmail").focus();
-        btn.disabled = false;
-        btn.textContent = "Save Changes";
-        return;
-      }
       if (!firstName || !lastName) {
         btn.disabled = false;
         btn.textContent = "Save Changes";
@@ -1224,7 +1392,6 @@
         section: document.getElementById("editSection").value.trim() || null,
         contact_number: document.getElementById("editContact").value.trim() || null,
         parent_guardian: document.getElementById("editGuardian").value.trim() || null,
-        student_email: email || null,
       };
 
       const { error } = await supabaseClient
@@ -1245,42 +1412,49 @@
       document.getElementById("studentDetailTitle").textContent = `${firstName} ${lastName}`;
       showToast("Student updated.", "success");
       renderStudentDetailBanner(currentDetailStudent);
-      updateSectionSuggestions();
+      updateYearLevelSuggestions();
       applyStudentFilters();
     });
 
     async function setStudentArchived(student, archive, opts = {}) {
-      const { error: updateError } = await supabaseClient
-        .from("students")
-        .update({ is_archived: archive, archived_at: archive ? new Date().toISOString() : null })
-        .eq("student_id", student.student_id);
+      // Block the screen while the status change is in flight so nobody
+      // double-clicks or taps around mid-change.
+      if (!opts.silent) showBlockingLoading(archive ? "Deactivating student…" : "Activating student…");
+      try {
+        const { error: updateError } = await supabaseClient
+          .from("students")
+          .update({ is_archived: archive, archived_at: archive ? new Date().toISOString() : null })
+          .eq("student_id", student.student_id);
 
-      if (updateError) {
-        if (!opts.silent) showToast("Couldn't update archive status: " + updateError.message, "error");
-        console.error(updateError);
-        return;
-      }
-
-      if (student.user_id) {
-        if (!(await attachSession())) return;
-        const { error: fnError } = await supabaseClient.functions.invoke("disable-student-account", {
-          body: { userId: student.user_id, archive },
-        });
-        if (fnError) {
-          const status = fnError?.context?.status ? ` (HTTP ${fnError.context.status})` : "";
-          const detail = fnError?.context?.data?.error || "";
-          if (!opts.silent) showToast(`Record updated, but login toggle failed${status}: ${detail || fnError.message}`, "error");
-          console.error(fnError, fnError?.context?.data);
+        if (updateError) {
+          if (!opts.silent) showToast("Couldn't update account status: " + updateError.message, "error");
+          console.error(updateError);
+          return;
         }
-      }
 
-      student.is_archived = archive;
-      student.archived_at = archive ? new Date().toISOString() : null;
+        if (student.user_id) {
+          const { error: fnError } = await invokeEdge("disable-student-account", {
+            userId: student.user_id,
+            archive,
+          });
+          if (fnError) {
+            const status = fnError?.context?.status ? ` (HTTP ${fnError.context.status})` : "";
+            const detail = fnError?.context?.data?.error || "";
+            if (!opts.silent) showToast(`Record updated, but login toggle failed${status}: ${detail || fnError.message}`, "error");
+            console.error(fnError, fnError?.context?.data);
+          }
+        }
 
-      if (!opts.silent) {
-        showToast(archive ? "Student archived." : "Student unarchived.", "success");
-        document.getElementById("studentDetailModalOverlay").classList.remove("show");
-        applyStudentFilters();
+        student.is_archived = archive;
+        student.archived_at = archive ? new Date().toISOString() : null;
+
+        if (!opts.silent) {
+          showToast(archive ? "Student deactivated." : "Student activated.", "success");
+          document.getElementById("studentDetailModalOverlay").classList.remove("show");
+          applyStudentFilters();
+        }
+      } finally {
+        if (!opts.silent) hideBlockingLoading();
       }
     }
 
@@ -1307,13 +1481,8 @@
         return;
       }
 
-      if (!(await attachSession())) {
-        resetPasswordBusy = false;
-        return;
-      }
-
-      const { data, error } = await supabaseClient.functions.invoke("reset-student-password", {
-        body: { userId: currentDetailStudent.user_id },
+      const { data, error } = await invokeEdge("reset-student-password", {
+        userId: currentDetailStudent.user_id,
       });
 
       if (error || data?.error) {
@@ -1351,8 +1520,8 @@
       }
 
       const ok = await confirmDialog(
-        `Archive ${currentDetailStudent.first_name} ${currentDetailStudent.last_name}? Their records are kept, but they won't be able to log in anymore.`,
-        { confirmLabel: "Archive", danger: true }
+        `Deactivate ${currentDetailStudent.first_name} ${currentDetailStudent.last_name}? Their records are kept, but they won't be able to log in anymore.`,
+        { confirmLabel: "Deactivate", danger: true }
       );
       if (!ok) return;
       await setStudentArchived(currentDetailStudent, true);

@@ -16,6 +16,7 @@ create table if not exists public.intervention_templates (
   intervention_template_id bigint generated always as identity primary key,
   counselor_id bigint not null references public.counselors(counselor_id) on delete cascade,
   title text not null,
+  note text,
   file_path text not null,
   file_name text not null,
   created_at timestamptz not null default now()
@@ -39,3 +40,12 @@ drop policy if exists "counselor can delete own intervention templates" on publi
 create policy "counselor can delete own intervention templates"
   on public.intervention_templates for delete
   using (counselor_id in (select counselor_id from public.counselors where user_id = auth.uid()));
+
+drop policy if exists "counselor can update own intervention templates" on public.intervention_templates;
+create policy "counselor can update own intervention templates"
+  on public.intervention_templates for update
+  using (counselor_id in (select counselor_id from public.counselors where user_id = auth.uid()))
+  with check (counselor_id in (select counselor_id from public.counselors where user_id = auth.uid()));
+
+-- Note column for templates that predate this migration (safe to re-run).
+alter table public.intervention_templates add column if not exists note text;
