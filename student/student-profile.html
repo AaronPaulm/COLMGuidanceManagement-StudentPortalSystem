@@ -277,7 +277,9 @@
 
       document.getElementById("profileFullName").textContent = fullName;
       document.getElementById("profileMeta").textContent = `${data.year_level || "—"} · ${data.student_number}`;
-      document.getElementById("profileCourse").textContent = `Course: ${data.course || "—"}`;
+      document.getElementById("profileCourse").textContent = `Course: ${
+        data.education_level === "college" ? (data.course || "—") : "N/A"
+      }`;
       document.getElementById("profileDeptBadge").textContent = educationLevelLabel(data.education_level);
       document.getElementById("profileSchoolYearBadge").textContent = `S.Y. ${defaultSchoolYear()}`;
 
@@ -288,7 +290,8 @@
       document.getElementById("editFullName").value = fullName;
       document.getElementById("editEducationLevel").value = educationLevelLabel(data.education_level);
       document.getElementById("editYearLevel").value = data.year_level || "";
-      document.getElementById("editCourse").value = data.course || "";
+      document.getElementById("editCourse").value =
+        data.education_level === "college" ? (data.course || "") : "N/A";
       document.getElementById("editEmail").value = data.student_email || "";
       document.getElementById("editPhone").value = formatPhone(data.contact_number);
       document.getElementById("editGuardian").value = data.parent_guardian || "";

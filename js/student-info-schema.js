@@ -567,6 +567,13 @@ window.STUDENT_INFO_SCHEMA = (function () {
   function fieldInnerHtml(field, value, disabled, values, print) {
     switch (field.type) {
       case "select": {
+        // Non-college Course is stored literally as "N/A" (sentinel, not a
+        // real program) — render it as a clean, disabled value accordingly.
+        if (String(value ?? "") === "N/A") {
+          return `<div class="sis-select-wrap"><select data-field="${escAttr(field.key)}" ${disabledAttr(true)}>
+              <option value="N/A" selected>N/A</option>
+            </select></div>`;
+        }
         // Cascade: when a select's options depend on another field's value
         // (e.g. Year Level follows Education Level), resolve the option list
         // against the current value of that source field.

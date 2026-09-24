@@ -1136,6 +1136,7 @@
 
       if (!isCert) STUDENT_INFO_SCHEMA.applyFieldStates(container, sisAnswers, sisReadOnly);
       if (!isCert) applySisCascades();
+      if (!isCert) applySisCourseState();
       // Re-derive Age whenever a DOB is already on file so it can never
       // go stale mid-school-year (birthdays happen).
       if (!isCert && !sisReadOnly && sisAnswers.dob) {
@@ -1169,10 +1170,51 @@
       });
     }
 
+    function sisCourseOptionsHtml() {
+      return (
+        `<option value="">\u2014 Select \u2014</option>` +
+        STUDENT_INFO_SCHEMA.courseGroups
+          .map(
+            (g) =>
+              `<optgroup label="${escapeHtml(g.label)}">${g.options
+                .map((o) => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`)
+                .join("")}</optgroup>`
+          )
+          .join("")
+      );
+    }
+
+    // Course is only real for College students. For JHS/SHS the field is
+    // locked to a disabled "N/A" (stored literally as "N/A"), and flipping
+    // Education Level to College restores the full course list.
+    function applySisCourseState() {
+      const container = document.getElementById("sisFieldsContainer");
+      if (!container) return;
+      const levelSel = container.querySelector('[data-field="education_level"]');
+      const courseSel = container.querySelector('[data-field="course"]');
+      if (!courseSel) return;
+
+      const isCollege = String(levelSel?.value || sisAnswers.education_level || "") === "college";
+      if (!isCollege) {
+        courseSel.innerHTML = `<option value="N/A" selected>N/A</option>`;
+        courseSel.disabled = true;
+        if (!sisReadOnly) sisAnswers.course = "N/A";
+        return;
+      }
+
+      courseSel.disabled = false;
+      if (courseSel.options.length === 1 && courseSel.options[0].value === "N/A") {
+        courseSel.innerHTML = sisCourseOptionsHtml();
+        const keep = sisAnswers.course && sisAnswers.course !== "N/A" ? sisAnswers.course : "";
+        if (keep) courseSel.value = keep;
+      }
+    }
+
     // Keep cascade selects in step with their source field as the student
     // edits them (Education Level change re-filters the Year Level options).
     document.getElementById("sisFieldsContainer").addEventListener("change", () => {
       if (!sisReadOnly) applySisCascades();
+      if (!sisReadOnly) applySisCourseState();
     });
 
     function renumberRows(wrap) {
@@ -1541,7 +1583,11 @@
         const updates = {};
         STUDENT_INFO_SCHEMA.syncToStudentRecord.forEach(({ field, column }) => {
           const v = sisAnswers[field];
-          if (v && String(v).trim()) updates[column] = String(v).trim();
+          if (!v || !String(v).trim()) return;
+          // Course only exists for College students — never sync the "N/A"
+          // sentinel (or any course) into a non-college record.
+          if (column === "course" && (v === "N/A" || sisAnswers.education_level !== "college")) return;
+          updates[column] = String(v).trim();
         });
         if (Object.keys(updates).length) {
           const { error: syncError } = await supabaseClient

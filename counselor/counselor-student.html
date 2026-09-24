@@ -329,8 +329,8 @@
                 <div class="builder-section-label" style="margin-top:20px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
                     <span>Student Information Sheet</span>
                     <span style="display:flex; align-items:center; gap:8px;">
-                        <button type="button" class="btn btn-outline btn-sm" id="sisDownloadBtn" style="display:none; padding:4px 10px; font-size:12px; gap:6px;"><i class="fa-solid fa-download"></i> Download</button>
-                        <select id="detailSisYearSelect" class="table-search" style="width:auto; padding:4px 10px; font-size:12px;"></select>
+                        <button type="button" class="btn btn-outline btn-sm" id="sisDownloadBtn" style="display:none; height:28px; box-sizing:border-box; padding:4px 10px; font-size:12px; gap:6px; margin:0; flex-shrink:0; vertical-align:middle;"><i class="fa-solid fa-download"></i> Download</button>
+                        <select id="detailSisYearSelect" class="table-search" style="width:auto; height:28px; box-sizing:border-box; padding:4px 10px; font-size:12px;"></select>
                     </span>
                 </div>
                 <div id="studentDetailSis"><div class="notif-empty" style="padding:16px;">No info sheet on record.</div></div>
@@ -493,6 +493,20 @@
           .join("");
     }
 
+    // Courses only exist for College students. For JHS/SHS the field is
+    // locked to a disabled "N/A" option (and saves normalize to NULL).
+    function applyCourseFieldState(educationLevel) {
+      const select = document.getElementById("editCourse");
+      if (educationLevel === "college") {
+        populateCourseOptions();
+        select.disabled = false;
+      } else {
+        select.innerHTML = `<option value="N/A" selected>N/A</option>`;
+        select.disabled = true;
+      }
+      return select;
+    }
+
     function studentRowHtml(s) {
       const name = `${s.first_name} ${s.last_name}`;
       const sisCell = s.is_archived
@@ -506,7 +520,7 @@
           <td>${escapeHtml(s.student_number) || "—"}</td>
           <td>${escapeHtml(name)}</td>
           <td>${educationLevelLabel(s.education_level)}</td>
-          <td>${escapeHtml(s.course) || "—"}</td>
+          <td>${s.education_level === "college" ? (escapeHtml(s.course) || "—") : "N/A"}</td>
           <td>${escapeHtml(s.year_level) || "—"}</td>
           <td>${escapeHtml(s.section) || "—"}</td>
           <td>${sisCell}</td>
@@ -1284,6 +1298,7 @@
 
     document.getElementById("editEducationLevel").addEventListener("change", (e) => {
       populateYearLevelOptions(e.target.value, null);
+      applyCourseFieldState(e.target.value);
     });
 
     async function openStudentDetail(studentId) {
@@ -1297,7 +1312,8 @@
       document.getElementById("editLastName").value = s.last_name || "";
       document.getElementById("editStudentNumber").value = s.student_number || "";
       document.getElementById("editEducationLevel").value = s.education_level || "";
-      document.getElementById("editCourse").value = s.course || "";
+      const courseSelect = applyCourseFieldState(s.education_level);
+      if (s.education_level === "college") courseSelect.value = s.course || "";
       populateYearLevelOptions(s.education_level, s.year_level);
       document.getElementById("editSection").value = s.section || "";
       document.getElementById("editContact").value = formatPhone(s.contact_number);
@@ -1390,7 +1406,7 @@
         last_name: lastName,
         student_number: document.getElementById("editStudentNumber").value.trim() || null,
         education_level: newEducationLevel,
-        course: document.getElementById("editCourse").value || null,
+        course: newEducationLevel === "college" ? (document.getElementById("editCourse").value || null) : null,
         year_level: newYearLevel,
         section: document.getElementById("editSection").value.trim() || null,
         contact_number: document.getElementById("editContact").value.trim() || null,
