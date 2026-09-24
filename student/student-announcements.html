@@ -347,9 +347,11 @@
 
       const countBadge = document.getElementById("selectedDayCount");
       countBadge.hidden = monthItems.length === 0;
-      countBadge.textContent = monthItems.length
-        ? `${monthItems.length} announcement${monthItems.length === 1 ? "" : "s"}`
-        : "";
+      const events = monthItems.filter((a) => a.category === "event").length;
+      const anns = monthItems.length - events;
+      const parts = [`${anns} announcement${anns === 1 ? "" : "s"}`];
+      if (events) parts.push(`${events} event${events === 1 ? "" : "s"}`);
+      countBadge.textContent = monthItems.length ? parts.join(" · ") : "";
 
       if (monthItems.length === 0) {
         list.innerHTML = `
